@@ -44,6 +44,7 @@ export default function RapearScreen() {
   const isDark = effectiveColorScheme === 'dark';
 
   const themeColors = useMemo(() => ({
+    isDark,
     screen: isDark ? '#000000' : '#F3F5F8',
     card: isDark ? '#0D0D0D' : '#FFFFFF',
     border: isDark ? '#1D1D1D' : '#E2E5EA',
@@ -52,14 +53,14 @@ export default function RapearScreen() {
     chipBg: isDark ? '#101010' : '#F4F5F8',
     chipBorder: isDark ? '#242424' : '#DCE1E7',
     chipText: isDark ? '#B7B7B7' : '#4B5563',
-    startBg: isDark ? '#FFFFFF' : '#1F2937',
-    startText: isDark ? '#000000' : '#FFFFFF',
+    startBg: '#6B46FF',
+    startText: '#FFFFFF',
     disabledStartBg: isDark ? '#2A2A2A' : '#D1D5DB',
     disabledStartText: isDark ? '#787878' : '#6B7280',
   }), [isDark]);
-  const [selectedMode, setSelectedMode] = useState<RapMode | null>(null);
+  const [selectedMode, setSelectedMode] = useState<RapMode | null>('easy');
   const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
-  const [selectedSessionTime, setSelectedSessionTime] = useState<SessionTime | null>(null);
+  const [selectedSessionTime, setSelectedSessionTime] = useState<SessionTime | null>('1-min');
   const [selectedSessionType, setSelectedSessionType] = useState<SessionType>('record');
 
   const isReadyToStart = useMemo(
@@ -79,7 +80,7 @@ export default function RapearScreen() {
     }
 
     if (selectedSessionTime === 'infinite') {
-      setSelectedSessionTime(null);
+      setSelectedSessionTime('1-min');
     }
   };
 
@@ -101,24 +102,37 @@ export default function RapearScreen() {
 
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.screen }]}
-        contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 28 }]}>
+        contentContainerStyle={[styles.contentContainer, { paddingTop: insets.top + 10, paddingBottom: insets.bottom + 28 }]}>
         <Text style={[styles.badge, { color: themeColors.textSecondary }]}>FreestyleZone</Text>
         <Text style={[styles.title, { color: themeColors.textPrimary }]}>Configura tu sesión</Text>
 
         <View style={[styles.sessionTypeCard, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
-          <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Rapear</Text>
-          <Text style={[styles.sessionTypeHelp, { color: themeColors.textSecondary }]}>Elige cómo quieres usar la sesión</Text>
-          <View style={styles.sessionTypeRow}>
-            {SESSION_TYPES.map((sessionType) => (
-              <SelectableChip
-                key={sessionType.key}
-                label={sessionType.label}
-                selected={selectedSessionType === sessionType.key}
-                onPress={() => onSelectSessionType(sessionType.key)}
-                fullWidth
-                themeColors={themeColors}
-              />
-            ))}
+          <View style={styles.sessionTypeHeaderRow}>
+            <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Rapear</Text>
+            <Text style={[styles.sessionTypeHelp, { color: themeColors.textSecondary }]}>Modo sesión</Text>
+          </View>
+          <View style={[styles.sessionTypeSegment, { backgroundColor: themeColors.chipBg, borderColor: themeColors.chipBorder }]}>
+            {SESSION_TYPES.map((sessionType) => {
+              const isSelected = selectedSessionType === sessionType.key;
+
+              return (
+                <Pressable
+                  key={sessionType.key}
+                  onPress={() => onSelectSessionType(sessionType.key)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isSelected }}
+                  style={[styles.sessionTypeOption, isSelected && styles.sessionTypeOptionSelected]}>
+                  <MaterialIcons
+                    name={sessionType.key === 'record' ? 'mic' : 'school'}
+                    size={16}
+                    color={isSelected ? '#FFFFFF' : themeColors.textSecondary}
+                  />
+                  <Text style={[styles.sessionTypeOptionText, { color: isSelected ? '#FFFFFF' : themeColors.textSecondary }]}>
+                    {sessionType.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
         </View>
 
@@ -227,6 +241,14 @@ function getModeColor(mode: RapMode, selected: boolean) {
   return '#A855F7';
 }
 
+function getModeIconColor(selected: boolean, isDarkTheme: boolean) {
+  if (!selected) {
+    return '#9F9F9F';
+  }
+
+  return isDarkTheme ? undefined : '#FFFFFF';
+}
+
 function getModeGlow(mode: RapMode, selected: boolean) {
   if (!selected) {
     return 'transparent';
@@ -257,27 +279,11 @@ function SelectableChip({
   fullWidth?: boolean;
   modePrimary?: boolean;
   selectionVariant?: RapMode | 'default';
-  themeColors: { chipBg: string; chipBorder: string; chipText: string; textPrimary: string; textSecondary: string };
+  themeColors: { isDark: boolean; chipBg: string; chipBorder: string; chipText: string; textPrimary: string; textSecondary: string };
 }) {
-  const isDarkTheme = themeColors.textPrimary === '#FFFFFF';
-  const selectedReadableText = isDarkTheme ? '#FFFFFF' : '#111111';
+  const selectedReadableText = '#FFFFFF';
 
-  const selectedStyle =
-    selected && selectionVariant === 'easy'
-      ? styles.chipSelectedEasy
-      : selected && selectionVariant === 'hard'
-        ? styles.chipSelectedHard
-        : selected && selectionVariant === 'incremental'
-          ? styles.chipSelectedIncremental
-          : selected && selectionVariant === 'history'
-            ? styles.chipSelectedHistory
-            : selected && selectionVariant === 'ending'
-              ? styles.chipSelectedEnding
-              : selected && selectionVariant === 'images'
-                ? styles.chipSelectedImages
-                : selected
-                  ? styles.chipSelected
-                  : null;
+  const selectedStyle = getChipSelectedStyle(selectionVariant, themeColors.isDark, selected);
 
   return (
     <Pressable
@@ -288,7 +294,7 @@ function SelectableChip({
       {selectionVariant !== 'default' ? (
         <View style={styles.iconWrap}>
           <View style={[styles.iconGlowWrap, { shadowColor: getModeGlow(selectionVariant, selected) }]}>
-            <ModeIcon mode={selectionVariant} color={getModeColor(selectionVariant, selected)} />
+            <ModeIcon mode={selectionVariant} color={getModeIconColor(selected, themeColors.isDark) ?? getModeColor(selectionVariant, selected)} />
           </View>
         </View>
       ) : null}
@@ -298,6 +304,32 @@ function SelectableChip({
       ) : null}
     </Pressable>
   );
+}
+
+function getChipSelectedStyle(selectionVariant: RapMode | 'default', isDark: boolean, selected: boolean) {
+  if (!selected) {
+    return null;
+  }
+
+  if (selectionVariant === 'default') {
+    return styles.chipSelected;
+  }
+
+  if (isDark) {
+    if (selectionVariant === 'easy') return styles.chipSelectedEasy;
+    if (selectionVariant === 'hard') return styles.chipSelectedHard;
+    if (selectionVariant === 'incremental') return styles.chipSelectedIncremental;
+    if (selectionVariant === 'history') return styles.chipSelectedHistory;
+    if (selectionVariant === 'ending') return styles.chipSelectedEnding;
+    return styles.chipSelectedImages;
+  }
+
+  if (selectionVariant === 'easy') return { borderColor: '#16A34A', backgroundColor: '#2FBF68' };
+  if (selectionVariant === 'hard') return { borderColor: '#EA580C', backgroundColor: '#F27A3E' };
+  if (selectionVariant === 'incremental') return { borderColor: '#DC2626', backgroundColor: '#EB5A5A' };
+  if (selectionVariant === 'history') return { borderColor: '#2563EB', backgroundColor: '#4D8FF6' };
+  if (selectionVariant === 'ending') return { borderColor: '#A16207', backgroundColor: '#C98A17' };
+  return { borderColor: '#7E22CE', backgroundColor: '#9A66E8' };
 }
 
 const styles = StyleSheet.create({
@@ -311,7 +343,6 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingHorizontal: 20,
-    paddingTop: 86,
     gap: 24,
   },
   badge: {
@@ -344,16 +375,42 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#1D1D1D',
     borderRadius: 14,
-    padding: 12,
-    gap: 10,
+    padding: 10,
+    gap: 8,
+  },
+  sessionTypeHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   sessionTypeHelp: {
     color: '#8C8C8C',
-    fontSize: 12,
+    fontSize: 11,
+    fontWeight: '600',
   },
-  sessionTypeRow: {
+  sessionTypeSegment: {
     flexDirection: 'row',
-    gap: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 4,
+    gap: 6,
+  },
+  sessionTypeOption: {
+    flex: 1,
+    borderRadius: 9,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+  sessionTypeOptionSelected: {
+    backgroundColor: '#6B46FF',
+  },
+  sessionTypeOptionText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   modePrimaryRow: {
     flexDirection: 'row',

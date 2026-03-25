@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Image } from 'expo-image';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAppTheme } from '@/context/app-theme-context';
 
@@ -42,6 +42,7 @@ const AVATAR_OPTIONS = [
 export default function ProfileScreen() {
   const { effectiveColorScheme, themePreference, setThemePreference } = useAppTheme();
   const isDark = effectiveColorScheme === 'dark';
+  const insets = useSafeAreaInsets();
 
   const [profile, setProfile] = useState<ProfileData>({
     username: '@mc_verso',
@@ -133,7 +134,7 @@ export default function ProfileScreen() {
               <Text style={[styles.profileTabText, { color: activeTab === 'videos' ? colors.textPrimary : colors.textSecondary }]}>Videos</Text>
             </Pressable>
             <Pressable onPress={() => setActiveTab('lines')} style={styles.profileTabBtn}>
-              <MaterialIcons name="lock" size={20} color={activeTab === 'lines' ? colors.textPrimary : colors.textSecondary} />
+              <MaterialIcons name="edit-note" size={20} color={activeTab === 'lines' ? colors.textPrimary : colors.textSecondary} />
               <Text style={[styles.profileTabText, { color: activeTab === 'lines' ? colors.textPrimary : colors.textSecondary }]}>Mis líneas</Text>
             </Pressable>
           </View>
@@ -149,7 +150,7 @@ export default function ProfileScreen() {
       {isEditing ? (
         <Animated.View style={[styles.editPanel, { backgroundColor: colors.background, transform: [{ translateX: editTranslateX }] }]}>
           <KeyboardAvoidingView style={styles.editKeyboard} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-            <View style={styles.editHeader}>
+            <View style={[styles.editHeader, { paddingTop: insets.top + 10 }]}>
               <Pressable onPress={() => closeEditScreen(false)} style={styles.backButton}>
                 <MaterialIcons name="arrow-back" size={22} color={colors.textPrimary} />
               </Pressable>
@@ -160,7 +161,7 @@ export default function ProfileScreen() {
             </View>
 
             <ScrollView contentContainerStyle={styles.editContent} keyboardShouldPersistTaps="handled">
-              <View style={[styles.editAvatarWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={styles.editAvatarWrap}>
                 <Image source={{ uri: draftProfile.avatarUri }} style={[styles.editAvatar, { borderColor: colors.border }]} contentFit="cover" />
                 <Pressable onPress={rotateAvatar} style={styles.editAvatarButton}>
                   <MaterialIcons name="edit" size={16} color="#FFFFFF" />
@@ -346,7 +347,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   editAvatarWrap: {
-    borderWidth: 1,
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
