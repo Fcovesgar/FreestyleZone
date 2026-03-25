@@ -369,33 +369,38 @@ export default function RapearScreen() {
               </Pressable>
             </View>
 
-            {selectedSessionType === 'record' ? (
-              <View style={styles.cameraStatusWrap}>
-                <Text style={styles.cameraStatusText}>
-                  {hasCameraPermission ? `Vista cámara (${cameraFacing === 'front' ? 'frontal' : 'trasera'})` : 'Sin permisos de cámara'}
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.cameraStatusWrap}>
-                <Text style={styles.cameraStatusText}>Modo entrenar activo (sin cámara).</Text>
-              </View>
-            )}
-
             <View style={[styles.sessionBottomActions, { paddingBottom: insets.bottom + 26 }]}> 
               {countdown !== null ? (
                 <Text style={[styles.countdownNumber, { color: getCountdownColor(countdown) }]}>{countdown}</Text>
               ) : null}
 
               {!hasSessionStarted && countdown === null ? (
-                <Pressable style={styles.recordButton} onPress={onStartRecordingPress}>
-                  <View style={styles.recordButtonInner} />
-                </Pressable>
+                <View style={styles.preSessionActionsRow}>
+                  <Pressable style={styles.recordButton} onPress={onStartRecordingPress}>
+                    <View style={styles.recordButtonInner} />
+                  </Pressable>
+
+                  {selectedSessionType === 'record' ? (
+                    <Pressable
+                      style={[styles.bottomSwitchCameraButton, hasCameraPermission === false && styles.bottomSwitchCameraDisabled]}
+                      accessibilityLabel={`alternar cámara ${cameraFacing === 'front' ? 'frontal' : 'trasera'}`}
+                      disabled={hasCameraPermission === false}
+                      onPress={() => setCameraFacing((previous) => (previous === 'front' ? 'back' : 'front'))}>
+                      <MaterialIcons name="sync-alt" size={20} color="#FFFFFF" />
+                      <Text style={styles.bottomSwitchCameraText}>alternar cámara</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
               ) : null}
 
               {hasSessionStarted && selectedSessionType === 'record' ? (
-                <Pressable style={styles.bottomSwitchCameraButton} onPress={() => setCameraFacing((previous) => (previous === 'front' ? 'back' : 'front'))}>
+                <Pressable
+                  style={[styles.bottomSwitchCameraButton, hasCameraPermission === false && styles.bottomSwitchCameraDisabled]}
+                  accessibilityLabel={`alternar cámara ${cameraFacing === 'front' ? 'frontal' : 'trasera'}`}
+                  disabled={hasCameraPermission === false}
+                  onPress={() => setCameraFacing((previous) => (previous === 'front' ? 'back' : 'front'))}>
                   <MaterialIcons name="sync-alt" size={22} color="#FFFFFF" />
-                  <Text style={styles.bottomSwitchCameraText}>alterar cámara</Text>
+                  <Text style={styles.bottomSwitchCameraText}>alternar cámara</Text>
                 </Pressable>
               ) : null}
             </View>
@@ -776,20 +781,20 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   timer: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
     color: '#FFFFFF',
   },
   finishButton: {
     borderRadius: 999,
     backgroundColor: '#0000007A',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
   finishButtonText: {
     color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '800',
   },
   extendButton: {
     borderRadius: 999,
@@ -807,14 +812,10 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
   },
-  cameraStatusWrap: {
+  preSessionActionsRow: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
-  },
-  cameraStatusText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
   },
   bottomSwitchCameraButton: {
     alignItems: 'center',
@@ -826,6 +827,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '500',
     textTransform: 'lowercase',
+  },
+  bottomSwitchCameraDisabled: {
+    opacity: 0.4,
   },
   sessionBottomActions: {
     alignItems: 'center',
