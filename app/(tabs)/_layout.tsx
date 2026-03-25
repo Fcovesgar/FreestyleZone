@@ -20,7 +20,12 @@ export default function TabLayout() {
         tabBarButton: HapticTab,
         tabBarActiveTintColor: isDark ? '#FFFFFF' : '#111111',
         tabBarInactiveTintColor: isDark ? '#7D7D7D' : '#777777',
-        tabBarShowLabel: false,
+        tabBarShowLabel: true,
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '600',
+          marginTop: 2,
+        },
         tabBarStyle: {
           backgroundColor: isDark ? '#090909' : '#FFFFFF',
           borderTopColor: isDark ? '#151515' : '#E5E5E5',
