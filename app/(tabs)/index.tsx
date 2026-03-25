@@ -108,6 +108,20 @@ export default function RapearScreen() {
 
   const selectedTrackLabel = TRACKS.find((track) => track.key === selectedTrack)?.label ?? '-';
   const summaryModeInfo = RAP_MODES.find((mode) => mode.key === sessionSummary?.mode);
+  const summaryTheme = useMemo(
+    () => ({
+      modalBg: isDark ? '#050505' : '#F2F4F8',
+      cardBg: isDark ? '#101010' : '#FFFFFF',
+      cardBorder: isDark ? '#2B2B2B' : '#DDE1E7',
+      primaryText: isDark ? '#FFFFFF' : '#101828',
+      secondaryText: isDark ? '#D8D8D8' : '#344054',
+      tertiaryText: isDark ? '#AFAFAF' : '#667085',
+      previewBg: isDark ? '#1A1A1A' : '#E9EEF6',
+      buttonBg: isDark ? '#6B46FF' : '#5B3BF1',
+      closeBg: isDark ? '#222222' : '#E4E7EC',
+    }),
+    [isDark]
+  );
 
   const onSelectSessionType = (sessionType: SessionType) => {
     setSelectedSessionType(sessionType);
@@ -270,7 +284,7 @@ export default function RapearScreen() {
   const confirmCloseSummary = () => {
     Alert.alert(
       '¿Salir del resumen?',
-      'Si sales ahora, se cerrará este resumen y tendrás que repetir la sesión para volver a verlo.',
+      'Si sales ahora,se cerrará este resumey y perderás la sesión.',
       [
         { text: 'Cancelar', style: 'cancel' },
         { text: 'Salir', style: 'destructive', onPress: () => setSummaryVisible(false) },
@@ -396,7 +410,7 @@ export default function RapearScreen() {
 
       <Modal visible={sessionVisible} animationType="slide" onRequestClose={stopSession}>
         <View style={styles.sessionFullscreen}>
-          <View style={[styles.cameraPlaceholder, selectedSessionType === 'train' ? styles.trainingBackground : styles.recordingBackground]}>
+          <View style={[styles.cameraPlaceholder, styles.sessionModalCard, selectedSessionType === 'train' ? styles.trainingBackground : styles.recordingBackground, { marginTop: insets.top + 8, marginBottom: insets.bottom + 8 }]}>
             <View style={[styles.cameraHudTop, { paddingTop: insets.top + 8 }]}> 
               <View style={styles.sessionHeaderActions}>
                 <Text style={[styles.timer, { color: timerColor }]}>{displayTimer}</Text>
@@ -450,39 +464,39 @@ export default function RapearScreen() {
       </Modal>
 
       <Modal visible={summaryVisible} animationType="slide" onRequestClose={confirmCloseSummary}>
-        <SafeAreaView style={styles.summaryScreen} edges={['top', 'bottom']}>
+        <SafeAreaView style={[styles.summaryScreen, { backgroundColor: summaryTheme.modalBg }]} edges={['top', 'bottom']}>
           <View style={styles.summaryHeader}>
-            <Text style={styles.summaryTitle}>Resumen de la sesión</Text>
-            <Pressable onPress={confirmCloseSummary} style={styles.summaryCloseButton}>
+            <Text style={[styles.summaryTitle, { color: summaryTheme.primaryText }]}>Resumen de la sesión</Text>
+            <Pressable onPress={confirmCloseSummary} style={[styles.summaryCloseButton, { backgroundColor: summaryTheme.closeBg }]}>
               <MaterialIcons name="close" size={18} color="#FFFFFF" />
             </Pressable>
           </View>
 
           <View style={styles.previewCard}>
-            <View style={styles.previewVideo}>
-              <Text style={styles.previewTimer}>{formatTime(sessionSummary?.elapsedSeconds ?? 0)}</Text>
+            <View style={[styles.previewVideo, { backgroundColor: summaryTheme.previewBg, borderColor: summaryTheme.cardBorder }]}>
+              <Text style={[styles.previewTimer, { color: summaryTheme.primaryText }]}>{formatTime(sessionSummary?.elapsedSeconds ?? 0)}</Text>
             </View>
-            <Text style={styles.previewHint}>Preview con overlay de tiempo (sin botones de control).</Text>
+            <Text style={[styles.previewHint, { color: summaryTheme.tertiaryText }]}>Preview con overlay de tiempo (sin botones de control).</Text>
           </View>
 
-          <View style={styles.summaryMetaCard}>
-            <Text style={styles.summaryMetaText}>Modo: {summaryModeInfo?.label ?? '-'}</Text>
-            <Text style={styles.summaryMetaDescription}>Descripción: {summaryModeInfo?.description ?? '-'}</Text>
-            <Text style={styles.summaryMetaText}>Sesión: {sessionSummary?.sessionType === 'record' ? 'Grabar' : 'Entrenar'}</Text>
-            <Text style={styles.summaryMetaText}>Base: {sessionSummary?.track ? selectedTrackLabel : '-'}</Text>
-            <Text style={styles.summaryMetaText}>Tiempo: {formatTime(sessionSummary?.elapsedSeconds ?? 0)}</Text>
+          <View style={[styles.summaryMetaCard, { backgroundColor: summaryTheme.cardBg, borderColor: summaryTheme.cardBorder }]}>
+            <Text style={[styles.summaryMetaText, { color: summaryTheme.secondaryText }]}>Modo: {summaryModeInfo?.label ?? '-'}</Text>
+            <Text style={[styles.summaryMetaDescription, { color: summaryTheme.tertiaryText }]}>Descripción: {summaryModeInfo?.description ?? '-'}</Text>
+            <Text style={[styles.summaryMetaText, { color: summaryTheme.secondaryText }]}>Sesión: {sessionSummary?.sessionType === 'record' ? 'Grabar' : 'Entrenar'}</Text>
+            <Text style={[styles.summaryMetaText, { color: summaryTheme.secondaryText }]}>Base: {sessionSummary?.track ? selectedTrackLabel : '-'}</Text>
+            <Text style={[styles.summaryMetaText, { color: summaryTheme.secondaryText }]}>Tiempo: {formatTime(sessionSummary?.elapsedSeconds ?? 0)}</Text>
           </View>
 
           <View style={styles.summaryActions}>
             <Pressable
-              style={styles.summaryActionButton}
+              style={[styles.summaryActionButton, { backgroundColor: summaryTheme.buttonBg }]}
               onPress={() => Alert.alert('Guardar en dispositivo', 'Función preparada para conectar con guardado local de video.')}>
               <MaterialIcons name="download" size={18} color="#FFFFFF" />
               <Text style={styles.summaryActionText}>Guardar en dispositivo</Text>
             </Pressable>
 
             <Pressable
-              style={styles.summaryActionButton}
+              style={[styles.summaryActionButton, { backgroundColor: summaryTheme.buttonBg }]}
               onPress={() => Alert.alert('Guardar en perfil', 'Función preparada para publicar el video en el perfil del usuario.')}>
               <MaterialIcons name="person" size={18} color="#FFFFFF" />
               <Text style={styles.summaryActionText}>Guardar en perfil</Text>
@@ -846,6 +860,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'space-between',
   },
+  sessionModalCard: {
+    marginHorizontal: 12,
+    borderRadius: 18,
+    overflow: 'hidden',
+  },
   recordingBackground: {
     backgroundColor: '#1A1A1A',
   },
@@ -964,6 +983,7 @@ const styles = StyleSheet.create({
   previewVideo: {
     height: 320,
     borderRadius: 16,
+    borderWidth: 1,
     backgroundColor: '#1A1A1A',
     justifyContent: 'flex-start',
     alignItems: 'flex-start',
