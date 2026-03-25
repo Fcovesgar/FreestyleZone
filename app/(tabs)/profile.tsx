@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -143,6 +144,7 @@ export default function ProfileScreen() {
                 onChangeText={(text) => setDraftProfile((prev) => ({ ...prev, bio: text }))}
                 colors={colors}
                 multiline
+                doneOnSubmit
               />
 
               <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Imagen de perfil</Text>
@@ -220,12 +222,14 @@ function Field({
   onChangeText,
   colors,
   multiline,
+  doneOnSubmit,
 }: {
   label: string;
   value: string;
   onChangeText: (text: string) => void;
   colors: { textPrimary: string; textSecondary: string; border: string; inputBg: string };
   multiline?: boolean;
+  doneOnSubmit?: boolean;
 }) {
   return (
     <View style={styles.fieldWrap}>
@@ -234,6 +238,10 @@ function Field({
         value={value}
         onChangeText={onChangeText}
         multiline={multiline}
+        blurOnSubmit={doneOnSubmit}
+        onSubmitEditing={doneOnSubmit ? () => Keyboard.dismiss() : undefined}
+        returnKeyType={doneOnSubmit ? 'done' : 'default'}
+        submitBehavior={doneOnSubmit ? 'blurAndSubmit' : undefined}
         style={[
           styles.input,
           { color: colors.textPrimary, borderColor: colors.border, backgroundColor: colors.inputBg },
@@ -274,7 +282,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyStateText: { fontSize: 14, fontWeight: '500' },
-  modalBackdrop: { flex: 1, justifyContent: 'flex-end', padding: 16 },
+  modalBackdrop: { flex: 1, justifyContent: 'flex-end', paddingTop: 16, paddingHorizontal: 16, paddingBottom: 0 },
   modalCard: { borderWidth: 1, borderRadius: 18, padding: 16 },
   modalScroll: { maxHeight: '76%' },
   modalContent: { gap: 12, paddingBottom: 8 },
