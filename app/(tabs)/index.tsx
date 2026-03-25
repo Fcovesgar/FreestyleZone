@@ -1,98 +1,172 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+type RapMode = 'easy' | 'hard' | 'images';
+type Track = 'base-1' | 'base-2' | 'base-3';
 
-export default function HomeScreen() {
+const RAP_MODES: { key: RapMode; label: string }[] = [
+  { key: 'easy', label: 'Easy mode' },
+  { key: 'hard', label: 'Hard mode' },
+  { key: 'images', label: 'Imágenes' },
+];
+
+const TRACKS: { key: Track; label: string }[] = [
+  { key: 'base-1', label: 'Base Boom Bap' },
+  { key: 'base-2', label: 'Base Trap' },
+  { key: 'base-3', label: 'Base Lo-Fi' },
+];
+
+export default function RapearScreen() {
+  const [selectedMode, setSelectedMode] = useState<RapMode | null>(null);
+  const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
+
+  const isReadyToStart = useMemo(() => selectedMode !== null && selectedTrack !== null, [selectedMode, selectedTrack]);
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <View style={styles.container}>
+      <Text style={styles.badge}>FreestyleZone</Text>
+      <Text style={styles.title}>Configura tu sesión</Text>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Tipo de rap</Text>
+        <View style={styles.optionsRow}>
+          {RAP_MODES.map((mode) => (
+            <SelectableChip
+              key={mode.key}
+              label={mode.label}
+              selected={selectedMode === mode.key}
+              onPress={() => setSelectedMode(mode.key)}
+            />
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Pista o base de fondo</Text>
+        <View style={styles.optionsColumn}>
+          {TRACKS.map((track) => (
+            <SelectableChip
+              key={track.key}
+              label={track.label}
+              selected={selectedTrack === track.key}
+              onPress={() => setSelectedTrack(track.key)}
+              fullWidth
+            />
+          ))}
+        </View>
+      </View>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !isReadyToStart }}
+        disabled={!isReadyToStart}
+        onPress={() => {}}
+        style={[styles.startButton, !isReadyToStart && styles.startButtonDisabled]}>
+        <Text style={[styles.startButtonText, !isReadyToStart && styles.startButtonTextDisabled]}>Empezar</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function SelectableChip({
+  label,
+  selected,
+  onPress,
+  fullWidth = false,
+}: {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+  fullWidth?: boolean;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      onPress={onPress}
+      style={[styles.chip, selected && styles.chipSelected, fullWidth && styles.chipFullWidth]}>
+      <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{label}</Text>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: '#000000',
+    paddingHorizontal: 20,
+    paddingTop: 32,
+    gap: 28,
+  },
+  badge: {
+    color: '#9B9B9B',
+    fontSize: 12,
+    letterSpacing: 1.3,
+    textTransform: 'uppercase',
+    fontWeight: '600',
+  },
+  title: {
+    color: '#FFFFFF',
+    fontSize: 30,
+    fontWeight: '800',
+  },
+  section: {
+    gap: 12,
+  },
+  sectionTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  optionsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  optionsColumn: {
+    gap: 10,
+  },
+  chip: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    backgroundColor: '#121212',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  chipSelected: {
+    borderColor: '#FFFFFF',
+    backgroundColor: '#1F1F1F',
+  },
+  chipFullWidth: {
+    width: '100%',
+  },
+  chipText: {
+    color: '#BDBDBD',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  chipTextSelected: {
+    color: '#FFFFFF',
+  },
+  startButton: {
+    marginTop: 'auto',
+    marginBottom: 20,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'center',
+    paddingVertical: 16,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  startButtonDisabled: {
+    backgroundColor: '#2A2A2A',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  startButtonText: {
+    color: '#000000',
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  startButtonTextDisabled: {
+    color: '#787878',
   },
 });
