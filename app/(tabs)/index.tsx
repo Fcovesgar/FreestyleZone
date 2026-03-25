@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Modal, PermissionsAndroid, Platform, Pressable, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -9,6 +9,14 @@ type RapMode = 'easy' | 'hard' | 'incremental' | 'history' | 'ending' | 'images'
 type Track = 'base-1' | 'base-2' | 'base-3';
 type SessionTime = '1-min' | '2-min' | '5-min' | 'infinite';
 type SessionType = 'record' | 'train';
+type CameraFacing = 'front' | 'back';
+
+type SessionSummary = {
+  mode: RapMode | null;
+  sessionType: SessionType;
+  track: Track | null;
+  elapsedSeconds: number;
+};
 
 const RAP_MODES: { key: RapMode; label: string; description: string }[] = [
   { key: 'easy', label: 'Easy', description: 'Palabras cada 10s' },
@@ -38,30 +46,57 @@ const SESSION_TYPES: { key: SessionType; label: string }[] = [
   { key: 'train', label: 'Entrenar' },
 ];
 
+const PRE_RECORD_COUNTDOWN_SECONDS = 5;
+
 export default function RapearScreen() {
   const insets = useSafeAreaInsets();
   const { effectiveColorScheme } = useAppTheme();
   const isDark = effectiveColorScheme === 'dark';
 
-  const themeColors = useMemo(() => ({
-    isDark,
-    screen: isDark ? '#000000' : '#F3F5F8',
-    card: isDark ? '#0D0D0D' : '#FFFFFF',
-    border: isDark ? '#1D1D1D' : '#E2E5EA',
-    textPrimary: isDark ? '#FFFFFF' : '#111111',
-    textSecondary: isDark ? '#8C8C8C' : '#67707D',
-    chipBg: isDark ? '#101010' : '#F4F5F8',
-    chipBorder: isDark ? '#242424' : '#DCE1E7',
-    chipText: isDark ? '#B7B7B7' : '#4B5563',
-    startBg: '#6B46FF',
-    startText: '#FFFFFF',
-    disabledStartBg: isDark ? '#2A2A2A' : '#D1D5DB',
-    disabledStartText: isDark ? '#787878' : '#6B7280',
-  }), [isDark]);
+  const themeColors = useMemo(
+    () => ({
+      isDark,
+      screen: isDark ? '#000000' : '#F3F5F8',
+      card: isDark ? '#0D0D0D' : '#FFFFFF',
+      border: isDark ? '#1D1D1D' : '#E2E5EA',
+      textPrimary: isDark ? '#FFFFFF' : '#111111',
+      textSecondary: isDark ? '#8C8C8C' : '#67707D',
+      chipBg: isDark ? '#101010' : '#F4F5F8',
+      chipBorder: isDark ? '#242424' : '#DCE1E7',
+      chipText: isDark ? '#B7B7B7' : '#4B5563',
+      startBg: '#6B46FF',
+      startText: '#FFFFFF',
+      disabledStartBg: isDark ? '#2A2A2A' : '#D1D5DB',
+      disabledStartText: isDark ? '#787878' : '#6B7280',
+    }),
+    [isDark]
+  );
   const [selectedMode, setSelectedMode] = useState<RapMode | null>('easy');
   const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
   const [selectedSessionTime, setSelectedSessionTime] = useState<SessionTime | null>('1-min');
   const [selectedSessionType, setSelectedSessionType] = useState<SessionType>('record');
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const [sessionVisible, setSessionVisible] = useState(false);
+  const [cameraFacing, setCameraFacing] = useState<CameraFacing>('front');
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [isUnlimitedSession, setIsUnlimitedSession] = useState(false);
+  const [hasSessionStarted, setHasSessionStarted] = useState(false);
+  const [summaryVisible, setSummaryVisible] = useState(false);
+  const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null);
+
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const sessionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const initialSessionSeconds = getSessionDuration(selectedSessionTime);
+
+  useEffect(() => {
+    return () => {
+      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+      if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current);
+    };
+  }, []);
 
   const isReadyToStart = useMemo(
     () => selectedMode !== null && selectedTrack !== null && selectedSessionTime !== null,
@@ -70,6 +105,9 @@ export default function RapearScreen() {
   const topModes = RAP_MODES.filter((mode) => ['easy', 'hard', 'incremental'].includes(mode.key));
   const bottomModes = RAP_MODES.filter((mode) => ['history', 'ending', 'images'].includes(mode.key));
   const availableSessionTimes = selectedSessionType === 'train' ? TRAINING_TIME : SESSION_TIMES;
+
+  const selectedTrackLabel = TRACKS.find((track) => track.key === selectedTrack)?.label ?? '-';
+  const summaryModeInfo = RAP_MODES.find((mode) => mode.key === sessionSummary?.mode);
 
   const onSelectSessionType = (sessionType: SessionType) => {
     setSelectedSessionType(sessionType);
@@ -84,13 +122,169 @@ export default function RapearScreen() {
     }
   };
 
+  const requestCameraPermission = async () => {
+    if (Platform.OS === 'android') {
+      const granted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CAMERA, {
+        title: 'Permiso de cámara',
+        message: 'Necesitamos acceder a tu cámara para grabar tu sesión de freestyle.',
+        buttonPositive: 'Permitir',
+        buttonNegative: 'Cancelar',
+        buttonNeutral: 'Más tarde',
+      });
+
+      const accepted = granted === PermissionsAndroid.RESULTS.GRANTED;
+      setHasCameraPermission(accepted);
+      return accepted;
+    }
+
+    if (Platform.OS === 'web') {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        stream.getTracks().forEach((track) => track.stop());
+        setHasCameraPermission(true);
+        return true;
+      } catch {
+        setHasCameraPermission(false);
+        return false;
+      }
+    }
+
+    // En iOS nativo, sin SDK de cámara instalada, no podemos forzar prompt real aquí.
+    setHasCameraPermission(true);
+    return true;
+  };
+
+  const openSession = async () => {
+    if (!isReadyToStart) return;
+
+    if (selectedSessionType === 'record') {
+      const granted = await requestCameraPermission();
+      if (!granted) {
+        return;
+      }
+    }
+
+    setSessionVisible(true);
+    setCountdown(null);
+    setElapsedSeconds(0);
+    setIsUnlimitedSession(initialSessionSeconds === null);
+    setRemainingSeconds(initialSessionSeconds);
+    setHasSessionStarted(false);
+  };
+
+  const startSessionTimer = () => {
+    if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current);
+    setHasSessionStarted(true);
+
+    sessionIntervalRef.current = setInterval(() => {
+      setElapsedSeconds((previousElapsed) => previousElapsed + 1);
+
+      setRemainingSeconds((previousRemaining) => {
+        if (previousRemaining === null) {
+          return null;
+        }
+
+        if (previousRemaining <= 1) {
+          return 0;
+        }
+
+        return previousRemaining - 1;
+      });
+    }, 1000);
+  };
+
+  const onStartRecordingPress = () => {
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+
+    setCountdown(PRE_RECORD_COUNTDOWN_SECONDS);
+
+    countdownIntervalRef.current = setInterval(() => {
+      setCountdown((previousCountdown) => {
+        if (previousCountdown === null) {
+          return PRE_RECORD_COUNTDOWN_SECONDS;
+        }
+
+        const nextCountdown = previousCountdown - 1;
+        Vibration.vibrate(90);
+
+        if (nextCountdown <= 0) {
+          if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+          startSessionTimer();
+          return null;
+        }
+
+        return nextCountdown;
+      });
+    }, 1000);
+  };
+
+  const finishSession = () => {
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current);
+
+    setSessionVisible(false);
+    setCountdown(null);
+    setRemainingSeconds(initialSessionSeconds);
+    setIsUnlimitedSession(initialSessionSeconds === null);
+    setHasSessionStarted(false);
+    setSessionSummary({
+      mode: selectedMode,
+      sessionType: selectedSessionType,
+      track: selectedTrack,
+      elapsedSeconds,
+    });
+    setSummaryVisible(true);
+    setElapsedSeconds(0);
+  };
+
+  const stopSession = () => {
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current);
+
+    setSessionVisible(false);
+    setCountdown(null);
+    setRemainingSeconds(initialSessionSeconds);
+    setElapsedSeconds(0);
+    setIsUnlimitedSession(initialSessionSeconds === null);
+    setHasSessionStarted(false);
+  };
+
+  const extendSession = () => {
+    setIsUnlimitedSession(true);
+    setRemainingSeconds(null);
+  };
+
+  const shouldShowExtendAction = !isUnlimitedSession && remainingSeconds !== null && remainingSeconds <= 10;
+
+  const displayTimer = isUnlimitedSession || remainingSeconds === null ? formatTime(elapsedSeconds) : formatTime(remainingSeconds);
+  const timerColor = getSessionTimerColor(remainingSeconds, initialSessionSeconds, isUnlimitedSession);
+
+  useEffect(() => {
+    if (!isUnlimitedSession && remainingSeconds === 0) {
+      finishSession();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remainingSeconds, isUnlimitedSession]);
+
+
+  const confirmCloseSummary = () => {
+    Alert.alert(
+      '¿Salir del resumen?',
+      'Si sales ahora, se cerrará este resumen y tendrás que repetir la sesión para volver a verlo.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Salir', style: 'destructive', onPress: () => setSummaryVisible(false) },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: themeColors.screen }]} edges={['top', 'bottom']}>
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ disabled: !isReadyToStart }}
         disabled={!isReadyToStart}
-        onPress={() => {}}
+        onPress={openSession}
         style={[
           styles.startButtonFloating,
           { top: insets.top + 10 },
@@ -199,8 +393,138 @@ export default function RapearScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <Modal visible={sessionVisible} animationType="slide" onRequestClose={stopSession}>
+        <View style={styles.sessionFullscreen}>
+          <View style={[styles.cameraPlaceholder, selectedSessionType === 'train' ? styles.trainingBackground : styles.recordingBackground]}>
+            <View style={[styles.cameraHudTop, { paddingTop: insets.top + 8 }]}> 
+              <View style={styles.sessionHeaderActions}>
+                <Text style={[styles.timer, { color: timerColor }]}>{displayTimer}</Text>
+                {shouldShowExtendAction ? (
+                  <Pressable style={styles.extendButton} onPress={extendSession}>
+                    <MaterialIcons name="add-circle" size={14} color="#FFFFFF" />
+                    <Text style={styles.extendButtonText}>Ampliar</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+              <Pressable style={styles.finishButton} onPress={finishSession}>
+                <Text style={styles.finishButtonText}>Finalizar</Text>
+              </Pressable>
+            </View>
+
+            <View style={[styles.sessionBottomActions, { paddingBottom: insets.bottom + 26 }]}> 
+              {countdown !== null ? (
+                <Text style={[styles.countdownNumber, { color: getCountdownColor(countdown) }]}>{countdown}</Text>
+              ) : null}
+
+              {!hasSessionStarted && countdown === null ? (
+                <View style={styles.preSessionActionsRow}>
+                  <Pressable style={styles.recordButton} onPress={onStartRecordingPress}>
+                    <View style={styles.recordButtonInner} />
+                  </Pressable>
+
+                  {selectedSessionType === 'record' ? (
+                    <Pressable
+                      style={[styles.bottomSwitchCameraButton, styles.bottomSwitchCameraButtonBeforeStart, hasCameraPermission === false && styles.bottomSwitchCameraDisabled]}
+                      accessibilityLabel={`alternar cámara ${cameraFacing === 'front' ? 'frontal' : 'trasera'}`}
+                      disabled={hasCameraPermission === false}
+                      onPress={() => setCameraFacing((previous) => (previous === 'front' ? 'back' : 'front'))}>
+                      <MaterialIcons name="sync-alt" size={20} color="#FFFFFF" />
+                    </Pressable>
+                  ) : null}
+                </View>
+              ) : null}
+
+              {hasSessionStarted && selectedSessionType === 'record' ? (
+                <Pressable
+                  style={[styles.bottomSwitchCameraButton, hasCameraPermission === false && styles.bottomSwitchCameraDisabled]}
+                  accessibilityLabel={`alternar cámara ${cameraFacing === 'front' ? 'frontal' : 'trasera'}`}
+                  disabled={hasCameraPermission === false}
+                  onPress={() => setCameraFacing((previous) => (previous === 'front' ? 'back' : 'front'))}>
+                  <MaterialIcons name="sync-alt" size={22} color="#FFFFFF" />
+                </Pressable>
+              ) : null}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={summaryVisible} animationType="slide" onRequestClose={confirmCloseSummary}>
+        <SafeAreaView style={styles.summaryScreen} edges={['top', 'bottom']}>
+          <View style={styles.summaryHeader}>
+            <Text style={styles.summaryTitle}>Resumen de la sesión</Text>
+            <Pressable onPress={confirmCloseSummary} style={styles.summaryCloseButton}>
+              <MaterialIcons name="close" size={18} color="#FFFFFF" />
+            </Pressable>
+          </View>
+
+          <View style={styles.previewCard}>
+            <View style={styles.previewVideo}>
+              <Text style={styles.previewTimer}>{formatTime(sessionSummary?.elapsedSeconds ?? 0)}</Text>
+            </View>
+            <Text style={styles.previewHint}>Preview con overlay de tiempo (sin botones de control).</Text>
+          </View>
+
+          <View style={styles.summaryMetaCard}>
+            <Text style={styles.summaryMetaText}>Modo: {summaryModeInfo?.label ?? '-'}</Text>
+            <Text style={styles.summaryMetaDescription}>Descripción: {summaryModeInfo?.description ?? '-'}</Text>
+            <Text style={styles.summaryMetaText}>Sesión: {sessionSummary?.sessionType === 'record' ? 'Grabar' : 'Entrenar'}</Text>
+            <Text style={styles.summaryMetaText}>Base: {sessionSummary?.track ? selectedTrackLabel : '-'}</Text>
+            <Text style={styles.summaryMetaText}>Tiempo: {formatTime(sessionSummary?.elapsedSeconds ?? 0)}</Text>
+          </View>
+
+          <View style={styles.summaryActions}>
+            <Pressable
+              style={styles.summaryActionButton}
+              onPress={() => Alert.alert('Guardar en dispositivo', 'Función preparada para conectar con guardado local de video.')}>
+              <MaterialIcons name="download" size={18} color="#FFFFFF" />
+              <Text style={styles.summaryActionText}>Guardar en dispositivo</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.summaryActionButton}
+              onPress={() => Alert.alert('Guardar en perfil', 'Función preparada para publicar el video en el perfil del usuario.')}>
+              <MaterialIcons name="person" size={18} color="#FFFFFF" />
+              <Text style={styles.summaryActionText}>Guardar en perfil</Text>
+            </Pressable>
+          </View>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
+}
+
+function getSessionDuration(time: SessionTime | null) {
+  if (time === '1-min') return 60;
+  if (time === '2-min') return 120;
+  if (time === '5-min') return 300;
+  return null;
+}
+
+function formatTime(totalSeconds: number) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+function getSessionTimerColor(remainingSeconds: number | null, totalSeconds: number | null, isUnlimited: boolean) {
+  if (isUnlimited || totalSeconds === null || remainingSeconds === null) {
+    return '#FFFFFF';
+  }
+
+  const ratio = remainingSeconds / totalSeconds;
+
+  if (ratio > 0.6) return '#22C55E';
+  if (ratio > 0.3) return '#FACC15';
+  if (ratio > 0.1) return '#FB923C';
+  return '#EF4444';
+}
+
+function getCountdownColor(value: number) {
+  if (value > 3) return '#22C55E';
+  if (value > 1) return '#FACC15';
+  return '#EF4444';
 }
 
 function ModeIcon({ mode, color }: { mode: RapMode; color: string }) {
@@ -513,5 +837,191 @@ const styles = StyleSheet.create({
   },
   startButtonTextDisabled: {
     color: '#787878',
+  },
+  sessionFullscreen: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  cameraPlaceholder: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  recordingBackground: {
+    backgroundColor: '#1A1A1A',
+  },
+  trainingBackground: {
+    backgroundColor: '#14122A',
+  },
+  cameraHudTop: {
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  sessionHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  timer: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  finishButton: {
+    borderRadius: 999,
+    backgroundColor: '#0000007A',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  finishButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  extendButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#FFFFFF66',
+    backgroundColor: '#00000066',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  extendButtonText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  preSessionActionsRow: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  bottomSwitchCameraButton: {
+    alignItems: 'center',
+    gap: 2,
+    padding: 8,
+  },
+  bottomSwitchCameraButtonBeforeStart: {
+    position: 'absolute',
+    left: '50%',
+    marginLeft: 58,
+  },
+  bottomSwitchCameraDisabled: {
+    opacity: 0.4,
+  },
+
+  summaryScreen: {
+    flex: 1,
+    backgroundColor: '#050505',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    gap: 16,
+  },
+  summaryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  summaryTitle: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  summaryCloseButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#222222',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  summaryMetaCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#2B2B2B',
+    backgroundColor: '#101010',
+    padding: 14,
+    gap: 6,
+  },
+  summaryMetaText: {
+    color: '#D8D8D8',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  summaryMetaDescription: {
+    color: '#AFAFAF',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  previewCard: {
+    gap: 8,
+  },
+  previewVideo: {
+    height: 320,
+    borderRadius: 16,
+    backgroundColor: '#1A1A1A',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+    padding: 14,
+  },
+  previewTimer: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  previewHint: {
+    color: '#909090',
+    fontSize: 12,
+  },
+  summaryActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 'auto',
+  },
+  summaryActionButton: {
+    flex: 1,
+    borderRadius: 12,
+    backgroundColor: '#6B46FF',
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  summaryActionText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+
+  sessionBottomActions: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 150,
+  },
+  recordButton: {
+    width: 86,
+    height: 86,
+    borderRadius: 43,
+    borderWidth: 4,
+    borderColor: '#FFFFFFAA',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  recordButtonInner: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: '#EF4444',
+  },
+  countdownNumber: {
+    fontSize: 82,
+    fontWeight: '800',
   },
 });
