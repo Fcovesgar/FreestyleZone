@@ -1,18 +1,19 @@
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 type RapMode = 'easy' | 'hard' | 'incremental' | 'history' | 'ending' | 'images';
 type Track = 'base-1' | 'base-2' | 'base-3';
 type SessionTime = '1-min' | '2-min' | '5-min' | 'infinite';
 type SessionType = 'record' | 'train';
 
-const RAP_MODES: { key: RapMode; label: string; description: string; icon: string }[] = [
-  { key: 'easy', label: 'Easy', description: 'Palabras cada 10s', icon: '●' },
-  { key: 'hard', label: 'Hard', description: 'Palabras cada 5s', icon: '⚡' },
-  { key: 'incremental', label: 'Incremental', description: 'Palabras cada 10s - 5s - 2s', icon: '▲' },
-  { key: 'history', label: 'Historia', description: 'Crea historia con palabras', icon: '✍️' },
-  { key: 'ending', label: 'Terminación', description: 'Rapea con terminaciones', icon: '◎' },
-  { key: 'images', label: 'Imágenes', description: 'Rapea con imágenes', icon: '▣' },
+const RAP_MODES: { key: RapMode; label: string; description: string }[] = [
+  { key: 'easy', label: 'Easy', description: 'Palabras cada 10s' },
+  { key: 'hard', label: 'Hard', description: 'Palabras cada 5s' },
+  { key: 'incremental', label: 'Incremental', description: 'Palabras cada 10s - 5s - 2s' },
+  { key: 'history', label: 'Historia', description: 'Crea historia con palabras' },
+  { key: 'ending', label: 'Terminación', description: 'Rapea con terminaciones' },
+  { key: 'images', label: 'Imágenes', description: 'Rapea con imágenes' },
 ];
 
 const TRACKS: { key: Track; label: string }[] = [
@@ -44,8 +45,8 @@ export default function RapearScreen() {
     () => selectedMode !== null && selectedTrack !== null && selectedSessionTime !== null,
     [selectedMode, selectedTrack, selectedSessionTime]
   );
-  const standardModes = RAP_MODES.filter((mode) => mode.key !== 'images');
-  const imageMode = RAP_MODES.find((mode) => mode.key === 'images');
+  const topModes = RAP_MODES.filter((mode) => ['easy', 'hard', 'incremental'].includes(mode.key));
+  const bottomModes = RAP_MODES.filter((mode) => ['history', 'ending', 'images'].includes(mode.key));
   const availableSessionTimes = selectedSessionType === 'train' ? TRAINING_TIME : SESSION_TIMES;
 
   const onSelectSessionType = (sessionType: SessionType) => {
@@ -62,102 +63,153 @@ export default function RapearScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      <Text style={styles.badge}>FreestyleZone</Text>
-      <Text style={styles.title}>Configura tu sesión</Text>
-
-      <View style={styles.sessionTypeCard}>
-        <Text style={styles.sectionTitle}>Rapear</Text>
-        <Text style={styles.sessionTypeHelp}>Elige cómo quieres usar la sesión</Text>
-        <View style={styles.sessionTypeRow}>
-          {SESSION_TYPES.map((sessionType) => (
-            <SelectableChip
-              key={sessionType.key}
-              label={sessionType.label}
-              selected={selectedSessionType === sessionType.key}
-              onPress={() => onSelectSessionType(sessionType.key)}
-              fullWidth
-            />
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Selecciona el modo.</Text>
-        <View style={styles.modePrimaryRow}>
-          {standardModes.map((mode) => (
-            <SelectableChip
-              key={mode.key}
-              label={mode.label}
-              description={mode.description}
-              icon={mode.icon}
-              selected={selectedMode === mode.key}
-              onPress={() => setSelectedMode(mode.key)}
-              selectionVariant={mode.key}
-              modePrimary
-            />
-          ))}
-        </View>
-        {imageMode ? (
-          <View style={styles.optionsColumn}>
-            <SelectableChip
-              label={imageMode.label}
-              description={imageMode.description}
-              icon={imageMode.icon}
-              selected={selectedMode === imageMode.key}
-              onPress={() => setSelectedMode(imageMode.key)}
-              selectionVariant={imageMode.key}
-              fullWidth
-            />
-          </View>
-        ) : null}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Base de fondo</Text>
-        <View style={styles.optionsColumn}>
-          {TRACKS.map((track) => (
-            <SelectableChip
-              key={track.key}
-              label={track.label}
-              selected={selectedTrack === track.key}
-              onPress={() => setSelectedTrack(track.key)}
-              fullWidth
-            />
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Tiempo de la sesión</Text>
-        <View style={styles.optionsRow}>
-          {availableSessionTimes.map((sessionTime) => (
-            <SelectableChip
-              key={sessionTime.key}
-              label={sessionTime.label}
-              selected={selectedSessionTime === sessionTime.key}
-              onPress={() => setSelectedSessionTime(sessionTime.key)}
-            />
-          ))}
-        </View>
-      </View>
-
+    <View style={styles.screen}>
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ disabled: !isReadyToStart }}
         disabled={!isReadyToStart}
         onPress={() => {}}
-        style={[styles.startButton, !isReadyToStart && styles.startButtonDisabled]}>
+        style={[styles.startButtonFloating, !isReadyToStart && styles.startButtonDisabled]}>
         <Text style={[styles.startButtonText, !isReadyToStart && styles.startButtonTextDisabled]}>Empezar</Text>
       </Pressable>
-    </ScrollView>
+
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+        <Text style={styles.badge}>FreestyleZone</Text>
+        <Text style={styles.title}>Configura tu sesión</Text>
+
+        <View style={styles.sessionTypeCard}>
+          <Text style={styles.sectionTitle}>Rapear</Text>
+          <Text style={styles.sessionTypeHelp}>Elige cómo quieres usar la sesión</Text>
+          <View style={styles.sessionTypeRow}>
+            {SESSION_TYPES.map((sessionType) => (
+              <SelectableChip
+                key={sessionType.key}
+                label={sessionType.label}
+                selected={selectedSessionType === sessionType.key}
+                onPress={() => onSelectSessionType(sessionType.key)}
+                fullWidth
+              />
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Selecciona el modo.</Text>
+          <View style={styles.modePrimaryRow}>
+            {topModes.map((mode) => (
+              <SelectableChip
+                key={mode.key}
+                label={mode.label}
+                description={mode.description}
+                selected={selectedMode === mode.key}
+                onPress={() => setSelectedMode(mode.key)}
+                selectionVariant={mode.key}
+                modePrimary
+              />
+            ))}
+          </View>
+          <View style={styles.modePrimaryRow}>
+            {bottomModes.map((mode) => (
+              <SelectableChip
+                key={mode.key}
+                label={mode.label}
+                description={mode.description}
+                selected={selectedMode === mode.key}
+                onPress={() => setSelectedMode(mode.key)}
+                selectionVariant={mode.key}
+                modePrimary
+              />
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Base de fondo</Text>
+          <View style={styles.optionsColumn}>
+            {TRACKS.map((track) => (
+              <SelectableChip
+                key={track.key}
+                label={track.label}
+                selected={selectedTrack === track.key}
+                onPress={() => setSelectedTrack(track.key)}
+                fullWidth
+              />
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Tiempo de la sesión</Text>
+          <View style={styles.optionsRow}>
+            {availableSessionTimes.map((sessionTime) => (
+              <SelectableChip
+                key={sessionTime.key}
+                label={sessionTime.label}
+                selected={selectedSessionTime === sessionTime.key}
+                onPress={() => setSelectedSessionTime(sessionTime.key)}
+              />
+            ))}
+          </View>
+        </View>
+      </ScrollView>
+    </View>
   );
+}
+
+function ModeIcon({ mode, color }: { mode: RapMode; color: string }) {
+  const iconNameByMode: Record<RapMode, string> = {
+    easy: 'security',
+    hard: 'flash-on',
+    incremental: 'local-fire-department',
+    history: 'history-edu',
+    ending: 'text-fields',
+    images: 'image',
+  };
+
+  if (mode === 'easy') {
+    return <MaterialIcons name={iconNameByMode[mode] as any} size={24} color={color} />;
+  }
+
+  if (mode === 'hard') {
+    return <MaterialIcons name={iconNameByMode[mode] as any} size={24} color={color} />;
+  }
+
+  if (mode === 'images') {
+    return <MaterialIcons name={iconNameByMode[mode] as any} size={24} color={color} />;
+  }
+
+  return <MaterialIcons name={iconNameByMode[mode] as any} size={24} color={color} />;
+}
+
+function getModeColor(mode: RapMode, selected: boolean) {
+  if (!selected) {
+    return '#9F9F9F';
+  }
+
+  if (mode === 'easy') return '#22C55E';
+  if (mode === 'hard') return '#F97316';
+  if (mode === 'incremental') return '#EF4444';
+  if (mode === 'history') return '#38BDF8';
+  if (mode === 'ending') return '#FACC15';
+  return '#A855F7';
+}
+
+function getModeGlow(mode: RapMode, selected: boolean) {
+  if (!selected) {
+    return 'transparent';
+  }
+
+  if (mode === 'easy') return '#22C55E99';
+  if (mode === 'hard') return '#F9731699';
+  if (mode === 'incremental') return '#EF444499';
+  if (mode === 'history') return '#38BDF899';
+  if (mode === 'ending') return '#FACC1599';
+  return '#A855F799';
 }
 
 function SelectableChip({
   label,
   description,
-  icon,
   selected,
   onPress,
   fullWidth = false,
@@ -166,7 +218,6 @@ function SelectableChip({
 }: {
   label: string;
   description?: string;
-  icon?: string;
   selected: boolean;
   onPress: () => void;
   fullWidth?: boolean;
@@ -184,27 +235,11 @@ function SelectableChip({
             ? styles.chipSelectedHistory
             : selected && selectionVariant === 'ending'
               ? styles.chipSelectedEnding
-          : selected && selectionVariant === 'images'
-          ? styles.chipSelectedImages
-          : selected
-            ? styles.chipSelected
-            : null;
-  const iconTextStyle =
-    selected && selectionVariant === 'easy'
-      ? styles.iconTextEasy
-      : selected && selectionVariant === 'hard'
-        ? styles.iconTextHard
-        : selected && selectionVariant === 'incremental'
-          ? styles.iconTextIncremental
-          : selected && selectionVariant === 'history'
-            ? styles.iconTextHistory
-            : selected && selectionVariant === 'ending'
-              ? styles.iconTextEnding
-          : selected && selectionVariant === 'images'
-            ? styles.iconTextImages
-            : selected
-              ? styles.iconTextSelected
-              : null;
+              : selected && selectionVariant === 'images'
+                ? styles.chipSelectedImages
+                : selected
+                  ? styles.chipSelected
+                  : null;
 
   return (
     <Pressable
@@ -212,9 +247,11 @@ function SelectableChip({
       accessibilityState={{ selected }}
       onPress={onPress}
       style={[styles.chip, selectedStyle, fullWidth && styles.chipFullWidth, modePrimary && styles.modePrimaryChip]}>
-      {icon ? (
+      {selectionVariant !== 'default' ? (
         <View style={styles.iconWrap}>
-          <Text style={[styles.iconText, iconTextStyle]}>{icon}</Text>
+          <View style={[styles.iconGlowWrap, { shadowColor: getModeGlow(selectionVariant, selected) }]}>
+            <ModeIcon mode={selectionVariant} color={getModeColor(selectionVariant, selected)} />
+          </View>
         </View>
       ) : null}
       <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{label}</Text>
@@ -226,13 +263,17 @@ function SelectableChip({
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
   container: {
     flex: 1,
     backgroundColor: '#000000',
   },
   contentContainer: {
     paddingHorizontal: 20,
-    paddingTop: 32,
+    paddingTop: 88,
     paddingBottom: 24,
     gap: 28,
   },
@@ -279,7 +320,6 @@ const styles = StyleSheet.create({
   },
   modePrimaryRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
   },
   optionsColumn: {
@@ -323,6 +363,11 @@ const styles = StyleSheet.create({
   },
   chipFullWidth: {
     width: '100%',
+    flex: 1,
+  },
+  modePrimaryChip: {
+    flex: 1,
+    minWidth: 0,
   },
   modePrimaryChip: {
     flex: 1,
@@ -351,62 +396,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  iconText: {
-    fontSize: 20,
-    color: '#9F9F9F',
-    textShadowColor: 'transparent',
-    textShadowRadius: 0,
+  iconGlowWrap: {
+    shadowOpacity: 0.9,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 8,
   },
-  iconTextSelected: {
-    color: '#FFFFFF',
-    textShadowColor: '#FFFFFF66',
-    textShadowRadius: 10,
-  },
-  iconTextEasy: {
-    color: '#22C55E',
-    textShadowColor: '#22C55E99',
-    textShadowRadius: 12,
-  },
-  iconTextHard: {
-    color: '#F97316',
-    textShadowColor: '#F9731699',
-    textShadowRadius: 12,
-  },
-  iconTextIncremental: {
-    color: '#EF4444',
-    textShadowColor: '#EF444499',
-    textShadowRadius: 12,
-  },
-  iconTextHistory: {
-    color: '#38BDF8',
-    textShadowColor: '#38BDF899',
-    textShadowRadius: 12,
-  },
-  iconTextEnding: {
-    color: '#FACC15',
-    textShadowColor: '#FACC1599',
-    textShadowRadius: 12,
-  },
-  iconTextImages: {
-    color: '#A855F7',
-    textShadowColor: '#A855F799',
-    textShadowRadius: 12,
-  },
-  startButton: {
-    marginTop: 8,
-    marginBottom: 8,
+  startButtonFloating: {
+    position: 'absolute',
+    top: 28,
+    right: 20,
+    zIndex: 10,
     borderRadius: 14,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
   },
   startButtonDisabled: {
     backgroundColor: '#2A2A2A',
   },
   startButtonText: {
     color: '#000000',
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
   },
   startButtonTextDisabled: {
