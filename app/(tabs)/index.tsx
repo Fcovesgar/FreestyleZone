@@ -476,7 +476,7 @@ export default function RapearScreen() {
             <View style={[styles.previewVideo, { backgroundColor: summaryTheme.previewBg, borderColor: summaryTheme.cardBorder }]}>
               <Text style={[styles.previewTimer, { color: summaryTheme.primaryText }]}>{formatTime(sessionSummary?.elapsedSeconds ?? 0)}</Text>
             </View>
-            <Text style={[styles.previewHint, { color: summaryTheme.tertiaryText }]}>Preview con overlay de tiempo (sin botones de control).</Text>
+            <Text style={[styles.previewHint, { color: summaryTheme.tertiaryText }]}>Preview de la sesión.</Text>
           </View>
 
           <View style={[styles.summaryMetaCard, { backgroundColor: summaryTheme.cardBg, borderColor: summaryTheme.cardBorder }]}>
@@ -492,7 +492,7 @@ export default function RapearScreen() {
               style={[styles.summaryActionButton, { backgroundColor: summaryTheme.buttonBg }]}
               onPress={() => Alert.alert('Guardar en dispositivo', 'Función preparada para conectar con guardado local de video.')}>
               <MaterialIcons name="download" size={18} color="#FFFFFF" />
-              <Text style={styles.summaryActionText}>Guardar en dispositivo</Text>
+              <Text style={styles.summaryActionText}>Guardar en galería</Text>
             </Pressable>
 
             <Pressable
