@@ -284,7 +284,7 @@ export default function RapearScreen() {
   const confirmCloseSummary = () => {
     Alert.alert(
       '¿Salir del resumen?',
-      'Si sales ahora,se cerrará este resumen y perderás la sesión.',
+      'Si sales ahora,se cerrará este resumey y perderás la sesión.',
       [
         { text: 'Cancelar', style: 'cancel' },
         { text: 'Salir', style: 'destructive', onPress: () => setSummaryVisible(false) },
@@ -468,7 +468,7 @@ export default function RapearScreen() {
           <View style={styles.summaryHeader}>
             <Text style={[styles.summaryTitle, { color: summaryTheme.primaryText }]}>Resumen de la sesión</Text>
             <Pressable onPress={confirmCloseSummary} style={[styles.summaryCloseButton, { backgroundColor: summaryTheme.closeBg }]}>
-              <MaterialIcons name="close" size={18} color="#FFFFFF" />
+              <MaterialIcons name="close" size={18} color={summaryTheme.primaryText} />
             </Pressable>
           </View>
 
