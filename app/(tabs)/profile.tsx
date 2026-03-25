@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const USER = {
   username: '@mc_verso',
@@ -7,7 +8,7 @@ const USER = {
 
 export default function ProfileScreen() {
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>MV</Text>
@@ -29,7 +30,7 @@ export default function ProfileScreen() {
           <Text style={styles.rapSectionText}>Usa la pestaña del micrófono para crear una nueva sesión.</Text>
         </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -38,7 +39,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000000',
     paddingHorizontal: 20,
-    paddingTop: 32,
+    paddingTop: 22,
     gap: 24,
   },
   header: {
@@ -46,14 +47,14 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   avatar: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: '#191919',
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: '#141414',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: '#202020',
   },
   avatarText: {
     color: '#FFFFFF',
@@ -62,46 +63,46 @@ const styles = StyleSheet.create({
   },
   username: {
     color: '#FFFFFF',
-    fontSize: 28,
-    fontWeight: '800',
+    fontSize: 26,
+    fontWeight: '700',
   },
   rapStyle: {
-    color: '#D1D1D1',
-    fontSize: 15,
-    fontWeight: '600',
+    color: '#AEAEAE',
+    fontSize: 14,
+    fontWeight: '500',
   },
   section: {
     gap: 12,
   },
   sectionTitle: {
     color: '#FFFFFF',
-    fontSize: 19,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '600',
   },
   emptyState: {
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
-    backgroundColor: '#111111',
+    borderColor: '#1E1E1E',
+    backgroundColor: '#0E0E0E',
     minHeight: 120,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
   },
   emptyStateText: {
-    color: '#BEBEBE',
-    fontSize: 15,
+    color: '#9A9A9A',
+    fontSize: 14,
   },
   rapSectionCard: {
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
-    backgroundColor: '#111111',
+    borderColor: '#1E1E1E',
+    backgroundColor: '#0E0E0E',
     padding: 16,
   },
   rapSectionText: {
-    color: '#BEBEBE',
-    fontSize: 15,
-    lineHeight: 22,
+    color: '#9A9A9A',
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

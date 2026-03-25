@@ -1,5 +1,7 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
+import { StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -9,6 +11,8 @@ const ACTIVE_COLOR = '#FFFFFF';
 const INACTIVE_COLOR = '#7D7D7D';
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tabs
       initialRouteName="index"
@@ -21,23 +25,28 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: TAB_BAR_BACKGROUND,
           borderTopColor: '#151515',
-          height: 74,
+          height: 62 + insets.bottom,
           paddingTop: 10,
-          paddingBottom: 12,
+          paddingBottom: Math.max(insets.bottom, 12),
         },
       }}>
       <Tabs.Screen
         name="challenge"
         options={{
           title: 'Reto diario',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="flame.fill" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={24} name="flag.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="index"
         options={{
           title: 'Rapear',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="mic.fill" color={color} />,
+          tabBarIcon: ({ focused }) => (
+            <View style={[styles.micTabIcon, focused && styles.micTabIconFocused]}>
+              <View style={styles.micTabAccent} />
+              <IconSymbol size={20} name="mic.fill" color="#FFFFFF" />
+            </View>
+          ),
         }}
       />
       <Tabs.Screen
@@ -50,3 +59,33 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  micTabIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#101014',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#27272E',
+  },
+  micTabIconFocused: {
+    borderColor: '#6B46FF',
+    shadowColor: '#6B46FF',
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 6,
+  },
+  micTabAccent: {
+    position: 'absolute',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 10,
+    borderColor: '#6B46FF55',
+  },
+});

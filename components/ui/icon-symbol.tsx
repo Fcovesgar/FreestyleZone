@@ -21,6 +21,7 @@ const MAPPING = {
   'mic.fill': 'mic',
   'person.fill': 'person',
   'flame.fill': 'local-fire-department',
+  'flag.fill': 'flag',
 } as IconMapping;
 
 /**
