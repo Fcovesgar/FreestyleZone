@@ -259,6 +259,9 @@ function SelectableChip({
   selectionVariant?: RapMode | 'default';
   themeColors: { chipBg: string; chipBorder: string; chipText: string; textPrimary: string; textSecondary: string };
 }) {
+  const isDarkTheme = themeColors.textPrimary === '#FFFFFF';
+  const selectedReadableText = isDarkTheme ? '#FFFFFF' : '#111111';
+
   const selectedStyle =
     selected && selectionVariant === 'easy'
       ? styles.chipSelectedEasy
@@ -289,9 +292,9 @@ function SelectableChip({
           </View>
         </View>
       ) : null}
-      <Text style={[styles.chipText, { color: themeColors.chipText }, selected && [styles.chipTextSelected, { color: themeColors.textPrimary }]]}>{label}</Text>
+      <Text style={[styles.chipText, { color: themeColors.chipText }, selected && [styles.chipTextSelected, { color: selectedReadableText }]]}>{label}</Text>
       {description ? (
-        <Text style={[styles.chipDescription, { color: themeColors.textSecondary }, selected && [styles.chipDescriptionSelected, { color: themeColors.textPrimary }]]}>{description}</Text>
+        <Text style={[styles.chipDescription, { color: themeColors.textSecondary }, selected && [styles.chipDescriptionSelected, { color: selectedReadableText }]]}>{description}</Text>
       ) : null}
     </Pressable>
   );

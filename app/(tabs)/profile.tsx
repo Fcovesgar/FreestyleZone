@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import {
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -78,7 +80,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.headerRow}>
           <View style={styles.userRow}>
             <Image source={{ uri: profile.avatarUri }} style={[styles.avatar, { borderColor: colors.border }]} contentFit="cover" />
@@ -94,12 +96,14 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          <Pressable onPress={() => setSettingsVisible(true)} style={[styles.settingsBtn, { borderColor: colors.border, backgroundColor: colors.card }]}>
+          <Pressable
+            onPress={() => setSettingsVisible(true)}
+            style={[styles.settingsBtn, { borderColor: colors.border, backgroundColor: colors.card }]}>
             <MaterialIcons name="settings" size={20} color={colors.textPrimary} />
           </Pressable>
         </View>
 
-        <View style={[styles.dataCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={[styles.dataCard, { backgroundColor: colors.card }]}>
           <Text style={[styles.bioLabel, { color: colors.textSecondary }]}>Bio</Text>
           <Text style={[styles.bioText, { color: colors.textPrimary }]}>{profile.bio}</Text>
         </View>
@@ -108,74 +112,84 @@ export default function ProfileScreen() {
           <MaterialIcons name="grid-view" size={20} color={colors.textSecondary} />
         </View>
 
-        <View style={[styles.emptyState, { borderColor: colors.border, backgroundColor: colors.card }]}>
+        <View style={[styles.emptyState, { backgroundColor: colors.card }]}>
           <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>Aún no hay videos.</Text>
         </View>
       </ScrollView>
 
       <Modal animationType="slide" transparent visible={editModalVisible} onRequestClose={() => setEditModalVisible(false)}>
-        <View style={[styles.modalBackdrop, { backgroundColor: colors.overlay }]}>
-          <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}> 
-            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Editar perfil</Text>
+        <KeyboardAvoidingView
+          style={[styles.modalBackdrop, { backgroundColor: colors.overlay }]}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <ScrollView style={styles.modalScroll} contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
+              <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Editar perfil</Text>
 
-            <Field
-              label="Ciudad"
-              value={draftProfile.city}
-              onChangeText={(text) => setDraftProfile((prev) => ({ ...prev, city: text }))}
-              colors={colors}
-            />
-            <Field
-              label="Bio"
-              value={draftProfile.bio}
-              onChangeText={(text) => setDraftProfile((prev) => ({ ...prev, bio: text }))}
-              colors={colors}
-              multiline
-            />
+              <Field
+                label="Nombre de usuario"
+                value={draftProfile.username}
+                onChangeText={(text) => setDraftProfile((prev) => ({ ...prev, username: text }))}
+                colors={colors}
+              />
+              <Field
+                label="Ciudad"
+                value={draftProfile.city}
+                onChangeText={(text) => setDraftProfile((prev) => ({ ...prev, city: text }))}
+                colors={colors}
+              />
+              <Field
+                label="Bio"
+                value={draftProfile.bio}
+                onChangeText={(text) => setDraftProfile((prev) => ({ ...prev, bio: text }))}
+                colors={colors}
+                multiline
+              />
 
-            <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Imagen de perfil</Text>
-            <Pressable onPress={rotateAvatar} style={[styles.imagePickerBtn, { borderColor: colors.border, backgroundColor: colors.inputBg }]}>
-              <MaterialIcons name="photo-library" size={16} color={colors.textPrimary} />
-              <Text style={[styles.imagePickerBtnText, { color: colors.textPrimary }]}>Seleccionar del dispositivo</Text>
-            </Pressable>
-
-            <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Estilo de rapeo</Text>
-            <View style={styles.chipsRow}>
-              {RAP_STYLES.map((style) => {
-                const selected = draftProfile.rapStyle === style;
-                return (
-                  <Pressable
-                    key={style}
-                    onPress={() => setDraftProfile((prev) => ({ ...prev, rapStyle: style }))}
-                    style={[
-                      styles.chip,
-                      {
-                        borderColor: selected ? '#6B46FF' : colors.border,
-                        backgroundColor: selected ? '#6B46FF22' : colors.inputBg,
-                      },
-                    ]}>
-                    <Text style={{ color: selected ? '#6B46FF' : colors.textPrimary, fontWeight: selected ? '700' : '500' }}>
-                      {style}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            <View style={styles.modalActions}>
-              <Pressable onPress={() => setEditModalVisible(false)} style={[styles.actionBtn, { borderColor: colors.border }]}>
-                <Text style={[styles.actionBtnText, { color: colors.textPrimary }]}>Cancelar</Text>
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Imagen de perfil</Text>
+              <Pressable onPress={rotateAvatar} style={[styles.imagePickerBtn, { borderColor: colors.border, backgroundColor: colors.inputBg }]}>
+                <MaterialIcons name="photo-library" size={16} color={colors.textPrimary} />
+                <Text style={[styles.imagePickerBtnText, { color: colors.textPrimary }]}>Seleccionar del dispositivo</Text>
               </Pressable>
-              <Pressable onPress={saveProfileChanges} style={[styles.actionBtn, styles.actionBtnPrimary]}>
-                <Text style={styles.actionBtnPrimaryText}>Aceptar</Text>
-              </Pressable>
-            </View>
+
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Estilo de rapeo</Text>
+              <View style={styles.chipsRow}>
+                {RAP_STYLES.map((style) => {
+                  const selected = draftProfile.rapStyle === style;
+                  return (
+                    <Pressable
+                      key={style}
+                      onPress={() => setDraftProfile((prev) => ({ ...prev, rapStyle: style }))}
+                      style={[
+                        styles.chip,
+                        {
+                          borderColor: selected ? '#6B46FF' : colors.border,
+                          backgroundColor: selected ? '#6B46FF22' : colors.inputBg,
+                        },
+                      ]}>
+                      <Text style={{ color: selected ? '#6B46FF' : colors.textPrimary, fontWeight: selected ? '700' : '500' }}>
+                        {style}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <View style={styles.modalActions}>
+                <Pressable onPress={() => setEditModalVisible(false)} style={[styles.actionBtn, { borderColor: colors.border }]}> 
+                  <Text style={[styles.actionBtnText, { color: colors.textPrimary }]}>Cancelar</Text>
+                </Pressable>
+                <Pressable onPress={saveProfileChanges} style={[styles.actionBtn, styles.actionBtnPrimary]}>
+                  <Text style={styles.actionBtnPrimaryText}>Aceptar</Text>
+                </Pressable>
+              </View>
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal animationType="fade" transparent visible={settingsVisible} onRequestClose={() => setSettingsVisible(false)}>
         <View style={[styles.modalBackdrop, { backgroundColor: colors.overlay }]}>
-          <View style={[styles.settingsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.settingsCard, { backgroundColor: colors.card, borderColor: colors.border }]}> 
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Configuración</Text>
             <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Tema de la app</Text>
             <View style={styles.themeButtonsWrap}>
@@ -190,7 +204,7 @@ export default function ProfileScreen() {
                 <Text style={styles.themeBtnText}>Oscuro</Text>
               </Pressable>
             </View>
-            <Pressable onPress={() => setSettingsVisible(false)} style={[styles.closeSettingsBtn, { borderColor: colors.border }]}>
+            <Pressable onPress={() => setSettingsVisible(false)} style={[styles.closeSettingsBtn, { borderColor: colors.border }]}> 
               <Text style={[styles.actionBtnText, { color: colors.textPrimary }]}>Cerrar</Text>
             </Pressable>
           </View>
@@ -233,7 +247,7 @@ function Field({
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { paddingHorizontal: 20, paddingTop: 16, gap: 18, paddingBottom: 30 },
+  content: { paddingHorizontal: 20, paddingTop: 24, gap: 18, paddingBottom: 30 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   userRow: { flexDirection: 'row', gap: 12 },
   avatar: { width: 70, height: 70, borderRadius: 35, borderWidth: 1 },
@@ -249,20 +263,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  dataCard: { borderWidth: 1, borderRadius: 14, padding: 14, gap: 4 },
+  dataCard: { borderRadius: 14, padding: 14, gap: 4 },
   bioLabel: { fontSize: 12, fontWeight: '600' },
   bioText: { fontSize: 14, lineHeight: 20 },
   gridHeader: { alignItems: 'center', marginTop: 8 },
   emptyState: {
     minHeight: 130,
     borderRadius: 14,
-    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   emptyStateText: { fontSize: 14, fontWeight: '500' },
   modalBackdrop: { flex: 1, justifyContent: 'flex-end', padding: 16 },
-  modalCard: { borderWidth: 1, borderRadius: 18, padding: 16, gap: 12 },
+  modalCard: { borderWidth: 1, borderRadius: 18, padding: 16 },
+  modalScroll: { maxHeight: '76%' },
+  modalContent: { gap: 12, paddingBottom: 8 },
   settingsCard: { borderWidth: 1, borderRadius: 14, padding: 16, gap: 12, alignSelf: 'stretch' },
   modalTitle: { fontSize: 18, fontWeight: '700' },
   fieldWrap: { gap: 6 },
