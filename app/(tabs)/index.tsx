@@ -106,8 +106,8 @@ export default function RapearScreen() {
   const bottomModes = RAP_MODES.filter((mode) => ['history', 'ending', 'images'].includes(mode.key));
   const availableSessionTimes = selectedSessionType === 'train' ? TRAINING_TIME : SESSION_TIMES;
 
-  const selectedModeLabel = RAP_MODES.find((mode) => mode.key === selectedMode)?.label ?? '-';
   const selectedTrackLabel = TRACKS.find((track) => track.key === selectedTrack)?.label ?? '-';
+  const summaryModeInfo = RAP_MODES.find((mode) => mode.key === sessionSummary?.mode);
 
   const onSelectSessionType = (sessionType: SessionType) => {
     setSelectedSessionType(sessionType);
@@ -265,6 +265,18 @@ export default function RapearScreen() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remainingSeconds, isUnlimitedSession]);
+
+
+  const confirmCloseSummary = () => {
+    Alert.alert(
+      '¿Salir del resumen?',
+      'Si sales ahora, se cerrará este resumen y tendrás que repetir la sesión para volver a verlo.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Salir', style: 'destructive', onPress: () => setSummaryVisible(false) },
+      ]
+    );
+  };
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: themeColors.screen }]} edges={['top', 'bottom']}>
@@ -437,20 +449,13 @@ export default function RapearScreen() {
         </View>
       </Modal>
 
-      <Modal visible={summaryVisible} animationType="slide" onRequestClose={() => setSummaryVisible(false)}>
+      <Modal visible={summaryVisible} animationType="slide" onRequestClose={confirmCloseSummary}>
         <SafeAreaView style={styles.summaryScreen} edges={['top', 'bottom']}>
           <View style={styles.summaryHeader}>
             <Text style={styles.summaryTitle}>Resumen de la sesión</Text>
-            <Pressable onPress={() => setSummaryVisible(false)} style={styles.summaryCloseButton}>
+            <Pressable onPress={confirmCloseSummary} style={styles.summaryCloseButton}>
               <MaterialIcons name="close" size={18} color="#FFFFFF" />
             </Pressable>
-          </View>
-
-          <View style={styles.summaryMetaCard}>
-            <Text style={styles.summaryMetaText}>Modo: {sessionSummary?.mode ? selectedModeLabel : '-'}</Text>
-            <Text style={styles.summaryMetaText}>Sesión: {sessionSummary?.sessionType === 'record' ? 'Grabar' : 'Entrenar'}</Text>
-            <Text style={styles.summaryMetaText}>Base: {sessionSummary?.track ? selectedTrackLabel : '-'}</Text>
-            <Text style={styles.summaryMetaText}>Tiempo: {formatTime(sessionSummary?.elapsedSeconds ?? 0)}</Text>
           </View>
 
           <View style={styles.previewCard}>
@@ -458,6 +463,14 @@ export default function RapearScreen() {
               <Text style={styles.previewTimer}>{formatTime(sessionSummary?.elapsedSeconds ?? 0)}</Text>
             </View>
             <Text style={styles.previewHint}>Preview con overlay de tiempo (sin botones de control).</Text>
+          </View>
+
+          <View style={styles.summaryMetaCard}>
+            <Text style={styles.summaryMetaText}>Modo: {summaryModeInfo?.label ?? '-'}</Text>
+            <Text style={styles.summaryMetaDescription}>Descripción: {summaryModeInfo?.description ?? '-'}</Text>
+            <Text style={styles.summaryMetaText}>Sesión: {sessionSummary?.sessionType === 'record' ? 'Grabar' : 'Entrenar'}</Text>
+            <Text style={styles.summaryMetaText}>Base: {sessionSummary?.track ? selectedTrackLabel : '-'}</Text>
+            <Text style={styles.summaryMetaText}>Tiempo: {formatTime(sessionSummary?.elapsedSeconds ?? 0)}</Text>
           </View>
 
           <View style={styles.summaryActions}>
@@ -940,6 +953,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  summaryMetaDescription: {
+    color: '#AFAFAF',
+    fontSize: 13,
+    fontWeight: '500',
+  },
   previewCard: {
     gap: 8,
   },
@@ -961,14 +979,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   summaryActions: {
+    flexDirection: 'row',
     gap: 10,
     marginTop: 'auto',
   },
   summaryActionButton: {
+    flex: 1,
     borderRadius: 12,
     backgroundColor: '#6B46FF',
     paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
