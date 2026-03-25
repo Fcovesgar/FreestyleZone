@@ -369,6 +369,10 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
+  modePrimaryChip: {
+    flex: 1,
+    minWidth: 0,
+  },
   chipText: {
     color: '#BDBDBD',
     fontSize: 15,
