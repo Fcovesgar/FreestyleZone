@@ -284,7 +284,7 @@ export default function RapearScreen() {
   const confirmCloseSummary = () => {
     Alert.alert(
       '¿Salir del resumen?',
-      'Si sales ahora,se cerrará este resumey y perderás la sesión.',
+      'Si sales ahora,se cerrará este resumen y perderás la sesión.',
       [
         { text: 'Cancelar', style: 'cancel' },
         { text: 'Salir', style: 'destructive', onPress: () => setSummaryVisible(false) },
