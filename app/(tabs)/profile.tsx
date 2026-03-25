@@ -119,11 +119,10 @@ export default function ProfileScreen() {
       </ScrollView>
 
       <Modal animationType="slide" transparent visible={editModalVisible} onRequestClose={() => setEditModalVisible(false)}>
-        <KeyboardAvoidingView
-          style={[styles.modalBackdrop, { backgroundColor: colors.overlay }]}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <ScrollView style={styles.modalScroll} contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
+        <View style={[styles.modalBackdrop, { backgroundColor: colors.overlay }]}>
+          <KeyboardAvoidingView style={styles.keyboardAvoider} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <ScrollView style={styles.modalScroll} contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
               <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Editar perfil</Text>
 
               <Field
@@ -184,9 +183,10 @@ export default function ProfileScreen() {
                   <Text style={styles.actionBtnPrimaryText}>Aceptar</Text>
                 </Pressable>
               </View>
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
+              </ScrollView>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
       </Modal>
 
       <Modal animationType="fade" transparent visible={settingsVisible} onRequestClose={() => setSettingsVisible(false)}>
@@ -282,7 +282,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyStateText: { fontSize: 14, fontWeight: '500' },
-  modalBackdrop: { flex: 1, justifyContent: 'flex-end', paddingTop: 16, paddingHorizontal: 16, paddingBottom: 0 },
+  modalBackdrop: { flex: 1, justifyContent: 'flex-end', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 0 },
+  keyboardAvoider: { width: '100%' },
   modalCard: { borderWidth: 1, borderRadius: 18, padding: 16 },
   modalScroll: { maxHeight: '76%' },
   modalContent: { gap: 12, paddingBottom: 8 },
