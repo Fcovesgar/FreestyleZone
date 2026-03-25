@@ -34,7 +34,7 @@ export default function TabLayout() {
         name="challenge"
         options={{
           title: 'Reto diario',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="flame.fill" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={24} name="flag.fill" color={color} />,
         }}
       />
       <Tabs.Screen
@@ -43,8 +43,7 @@ export default function TabLayout() {
           title: 'Rapear',
           tabBarIcon: ({ focused }) => (
             <View style={[styles.micTabIcon, focused && styles.micTabIconFocused]}>
-              <View style={styles.micTabGlowLeft} />
-              <View style={styles.micTabGlowRight} />
+              <View style={styles.micTabAccent} />
               <IconSymbol size={20} name="mic.fill" color="#FFFFFF" />
             </View>
           ),
@@ -63,36 +62,30 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   micTabIcon: {
-    width: 38,
-    height: 28,
-    borderRadius: 9,
-    backgroundColor: '#141414',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#101014',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: '#27272E',
   },
   micTabIconFocused: {
-    backgroundColor: '#1A1A1A',
-    borderColor: '#3A3A3A',
+    borderColor: '#6B46FF',
+    shadowColor: '#6B46FF',
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 6,
   },
-  micTabGlowLeft: {
+  micTabAccent: {
     position: 'absolute',
-    left: -10,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#25F4EE',
-    opacity: 0.55,
-  },
-  micTabGlowRight: {
-    position: 'absolute',
-    right: -10,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#FE2C55',
-    opacity: 0.55,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 10,
+    borderColor: '#6B46FF55',
   },
 });
