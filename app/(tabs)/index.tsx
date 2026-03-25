@@ -1,16 +1,18 @@
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-type RapMode = 'easy' | 'hard' | 'incremental' | 'images';
+type RapMode = 'easy' | 'hard' | 'incremental' | 'history' | 'ending' | 'images';
 type Track = 'base-1' | 'base-2' | 'base-3';
 type SessionTime = '1-min' | '2-min' | '5-min' | 'infinite';
 type SessionType = 'record' | 'train';
 
 const RAP_MODES: { key: RapMode; label: string; description: string; icon: string }[] = [
-  { key: 'easy', label: 'Easy', description: 'Palabras cada 10s', icon: '🛡️' },
+  { key: 'easy', label: 'Easy', description: 'Palabras cada 10s', icon: '●' },
   { key: 'hard', label: 'Hard', description: 'Palabras cada 5s', icon: '⚡' },
-  { key: 'incremental', label: 'Incremental', description: 'Palabras cada 10s - 5s - 2s', icon: '🌪️' },
-  { key: 'images', label: 'Imágenes', description: 'Rapea con imágenes', icon: '🖼️' },
+  { key: 'incremental', label: 'Incremental', description: 'Palabras cada 10s - 5s - 2s', icon: '▲' },
+  { key: 'history', label: 'Historia', description: 'Crea historia con palabras', icon: '✍️' },
+  { key: 'ending', label: 'Terminación', description: 'Rapea con terminaciones', icon: '◎' },
+  { key: 'images', label: 'Imágenes', description: 'Rapea con imágenes', icon: '▣' },
 ];
 
 const TRACKS: { key: Track; label: string }[] = [
@@ -60,9 +62,25 @@ export default function RapearScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <Text style={styles.badge}>FreestyleZone</Text>
       <Text style={styles.title}>Configura tu sesión</Text>
+
+      <View style={styles.sessionTypeCard}>
+        <Text style={styles.sectionTitle}>Rapear</Text>
+        <Text style={styles.sessionTypeHelp}>Elige cómo quieres usar la sesión</Text>
+        <View style={styles.sessionTypeRow}>
+          {SESSION_TYPES.map((sessionType) => (
+            <SelectableChip
+              key={sessionType.key}
+              label={sessionType.label}
+              selected={selectedSessionType === sessionType.key}
+              onPress={() => onSelectSessionType(sessionType.key)}
+              fullWidth
+            />
+          ))}
+        </View>
+      </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Selecciona el modo.</Text>
@@ -111,20 +129,6 @@ export default function RapearScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Rapear</Text>
-        <View style={styles.optionsRow}>
-          {SESSION_TYPES.map((sessionType) => (
-            <SelectableChip
-              key={sessionType.key}
-              label={sessionType.label}
-              selected={selectedSessionType === sessionType.key}
-              onPress={() => onSelectSessionType(sessionType.key)}
-            />
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.section}>
         <Text style={styles.sectionTitle}>Tiempo de la sesión</Text>
         <View style={styles.optionsRow}>
           {availableSessionTimes.map((sessionTime) => (
@@ -146,7 +150,7 @@ export default function RapearScreen() {
         style={[styles.startButton, !isReadyToStart && styles.startButtonDisabled]}>
         <Text style={[styles.startButtonText, !isReadyToStart && styles.startButtonTextDisabled]}>Empezar</Text>
       </Pressable>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -176,23 +180,15 @@ function SelectableChip({
         ? styles.chipSelectedHard
         : selected && selectionVariant === 'incremental'
           ? styles.chipSelectedIncremental
+          : selected && selectionVariant === 'history'
+            ? styles.chipSelectedHistory
+            : selected && selectionVariant === 'ending'
+              ? styles.chipSelectedEnding
           : selected && selectionVariant === 'images'
           ? styles.chipSelectedImages
           : selected
             ? styles.chipSelected
             : null;
-  const iconContainerStyle =
-    selected && selectionVariant === 'easy'
-      ? styles.iconRingEasy
-      : selected && selectionVariant === 'hard'
-        ? styles.iconRingHard
-        : selected && selectionVariant === 'incremental'
-          ? styles.iconRingIncremental
-          : selected && selectionVariant === 'images'
-            ? styles.iconRingImages
-            : selected
-              ? styles.iconRingSelected
-              : null;
   const iconTextStyle =
     selected && selectionVariant === 'easy'
       ? styles.iconTextEasy
@@ -200,6 +196,10 @@ function SelectableChip({
         ? styles.iconTextHard
         : selected && selectionVariant === 'incremental'
           ? styles.iconTextIncremental
+          : selected && selectionVariant === 'history'
+            ? styles.iconTextHistory
+            : selected && selectionVariant === 'ending'
+              ? styles.iconTextEnding
           : selected && selectionVariant === 'images'
             ? styles.iconTextImages
             : selected
@@ -213,7 +213,7 @@ function SelectableChip({
       onPress={onPress}
       style={[styles.chip, selectedStyle, fullWidth && styles.chipFullWidth, modePrimary && styles.modePrimaryChip]}>
       {icon ? (
-        <View style={[styles.iconRing, iconContainerStyle]}>
+        <View style={styles.iconWrap}>
           <Text style={[styles.iconText, iconTextStyle]}>{icon}</Text>
         </View>
       ) : null}
@@ -229,8 +229,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000000',
+  },
+  contentContainer: {
     paddingHorizontal: 20,
     paddingTop: 32,
+    paddingBottom: 24,
     gap: 28,
   },
   badge: {
@@ -258,8 +261,25 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 10,
   },
+  sessionTypeCard: {
+    backgroundColor: '#101010',
+    borderWidth: 1,
+    borderColor: '#242424',
+    borderRadius: 16,
+    padding: 14,
+    gap: 10,
+  },
+  sessionTypeHelp: {
+    color: '#9B9B9B',
+    fontSize: 13,
+  },
+  sessionTypeRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
   modePrimaryRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
   },
   optionsColumn: {
@@ -293,6 +313,14 @@ const styles = StyleSheet.create({
     borderColor: '#A855F7',
     backgroundColor: '#20152F',
   },
+  chipSelectedHistory: {
+    borderColor: '#38BDF8',
+    backgroundColor: '#122632',
+  },
+  chipSelectedEnding: {
+    borderColor: '#FACC15',
+    backgroundColor: '#2E2A16',
+  },
   chipFullWidth: {
     width: '100%',
   },
@@ -304,6 +332,7 @@ const styles = StyleSheet.create({
     color: '#BDBDBD',
     fontSize: 15,
     fontWeight: '600',
+    textAlign: 'center',
   },
   chipTextSelected: {
     color: '#FFFFFF',
@@ -313,57 +342,59 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
     fontWeight: '500',
+    textAlign: 'center',
   },
   chipDescriptionSelected: {
     color: '#D8D8D8',
   },
-  iconRing: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#3A3A3A',
+  iconWrap: {
     alignItems: 'center',
-    justifyContent: 'center',
     marginBottom: 8,
   },
-  iconRingSelected: {
-    borderColor: '#FFFFFF',
-  },
-  iconRingEasy: {
-    borderColor: '#22C55E',
-  },
-  iconRingHard: {
-    borderColor: '#F97316',
-  },
-  iconRingIncremental: {
-    borderColor: '#EF4444',
-  },
-  iconRingImages: {
-    borderColor: '#A855F7',
-  },
   iconText: {
-    fontSize: 14,
+    fontSize: 20,
     color: '#9F9F9F',
+    textShadowColor: 'transparent',
+    textShadowRadius: 0,
   },
   iconTextSelected: {
     color: '#FFFFFF',
+    textShadowColor: '#FFFFFF66',
+    textShadowRadius: 10,
   },
   iconTextEasy: {
     color: '#22C55E',
+    textShadowColor: '#22C55E99',
+    textShadowRadius: 12,
   },
   iconTextHard: {
     color: '#F97316',
+    textShadowColor: '#F9731699',
+    textShadowRadius: 12,
   },
   iconTextIncremental: {
     color: '#EF4444',
+    textShadowColor: '#EF444499',
+    textShadowRadius: 12,
+  },
+  iconTextHistory: {
+    color: '#38BDF8',
+    textShadowColor: '#38BDF899',
+    textShadowRadius: 12,
+  },
+  iconTextEnding: {
+    color: '#FACC15',
+    textShadowColor: '#FACC1599',
+    textShadowRadius: 12,
   },
   iconTextImages: {
     color: '#A855F7',
+    textShadowColor: '#A855F799',
+    textShadowRadius: 12,
   },
   startButton: {
-    marginTop: 'auto',
-    marginBottom: 20,
+    marginTop: 8,
+    marginBottom: 8,
     borderRadius: 14,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
