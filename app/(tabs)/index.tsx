@@ -382,7 +382,7 @@ export default function RapearScreen() {
 
                   {selectedSessionType === 'record' ? (
                     <Pressable
-                      style={[styles.bottomSwitchCameraButton, hasCameraPermission === false && styles.bottomSwitchCameraDisabled]}
+                      style={[styles.bottomSwitchCameraButton, styles.bottomSwitchCameraButtonBeforeStart, hasCameraPermission === false && styles.bottomSwitchCameraDisabled]}
                       accessibilityLabel={`alternar cámara ${cameraFacing === 'front' ? 'frontal' : 'trasera'}`}
                       disabled={hasCameraPermission === false}
                       onPress={() => setCameraFacing((previous) => (previous === 'front' ? 'back' : 'front'))}>
@@ -764,7 +764,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   recordingBackground: {
-    backgroundColor: '#111111',
+    backgroundColor: '#1A1A1A',
   },
   trainingBackground: {
     backgroundColor: '#14122A',
@@ -813,14 +813,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   preSessionActionsRow: {
-    flexDirection: 'row',
+    width: '100%',
     alignItems: 'center',
-    gap: 16,
+    justifyContent: 'center',
+    position: 'relative',
   },
   bottomSwitchCameraButton: {
     alignItems: 'center',
     gap: 2,
     padding: 8,
+  },
+  bottomSwitchCameraButtonBeforeStart: {
+    position: 'absolute',
+    left: '50%',
+    marginLeft: 58,
   },
   bottomSwitchCameraText: {
     color: '#FFFFFF',
