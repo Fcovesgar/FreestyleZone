@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, PermissionsAndroid, Platform, Pressable, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
+import { Alert, Modal, PermissionsAndroid, Platform, Pressable, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,6 +10,13 @@ type Track = 'base-1' | 'base-2' | 'base-3';
 type SessionTime = '1-min' | '2-min' | '5-min' | 'infinite';
 type SessionType = 'record' | 'train';
 type CameraFacing = 'front' | 'back';
+
+type SessionSummary = {
+  mode: RapMode | null;
+  sessionType: SessionType;
+  track: Track | null;
+  elapsedSeconds: number;
+};
 
 const RAP_MODES: { key: RapMode; label: string; description: string }[] = [
   { key: 'easy', label: 'Easy', description: 'Palabras cada 10s' },
@@ -76,6 +83,8 @@ export default function RapearScreen() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [isUnlimitedSession, setIsUnlimitedSession] = useState(false);
   const [hasSessionStarted, setHasSessionStarted] = useState(false);
+  const [summaryVisible, setSummaryVisible] = useState(false);
+  const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null);
 
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -96,6 +105,9 @@ export default function RapearScreen() {
   const topModes = RAP_MODES.filter((mode) => ['easy', 'hard', 'incremental'].includes(mode.key));
   const bottomModes = RAP_MODES.filter((mode) => ['history', 'ending', 'images'].includes(mode.key));
   const availableSessionTimes = selectedSessionType === 'train' ? TRAINING_TIME : SESSION_TIMES;
+
+  const selectedModeLabel = RAP_MODES.find((mode) => mode.key === selectedMode)?.label ?? '-';
+  const selectedTrackLabel = TRACKS.find((track) => track.key === selectedTrack)?.label ?? '-';
 
   const onSelectSessionType = (sessionType: SessionType) => {
     setSelectedSessionType(sessionType);
@@ -206,6 +218,25 @@ export default function RapearScreen() {
     }, 1000);
   };
 
+  const finishSession = () => {
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current);
+
+    setSessionVisible(false);
+    setCountdown(null);
+    setRemainingSeconds(initialSessionSeconds);
+    setIsUnlimitedSession(initialSessionSeconds === null);
+    setHasSessionStarted(false);
+    setSessionSummary({
+      mode: selectedMode,
+      sessionType: selectedSessionType,
+      track: selectedTrack,
+      elapsedSeconds,
+    });
+    setSummaryVisible(true);
+    setElapsedSeconds(0);
+  };
+
   const stopSession = () => {
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current);
@@ -230,7 +261,7 @@ export default function RapearScreen() {
 
   useEffect(() => {
     if (!isUnlimitedSession && remainingSeconds === 0) {
-      stopSession();
+      finishSession();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remainingSeconds, isUnlimitedSession]);
@@ -364,7 +395,7 @@ export default function RapearScreen() {
                   </Pressable>
                 ) : null}
               </View>
-              <Pressable style={styles.finishButton} onPress={stopSession}>
+              <Pressable style={styles.finishButton} onPress={finishSession}>
                 <Text style={styles.finishButtonText}>Finalizar</Text>
               </Pressable>
             </View>
@@ -387,7 +418,6 @@ export default function RapearScreen() {
                       disabled={hasCameraPermission === false}
                       onPress={() => setCameraFacing((previous) => (previous === 'front' ? 'back' : 'front'))}>
                       <MaterialIcons name="sync-alt" size={20} color="#FFFFFF" />
-                      <Text style={styles.bottomSwitchCameraText}>alternar cámara</Text>
                     </Pressable>
                   ) : null}
                 </View>
@@ -400,12 +430,52 @@ export default function RapearScreen() {
                   disabled={hasCameraPermission === false}
                   onPress={() => setCameraFacing((previous) => (previous === 'front' ? 'back' : 'front'))}>
                   <MaterialIcons name="sync-alt" size={22} color="#FFFFFF" />
-                  <Text style={styles.bottomSwitchCameraText}>alternar cámara</Text>
                 </Pressable>
               ) : null}
             </View>
           </View>
         </View>
+      </Modal>
+
+      <Modal visible={summaryVisible} animationType="slide" onRequestClose={() => setSummaryVisible(false)}>
+        <SafeAreaView style={styles.summaryScreen} edges={['top', 'bottom']}>
+          <View style={styles.summaryHeader}>
+            <Text style={styles.summaryTitle}>Resumen de la sesión</Text>
+            <Pressable onPress={() => setSummaryVisible(false)} style={styles.summaryCloseButton}>
+              <MaterialIcons name="close" size={18} color="#FFFFFF" />
+            </Pressable>
+          </View>
+
+          <View style={styles.summaryMetaCard}>
+            <Text style={styles.summaryMetaText}>Modo: {sessionSummary?.mode ? selectedModeLabel : '-'}</Text>
+            <Text style={styles.summaryMetaText}>Sesión: {sessionSummary?.sessionType === 'record' ? 'Grabar' : 'Entrenar'}</Text>
+            <Text style={styles.summaryMetaText}>Base: {sessionSummary?.track ? selectedTrackLabel : '-'}</Text>
+            <Text style={styles.summaryMetaText}>Tiempo: {formatTime(sessionSummary?.elapsedSeconds ?? 0)}</Text>
+          </View>
+
+          <View style={styles.previewCard}>
+            <View style={styles.previewVideo}>
+              <Text style={styles.previewTimer}>{formatTime(sessionSummary?.elapsedSeconds ?? 0)}</Text>
+            </View>
+            <Text style={styles.previewHint}>Preview con overlay de tiempo (sin botones de control).</Text>
+          </View>
+
+          <View style={styles.summaryActions}>
+            <Pressable
+              style={styles.summaryActionButton}
+              onPress={() => Alert.alert('Guardar en dispositivo', 'Función preparada para conectar con guardado local de video.')}>
+              <MaterialIcons name="download" size={18} color="#FFFFFF" />
+              <Text style={styles.summaryActionText}>Guardar en dispositivo</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.summaryActionButton}
+              onPress={() => Alert.alert('Guardar en perfil', 'Función preparada para publicar el video en el perfil del usuario.')}>
+              <MaterialIcons name="person" size={18} color="#FFFFFF" />
+              <Text style={styles.summaryActionText}>Guardar en perfil</Text>
+            </Pressable>
+          </View>
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );
@@ -828,15 +898,88 @@ const styles = StyleSheet.create({
     left: '50%',
     marginLeft: 58,
   },
-  bottomSwitchCameraText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '500',
-    textTransform: 'lowercase',
-  },
   bottomSwitchCameraDisabled: {
     opacity: 0.4,
   },
+
+  summaryScreen: {
+    flex: 1,
+    backgroundColor: '#050505',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    gap: 16,
+  },
+  summaryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  summaryTitle: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  summaryCloseButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#222222',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  summaryMetaCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#2B2B2B',
+    backgroundColor: '#101010',
+    padding: 14,
+    gap: 6,
+  },
+  summaryMetaText: {
+    color: '#D8D8D8',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  previewCard: {
+    gap: 8,
+  },
+  previewVideo: {
+    height: 320,
+    borderRadius: 16,
+    backgroundColor: '#1A1A1A',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+    padding: 14,
+  },
+  previewTimer: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  previewHint: {
+    color: '#909090',
+    fontSize: 12,
+  },
+  summaryActions: {
+    gap: 10,
+    marginTop: 'auto',
+  },
+  summaryActionButton: {
+    borderRadius: 12,
+    backgroundColor: '#6B46FF',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  summaryActionText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+
   sessionBottomActions: {
     alignItems: 'center',
     justifyContent: 'center',
