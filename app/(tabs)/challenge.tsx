@@ -1,12 +1,17 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useAppTheme } from '@/context/app-theme-context';
+
 export default function DailyChallengeOverlayScreen() {
+  const { effectiveColorScheme } = useAppTheme();
+  const isDark = effectiveColorScheme === 'dark';
+
   return (
-    <SafeAreaView style={styles.backdrop} edges={['top', 'bottom']}>
-      <View style={styles.overlayCard}>
-        <Text style={styles.title}>Reto diario</Text>
-        <Text style={styles.description}>Overlay pendiente de diseño.</Text>
+    <SafeAreaView style={[styles.backdrop, { backgroundColor: isDark ? '#060606' : '#F2F4F7' }]} edges={['top', 'bottom']}>
+      <View style={[styles.overlayCard, { borderColor: isDark ? '#202020' : '#DFE3E8', backgroundColor: isDark ? '#0E0E0E' : '#FFFFFF' }]}>
+        <Text style={[styles.title, { color: isDark ? '#FFFFFF' : '#111111' }]}>Reto diario</Text>
+        <Text style={[styles.description, { color: isDark ? '#9C9C9C' : '#667085' }]}>Overlay pendiente de diseño.</Text>
       </View>
     </SafeAreaView>
   );
@@ -15,27 +20,22 @@ export default function DailyChallengeOverlayScreen() {
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: '#060606',
     justifyContent: 'center',
     paddingHorizontal: 20,
   },
   overlayCard: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#202020',
-    backgroundColor: '#0E0E0E',
     paddingVertical: 24,
     paddingHorizontal: 20,
     alignItems: 'center',
     gap: 6,
   },
   title: {
-    color: '#FFFFFF',
     fontSize: 22,
     fontWeight: '700',
   },
   description: {
-    color: '#9C9C9C',
     fontSize: 14,
   },
 });

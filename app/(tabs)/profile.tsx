@@ -1,154 +1,201 @@
 import { useMemo, useState } from 'react';
 import {
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAppTheme } from '@/context/app-theme-context';
 
 type RapStyle = 'Doble punch' | 'Metriquero' | 'Batallero';
 
+type ProfileData = {
+  username: string;
+  city: string;
+  bio: string;
+  rapStyle: RapStyle;
+  avatarUri: string;
+};
+
 const RAP_STYLES: RapStyle[] = ['Doble punch', 'Metriquero', 'Batallero'];
 
-const RECORDINGS = [
-  { id: '1', title: '#PunchlineChallenge', views: '12.8K', likes: '2.1K' },
-  { id: '2', title: '#BatallaEnPlaza', views: '9.4K', likes: '1.2K' },
-  { id: '3', title: '#FMSFlow', views: '22.3K', likes: '4.8K' },
+const AVATAR_OPTIONS = [
+  'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=400&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop',
 ];
 
 export default function ProfileScreen() {
-  const [username, setUsername] = useState('@mc_verso');
-  const [city, setCity] = useState('Madrid, ES');
-  const [bio, setBio] = useState('MC en progreso, barras y métricas todos los días.');
-  const [rapStyle, setRapStyle] = useState<RapStyle>('Doble punch');
-  const [avatarInitials, setAvatarInitials] = useState('MV');
-
   const { effectiveColorScheme, themePreference, setThemePreference } = useAppTheme();
   const isDark = effectiveColorScheme === 'dark';
 
+  const [profile, setProfile] = useState<ProfileData>({
+    username: '@mc_verso',
+    city: 'Madrid, ES',
+    bio: 'MC en progreso, barras y métricas todos los días.',
+    rapStyle: 'Doble punch',
+    avatarUri: AVATAR_OPTIONS[0],
+  });
+  const [draftProfile, setDraftProfile] = useState<ProfileData>(profile);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [settingsVisible, setSettingsVisible] = useState(false);
+
   const colors = useMemo(
     () => ({
-      background: isDark ? '#000000' : '#F4F5F7',
+      background: isDark ? '#020202' : '#F2F4F7',
       card: isDark ? '#0E0E0E' : '#FFFFFF',
-      border: isDark ? '#1E1E1E' : '#E3E3E3',
-      textPrimary: isDark ? '#FFFFFF' : '#0B0B0B',
-      textSecondary: isDark ? '#AEAEAE' : '#5E5E5E',
-      inputBackground: isDark ? '#131313' : '#F2F2F2',
-      selectedChip: '#6B46FF',
+      border: isDark ? '#1E1E1E' : '#DFE3E8',
+      textPrimary: isDark ? '#FFFFFF' : '#141414',
+      textSecondary: isDark ? '#AFAFAF' : '#5F646D',
+      inputBg: isDark ? '#131313' : '#F4F5F7',
+      overlay: isDark ? '#000000A8' : '#00000066',
     }),
     [isDark]
   );
 
+  const openEditModal = () => {
+    setDraftProfile(profile);
+    setEditModalVisible(true);
+  };
+
+  const saveProfileChanges = () => {
+    setProfile(draftProfile);
+    setEditModalVisible(false);
+  };
+
+  const rotateAvatar = () => {
+    const currentIndex = AVATAR_OPTIONS.findIndex((item) => item === draftProfile.avatarUri);
+    const nextIndex = (currentIndex + 1) % AVATAR_OPTIONS.length;
+    setDraftProfile((prev) => ({ ...prev, avatarUri: AVATAR_OPTIONS[nextIndex] }));
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <View style={[styles.avatar, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.avatarText, { color: colors.textPrimary }]}>{avatarInitials}</Text>
+        <View style={styles.headerRow}>
+          <View style={styles.userRow}>
+            <Image source={{ uri: profile.avatarUri }} style={[styles.avatar, { borderColor: colors.border }]} contentFit="cover" />
+            <View>
+              <View style={styles.nameRow}>
+                <Text style={[styles.username, { color: colors.textPrimary }]}>{profile.username}</Text>
+                <Pressable onPress={openEditModal} style={styles.iconBtn}>
+                  <MaterialIcons name="edit" size={18} color={colors.textPrimary} />
+                </Pressable>
+              </View>
+              <Text style={[styles.metaText, { color: colors.textSecondary }]}>{profile.city}</Text>
+              <Text style={[styles.metaText, { color: colors.textSecondary }]}>Estilo: {profile.rapStyle}</Text>
+            </View>
           </View>
-          <Pressable
-            style={[styles.photoButton, { borderColor: colors.border, backgroundColor: colors.card }]}
-            onPress={() => setAvatarInitials((prev) => (prev === 'MV' ? 'FZ' : 'MV'))}>
-            <Text style={[styles.photoButtonText, { color: colors.textPrimary }]}>Cambiar foto de perfil</Text>
+
+          <Pressable onPress={() => setSettingsVisible(true)} style={[styles.settingsBtn, { borderColor: colors.border, backgroundColor: colors.card }]}>
+            <MaterialIcons name="settings" size={20} color={colors.textPrimary} />
           </Pressable>
         </View>
 
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Editar datos del perfil</Text>
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}> 
-            <Field label="Usuario" value={username} onChangeText={setUsername} colors={colors} />
-            <Field label="Ciudad" value={city} onChangeText={setCity} colors={colors} />
-            <Field label="Bio" value={bio} onChangeText={setBio} colors={colors} multiline />
+        <View style={[styles.dataCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.bioLabel, { color: colors.textSecondary }]}>Bio</Text>
+          <Text style={[styles.bioText, { color: colors.textPrimary }]}>{profile.bio}</Text>
+        </View>
 
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Estilo de rapeo</Text>
+        <View style={styles.gridHeader}>
+          <MaterialIcons name="grid-view" size={20} color={colors.textSecondary} />
+        </View>
+
+        <View style={[styles.emptyState, { borderColor: colors.border, backgroundColor: colors.card }]}>
+          <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>Aún no hay videos.</Text>
+        </View>
+      </ScrollView>
+
+      <Modal animationType="slide" transparent visible={editModalVisible} onRequestClose={() => setEditModalVisible(false)}>
+        <View style={[styles.modalBackdrop, { backgroundColor: colors.overlay }]}>
+          <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}> 
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Editar perfil</Text>
+
+            <Field
+              label="Ciudad"
+              value={draftProfile.city}
+              onChangeText={(text) => setDraftProfile((prev) => ({ ...prev, city: text }))}
+              colors={colors}
+            />
+            <Field
+              label="Bio"
+              value={draftProfile.bio}
+              onChangeText={(text) => setDraftProfile((prev) => ({ ...prev, bio: text }))}
+              colors={colors}
+              multiline
+            />
+
+            <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Imagen de perfil</Text>
+            <Pressable onPress={rotateAvatar} style={[styles.imagePickerBtn, { borderColor: colors.border, backgroundColor: colors.inputBg }]}>
+              <MaterialIcons name="photo-library" size={16} color={colors.textPrimary} />
+              <Text style={[styles.imagePickerBtnText, { color: colors.textPrimary }]}>Seleccionar del dispositivo</Text>
+            </Pressable>
+
+            <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Estilo de rapeo</Text>
             <View style={styles.chipsRow}>
               {RAP_STYLES.map((style) => {
-                const selected = rapStyle === style;
+                const selected = draftProfile.rapStyle === style;
                 return (
                   <Pressable
                     key={style}
-                    onPress={() => setRapStyle(style)}
+                    onPress={() => setDraftProfile((prev) => ({ ...prev, rapStyle: style }))}
                     style={[
                       styles.chip,
                       {
-                        borderColor: selected ? colors.selectedChip : colors.border,
-                        backgroundColor: selected ? '#6B46FF22' : colors.inputBackground,
+                        borderColor: selected ? '#6B46FF' : colors.border,
+                        backgroundColor: selected ? '#6B46FF22' : colors.inputBg,
                       },
                     ]}>
-                    <Text
-                      style={{
-                        color: selected ? colors.selectedChip : colors.textPrimary,
-                        fontWeight: selected ? '700' : '500',
-                      }}>
+                    <Text style={{ color: selected ? '#6B46FF' : colors.textPrimary, fontWeight: selected ? '700' : '500' }}>
                       {style}
                     </Text>
                   </Pressable>
                 );
               })}
             </View>
-          </View>
-        </View>
 
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Mis grabaciones</Text>
-          <View style={styles.recordingsGrid}>
-            {RECORDINGS.map((video) => (
-              <View key={video.id} style={[styles.tiktokCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <View style={styles.tiktokPlay}>
-                  <Text style={styles.tiktokPlayText}>▶</Text>
-                </View>
-                <Text style={[styles.tiktokTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-                  {video.title}
-                </Text>
-                <Text style={[styles.tiktokStats, { color: colors.textSecondary }]}>
-                  {video.views} vistas · {video.likes} likes
-                </Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Configuración del perfil</Text>
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}> 
-            <View style={styles.themeRow}>
-              <Text style={[styles.label, { color: colors.textPrimary }]}>Modo de la app</Text>
-              <View style={styles.themeButtonsWrap}>
-                <Pressable
-                  onPress={() => setThemePreference('light')}
-                  style={[
-                    styles.themeButton,
-                    themePreference === 'light' && styles.themeButtonActive,
-                  ]}>
-                  <Text style={styles.themeButtonText}>Claro</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => setThemePreference('dark')}
-                  style={[
-                    styles.themeButton,
-                    themePreference === 'dark' && styles.themeButtonActive,
-                  ]}>
-                  <Text style={styles.themeButtonText}>Oscuro</Text>
-                </Pressable>
-              </View>
-            </View>
-
-            <View style={styles.themeRow}>
-              <Text style={[styles.label, { color: colors.textPrimary }]}>Alternar con switch</Text>
-              <Switch
-                value={themePreference === 'dark'}
-                onValueChange={(enabled) => setThemePreference(enabled ? 'dark' : 'light')}
-              />
+            <View style={styles.modalActions}>
+              <Pressable onPress={() => setEditModalVisible(false)} style={[styles.actionBtn, { borderColor: colors.border }]}>
+                <Text style={[styles.actionBtnText, { color: colors.textPrimary }]}>Cancelar</Text>
+              </Pressable>
+              <Pressable onPress={saveProfileChanges} style={[styles.actionBtn, styles.actionBtnPrimary]}>
+                <Text style={styles.actionBtnPrimaryText}>Aceptar</Text>
+              </Pressable>
             </View>
           </View>
         </View>
-      </ScrollView>
+      </Modal>
+
+      <Modal animationType="fade" transparent visible={settingsVisible} onRequestClose={() => setSettingsVisible(false)}>
+        <View style={[styles.modalBackdrop, { backgroundColor: colors.overlay }]}>
+          <View style={[styles.settingsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Configuración</Text>
+            <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Tema de la app</Text>
+            <View style={styles.themeButtonsWrap}>
+              <Pressable
+                onPress={() => setThemePreference('light')}
+                style={[styles.themeBtn, themePreference === 'light' && styles.themeBtnActive]}>
+                <Text style={styles.themeBtnText}>Claro</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setThemePreference('dark')}
+                style={[styles.themeBtn, themePreference === 'dark' && styles.themeBtnActive]}>
+                <Text style={styles.themeBtnText}>Oscuro</Text>
+              </Pressable>
+            </View>
+            <Pressable onPress={() => setSettingsVisible(false)} style={[styles.closeSettingsBtn, { borderColor: colors.border }]}>
+              <Text style={[styles.actionBtnText, { color: colors.textPrimary }]}>Cerrar</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -163,173 +210,77 @@ function Field({
   label: string;
   value: string;
   onChangeText: (text: string) => void;
-  colors: {
-    textSecondary: string;
-    textPrimary: string;
-    border: string;
-    inputBackground: string;
-  };
+  colors: { textPrimary: string; textSecondary: string; border: string; inputBg: string };
   multiline?: boolean;
 }) {
   return (
     <View style={styles.fieldWrap}>
-      <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>
+      <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>{label}</Text>
       <TextInput
         value={value}
         onChangeText={onChangeText}
         multiline={multiline}
         style={[
           styles.input,
-          {
-            color: colors.textPrimary,
-            borderColor: colors.border,
-            backgroundColor: colors.inputBackground,
-          },
+          { color: colors.textPrimary, borderColor: colors.border, backgroundColor: colors.inputBg },
           multiline && styles.multiline,
         ]}
-        placeholderTextColor="#8C8C8C"
+        placeholderTextColor="#8A8A8A"
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 30,
-    gap: 24,
-  },
-  header: {
-    alignItems: 'center',
-    gap: 12,
-  },
-  avatar: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    alignItems: 'center',
+  container: { flex: 1 },
+  content: { paddingHorizontal: 20, paddingTop: 16, gap: 18, paddingBottom: 30 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  userRow: { flexDirection: 'row', gap: 12 },
+  avatar: { width: 70, height: 70, borderRadius: 35, borderWidth: 1 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  username: { fontSize: 24, fontWeight: '700' },
+  iconBtn: { padding: 4 },
+  metaText: { fontSize: 13, fontWeight: '500', marginTop: 2 },
+  settingsBtn: {
+    borderWidth: 1,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     justifyContent: 'center',
-    borderWidth: 1,
+    alignItems: 'center',
   },
-  avatarText: {
-    fontSize: 28,
-    fontWeight: '700',
-  },
-  photoButton: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-  },
-  photoButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  section: {
-    gap: 10,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  card: {
+  dataCard: { borderWidth: 1, borderRadius: 14, padding: 14, gap: 4 },
+  bioLabel: { fontSize: 12, fontWeight: '600' },
+  bioText: { fontSize: 14, lineHeight: 20 },
+  gridHeader: { alignItems: 'center', marginTop: 8 },
+  emptyState: {
+    minHeight: 130,
     borderRadius: 14,
     borderWidth: 1,
-    padding: 14,
-    gap: 12,
-  },
-  fieldWrap: {
-    gap: 6,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-  },
-  multiline: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  chipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  chip: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  recordingsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  tiktokCard: {
-    width: '48.5%',
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 10,
-    minHeight: 156,
-    justifyContent: 'flex-end',
-  },
-  tiktokPlay: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#000000B0',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  tiktokPlayText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  tiktokTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  tiktokStats: {
-    marginTop: 3,
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  themeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  themeButtonsWrap: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  themeButton: {
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#232327',
-  },
-  themeButtonActive: {
-    backgroundColor: '#6B46FF',
-  },
-  themeButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 12,
-  },
+  emptyStateText: { fontSize: 14, fontWeight: '500' },
+  modalBackdrop: { flex: 1, justifyContent: 'flex-end', padding: 16 },
+  modalCard: { borderWidth: 1, borderRadius: 18, padding: 16, gap: 12 },
+  settingsCard: { borderWidth: 1, borderRadius: 14, padding: 16, gap: 12, alignSelf: 'stretch' },
+  modalTitle: { fontSize: 18, fontWeight: '700' },
+  fieldWrap: { gap: 6 },
+  fieldLabel: { fontSize: 13, fontWeight: '600' },
+  input: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14 },
+  multiline: { minHeight: 74, textAlignVertical: 'top' },
+  imagePickerBtn: { borderWidth: 1, borderRadius: 10, padding: 11, flexDirection: 'row', gap: 8, alignItems: 'center' },
+  imagePickerBtnText: { fontSize: 13, fontWeight: '600' },
+  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
+  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 6 },
+  actionBtn: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 },
+  actionBtnPrimary: { backgroundColor: '#6B46FF', borderColor: '#6B46FF' },
+  actionBtnText: { fontWeight: '600' },
+  actionBtnPrimaryText: { color: '#FFFFFF', fontWeight: '700' },
+  themeButtonsWrap: { flexDirection: 'row', gap: 10 },
+  themeBtn: { backgroundColor: '#2A2A2A', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 9 },
+  themeBtnActive: { backgroundColor: '#6B46FF' },
+  themeBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 13 },
+  closeSettingsBtn: { borderWidth: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
 });

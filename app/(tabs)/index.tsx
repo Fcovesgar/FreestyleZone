@@ -3,6 +3,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useAppTheme } from '@/context/app-theme-context';
+
 type RapMode = 'easy' | 'hard' | 'incremental' | 'history' | 'ending' | 'images';
 type Track = 'base-1' | 'base-2' | 'base-3';
 type SessionTime = '1-min' | '2-min' | '5-min' | 'infinite';
@@ -38,6 +40,23 @@ const SESSION_TYPES: { key: SessionType; label: string }[] = [
 
 export default function RapearScreen() {
   const insets = useSafeAreaInsets();
+  const { effectiveColorScheme } = useAppTheme();
+  const isDark = effectiveColorScheme === 'dark';
+
+  const themeColors = useMemo(() => ({
+    screen: isDark ? '#000000' : '#F3F5F8',
+    card: isDark ? '#0D0D0D' : '#FFFFFF',
+    border: isDark ? '#1D1D1D' : '#E2E5EA',
+    textPrimary: isDark ? '#FFFFFF' : '#111111',
+    textSecondary: isDark ? '#8C8C8C' : '#67707D',
+    chipBg: isDark ? '#101010' : '#F4F5F8',
+    chipBorder: isDark ? '#242424' : '#DCE1E7',
+    chipText: isDark ? '#B7B7B7' : '#4B5563',
+    startBg: isDark ? '#FFFFFF' : '#1F2937',
+    startText: isDark ? '#000000' : '#FFFFFF',
+    disabledStartBg: isDark ? '#2A2A2A' : '#D1D5DB',
+    disabledStartText: isDark ? '#787878' : '#6B7280',
+  }), [isDark]);
   const [selectedMode, setSelectedMode] = useState<RapMode | null>(null);
   const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
   const [selectedSessionTime, setSelectedSessionTime] = useState<SessionTime | null>(null);
@@ -65,7 +84,7 @@ export default function RapearScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.screen, { backgroundColor: themeColors.screen }]} edges={['top', 'bottom']}>
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ disabled: !isReadyToStart }}
@@ -74,20 +93,21 @@ export default function RapearScreen() {
         style={[
           styles.startButtonFloating,
           { top: insets.top + 10 },
-          !isReadyToStart && styles.startButtonDisabled,
+          { backgroundColor: themeColors.startBg },
+          !isReadyToStart && [styles.startButtonDisabled, { backgroundColor: themeColors.disabledStartBg }],
         ]}>
-        <Text style={[styles.startButtonText, !isReadyToStart && styles.startButtonTextDisabled]}>Empezar</Text>
+        <Text style={[styles.startButtonText, { color: themeColors.startText }, !isReadyToStart && [styles.startButtonTextDisabled, { color: themeColors.disabledStartText }]]}>Empezar</Text>
       </Pressable>
 
       <ScrollView
-        style={styles.container}
+        style={[styles.container, { backgroundColor: themeColors.screen }]}
         contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 28 }]}>
-        <Text style={styles.badge}>FreestyleZone</Text>
-        <Text style={styles.title}>Configura tu sesión</Text>
+        <Text style={[styles.badge, { color: themeColors.textSecondary }]}>FreestyleZone</Text>
+        <Text style={[styles.title, { color: themeColors.textPrimary }]}>Configura tu sesión</Text>
 
-        <View style={styles.sessionTypeCard}>
-          <Text style={styles.sectionTitle}>Rapear</Text>
-          <Text style={styles.sessionTypeHelp}>Elige cómo quieres usar la sesión</Text>
+        <View style={[styles.sessionTypeCard, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
+          <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Rapear</Text>
+          <Text style={[styles.sessionTypeHelp, { color: themeColors.textSecondary }]}>Elige cómo quieres usar la sesión</Text>
           <View style={styles.sessionTypeRow}>
             {SESSION_TYPES.map((sessionType) => (
               <SelectableChip
@@ -96,13 +116,14 @@ export default function RapearScreen() {
                 selected={selectedSessionType === sessionType.key}
                 onPress={() => onSelectSessionType(sessionType.key)}
                 fullWidth
+                themeColors={themeColors}
               />
             ))}
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Selecciona el modo.</Text>
+          <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Selecciona el modo.</Text>
           <View style={styles.modePrimaryRow}>
             {topModes.map((mode) => (
               <SelectableChip
@@ -113,6 +134,7 @@ export default function RapearScreen() {
                 onPress={() => setSelectedMode(mode.key)}
                 selectionVariant={mode.key}
                 modePrimary
+                themeColors={themeColors}
               />
             ))}
           </View>
@@ -126,13 +148,14 @@ export default function RapearScreen() {
                 onPress={() => setSelectedMode(mode.key)}
                 selectionVariant={mode.key}
                 modePrimary
+                themeColors={themeColors}
               />
             ))}
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Base de fondo</Text>
+          <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Base de fondo</Text>
           <View style={styles.optionsColumn}>
             {TRACKS.map((track) => (
               <SelectableChip
@@ -141,13 +164,14 @@ export default function RapearScreen() {
                 selected={selectedTrack === track.key}
                 onPress={() => setSelectedTrack(track.key)}
                 fullWidth
+                themeColors={themeColors}
               />
             ))}
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Tiempo de la sesión</Text>
+          <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Tiempo de la sesión</Text>
           <View style={styles.optionsRow}>
             {availableSessionTimes.map((sessionTime) => (
               <SelectableChip
@@ -155,6 +179,7 @@ export default function RapearScreen() {
                 label={sessionTime.label}
                 selected={selectedSessionTime === sessionTime.key}
                 onPress={() => setSelectedSessionTime(sessionTime.key)}
+                themeColors={themeColors}
               />
             ))}
           </View>
@@ -223,6 +248,7 @@ function SelectableChip({
   fullWidth = false,
   modePrimary = false,
   selectionVariant = 'default',
+  themeColors,
 }: {
   label: string;
   description?: string;
@@ -231,6 +257,7 @@ function SelectableChip({
   fullWidth?: boolean;
   modePrimary?: boolean;
   selectionVariant?: RapMode | 'default';
+  themeColors: { chipBg: string; chipBorder: string; chipText: string; textPrimary: string; textSecondary: string };
 }) {
   const selectedStyle =
     selected && selectionVariant === 'easy'
@@ -254,7 +281,7 @@ function SelectableChip({
       accessibilityRole="button"
       accessibilityState={{ selected }}
       onPress={onPress}
-      style={[styles.chip, selectedStyle, fullWidth && styles.chipFullWidth, modePrimary && styles.modePrimaryChip]}>
+      style={[styles.chip, { backgroundColor: themeColors.chipBg, borderColor: themeColors.chipBorder }, selectedStyle, fullWidth && styles.chipFullWidth, modePrimary && styles.modePrimaryChip]}>
       {selectionVariant !== 'default' ? (
         <View style={styles.iconWrap}>
           <View style={[styles.iconGlowWrap, { shadowColor: getModeGlow(selectionVariant, selected) }]}>
@@ -262,9 +289,9 @@ function SelectableChip({
           </View>
         </View>
       ) : null}
-      <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{label}</Text>
+      <Text style={[styles.chipText, { color: themeColors.chipText }, selected && [styles.chipTextSelected, { color: themeColors.textPrimary }]]}>{label}</Text>
       {description ? (
-        <Text style={[styles.chipDescription, selected && styles.chipDescriptionSelected]}>{description}</Text>
+        <Text style={[styles.chipDescription, { color: themeColors.textSecondary }, selected && [styles.chipDescriptionSelected, { color: themeColors.textPrimary }]]}>{description}</Text>
       ) : null}
     </Pressable>
   );
