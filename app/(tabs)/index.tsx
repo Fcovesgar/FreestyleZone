@@ -75,6 +75,7 @@ export default function RapearScreen() {
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [isUnlimitedSession, setIsUnlimitedSession] = useState(false);
+  const [hasSessionStarted, setHasSessionStarted] = useState(false);
 
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -110,23 +111,35 @@ export default function RapearScreen() {
   };
 
   const requestCameraPermission = async () => {
-    if (Platform.OS !== 'android') {
-      // iOS permission request should be handled with camera SDK; this keeps the flow consistent in this prototype.
-      setHasCameraPermission(true);
-      return true;
+    if (Platform.OS === 'android') {
+      const granted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CAMERA, {
+        title: 'Permiso de cámara',
+        message: 'Necesitamos acceder a tu cámara para grabar tu sesión de freestyle.',
+        buttonPositive: 'Permitir',
+        buttonNegative: 'Cancelar',
+        buttonNeutral: 'Más tarde',
+      });
+
+      const accepted = granted === PermissionsAndroid.RESULTS.GRANTED;
+      setHasCameraPermission(accepted);
+      return accepted;
     }
 
-    const granted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CAMERA, {
-      title: 'Permiso de cámara',
-      message: 'Necesitamos acceder a tu cámara para grabar tu sesión de freestyle.',
-      buttonPositive: 'Permitir',
-      buttonNegative: 'Cancelar',
-      buttonNeutral: 'Más tarde',
-    });
+    if (Platform.OS === 'web') {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        stream.getTracks().forEach((track) => track.stop());
+        setHasCameraPermission(true);
+        return true;
+      } catch {
+        setHasCameraPermission(false);
+        return false;
+      }
+    }
 
-    const accepted = granted === PermissionsAndroid.RESULTS.GRANTED;
-    setHasCameraPermission(accepted);
-    return accepted;
+    // En iOS nativo, sin SDK de cámara instalada, no podemos forzar prompt real aquí.
+    setHasCameraPermission(true);
+    return true;
   };
 
   const openSession = async () => {
@@ -144,10 +157,12 @@ export default function RapearScreen() {
     setElapsedSeconds(0);
     setIsUnlimitedSession(initialSessionSeconds === null);
     setRemainingSeconds(initialSessionSeconds);
+    setHasSessionStarted(false);
   };
 
   const startSessionTimer = () => {
     if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current);
+    setHasSessionStarted(true);
 
     sessionIntervalRef.current = setInterval(() => {
       setElapsedSeconds((previousElapsed) => previousElapsed + 1);
@@ -200,6 +215,7 @@ export default function RapearScreen() {
     setRemainingSeconds(initialSessionSeconds);
     setElapsedSeconds(0);
     setIsUnlimitedSession(initialSessionSeconds === null);
+    setHasSessionStarted(false);
   };
 
   const extendSession = () => {
@@ -358,10 +374,6 @@ export default function RapearScreen() {
                 <Text style={styles.cameraStatusText}>
                   {hasCameraPermission ? `Vista cámara (${cameraFacing === 'front' ? 'frontal' : 'trasera'})` : 'Sin permisos de cámara'}
                 </Text>
-                <Pressable style={styles.switchCameraButton} onPress={() => setCameraFacing((previous) => (previous === 'front' ? 'back' : 'front'))}>
-                  <MaterialIcons name="flip-camera-ios" size={20} color="#FFFFFF" />
-                  <Text style={styles.switchCameraText}>Cambiar cámara</Text>
-                </Pressable>
               </View>
             ) : (
               <View style={styles.cameraStatusWrap}>
@@ -372,11 +384,20 @@ export default function RapearScreen() {
             <View style={[styles.sessionBottomActions, { paddingBottom: insets.bottom + 26 }]}> 
               {countdown !== null ? (
                 <Text style={[styles.countdownNumber, { color: getCountdownColor(countdown) }]}>{countdown}</Text>
-              ) : (
+              ) : null}
+
+              {!hasSessionStarted && countdown === null ? (
                 <Pressable style={styles.recordButton} onPress={onStartRecordingPress}>
                   <View style={styles.recordButtonInner} />
                 </Pressable>
-              )}
+              ) : null}
+
+              {hasSessionStarted && selectedSessionType === 'record' ? (
+                <Pressable style={styles.bottomSwitchCameraButton} onPress={() => setCameraFacing((previous) => (previous === 'front' ? 'back' : 'front'))}>
+                  <MaterialIcons name="sync-alt" size={22} color="#FFFFFF" />
+                  <Text style={styles.bottomSwitchCameraText}>alterar cámara</Text>
+                </Pressable>
+              ) : null}
             </View>
           </View>
         </View>
@@ -795,21 +816,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  switchCameraButton: {
-    borderRadius: 999,
-    backgroundColor: '#00000070',
-    borderColor: '#FFFFFF44',
-    borderWidth: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    flexDirection: 'row',
+  bottomSwitchCameraButton: {
     alignItems: 'center',
-    gap: 6,
+    gap: 2,
+    padding: 8,
   },
-  switchCameraText: {
+  bottomSwitchCameraText: {
     color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '500',
+    textTransform: 'lowercase',
   },
   sessionBottomActions: {
     alignItems: 'center',
