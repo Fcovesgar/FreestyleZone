@@ -107,19 +107,32 @@ export default function RapearScreen() {
         <Text style={[styles.title, { color: themeColors.textPrimary }]}>Configura tu sesión</Text>
 
         <View style={[styles.sessionTypeCard, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
-          <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Rapear</Text>
-          <Text style={[styles.sessionTypeHelp, { color: themeColors.textSecondary }]}>Elige cómo quieres usar la sesión</Text>
-          <View style={styles.sessionTypeRow}>
-            {SESSION_TYPES.map((sessionType) => (
-              <SelectableChip
-                key={sessionType.key}
-                label={sessionType.label}
-                selected={selectedSessionType === sessionType.key}
-                onPress={() => onSelectSessionType(sessionType.key)}
-                fullWidth
-                themeColors={themeColors}
-              />
-            ))}
+          <View style={styles.sessionTypeHeaderRow}>
+            <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Rapear</Text>
+            <Text style={[styles.sessionTypeHelp, { color: themeColors.textSecondary }]}>Modo sesión</Text>
+          </View>
+          <View style={[styles.sessionTypeSegment, { backgroundColor: themeColors.chipBg, borderColor: themeColors.chipBorder }]}>
+            {SESSION_TYPES.map((sessionType) => {
+              const isSelected = selectedSessionType === sessionType.key;
+
+              return (
+                <Pressable
+                  key={sessionType.key}
+                  onPress={() => onSelectSessionType(sessionType.key)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isSelected }}
+                  style={[styles.sessionTypeOption, isSelected && styles.sessionTypeOptionSelected]}>
+                  <MaterialIcons
+                    name={sessionType.key === 'record' ? 'mic' : 'school'}
+                    size={16}
+                    color={isSelected ? '#FFFFFF' : themeColors.textSecondary}
+                  />
+                  <Text style={[styles.sessionTypeOptionText, { color: isSelected ? '#FFFFFF' : themeColors.textSecondary }]}>
+                    {sessionType.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
         </View>
 
@@ -228,6 +241,14 @@ function getModeColor(mode: RapMode, selected: boolean) {
   return '#A855F7';
 }
 
+function getModeIconColor(selected: boolean, isDarkTheme: boolean) {
+  if (!selected) {
+    return '#9F9F9F';
+  }
+
+  return isDarkTheme ? undefined : '#FFFFFF';
+}
+
 function getModeGlow(mode: RapMode, selected: boolean) {
   if (!selected) {
     return 'transparent';
@@ -273,7 +294,7 @@ function SelectableChip({
       {selectionVariant !== 'default' ? (
         <View style={styles.iconWrap}>
           <View style={[styles.iconGlowWrap, { shadowColor: getModeGlow(selectionVariant, selected) }]}>
-            <ModeIcon mode={selectionVariant} color={getModeColor(selectionVariant, selected)} />
+            <ModeIcon mode={selectionVariant} color={getModeIconColor(selected, themeColors.isDark) ?? getModeColor(selectionVariant, selected)} />
           </View>
         </View>
       ) : null}
@@ -354,16 +375,42 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#1D1D1D',
     borderRadius: 14,
-    padding: 12,
-    gap: 10,
+    padding: 10,
+    gap: 8,
+  },
+  sessionTypeHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   sessionTypeHelp: {
     color: '#8C8C8C',
-    fontSize: 12,
+    fontSize: 11,
+    fontWeight: '600',
   },
-  sessionTypeRow: {
+  sessionTypeSegment: {
     flexDirection: 'row',
-    gap: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 4,
+    gap: 6,
+  },
+  sessionTypeOption: {
+    flex: 1,
+    borderRadius: 9,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+  sessionTypeOptionSelected: {
+    backgroundColor: '#6B46FF',
+  },
+  sessionTypeOptionText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   modePrimaryRow: {
     flexDirection: 'row',
