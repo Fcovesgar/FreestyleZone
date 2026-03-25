@@ -134,7 +134,7 @@ export default function ProfileScreen() {
               <Text style={[styles.profileTabText, { color: activeTab === 'videos' ? colors.textPrimary : colors.textSecondary }]}>Videos</Text>
             </Pressable>
             <Pressable onPress={() => setActiveTab('lines')} style={styles.profileTabBtn}>
-              <MaterialIcons name="lock" size={20} color={activeTab === 'lines' ? colors.textPrimary : colors.textSecondary} />
+              <MaterialIcons name="edit-note" size={20} color={activeTab === 'lines' ? colors.textPrimary : colors.textSecondary} />
               <Text style={[styles.profileTabText, { color: activeTab === 'lines' ? colors.textPrimary : colors.textSecondary }]}>Mis líneas</Text>
             </Pressable>
           </View>
@@ -161,7 +161,7 @@ export default function ProfileScreen() {
             </View>
 
             <ScrollView contentContainerStyle={styles.editContent} keyboardShouldPersistTaps="handled">
-              <View style={[styles.editAvatarWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={styles.editAvatarWrap}>
                 <Image source={{ uri: draftProfile.avatarUri }} style={[styles.editAvatar, { borderColor: colors.border }]} contentFit="cover" />
                 <Pressable onPress={rotateAvatar} style={styles.editAvatarButton}>
                   <MaterialIcons name="edit" size={16} color="#FFFFFF" />
@@ -347,7 +347,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   editAvatarWrap: {
-    borderWidth: 1,
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',

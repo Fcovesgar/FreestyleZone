@@ -58,9 +58,9 @@ export default function RapearScreen() {
     disabledStartBg: isDark ? '#2A2A2A' : '#D1D5DB',
     disabledStartText: isDark ? '#787878' : '#6B7280',
   }), [isDark]);
-  const [selectedMode, setSelectedMode] = useState<RapMode | null>(null);
+  const [selectedMode, setSelectedMode] = useState<RapMode | null>('easy');
   const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
-  const [selectedSessionTime, setSelectedSessionTime] = useState<SessionTime | null>(null);
+  const [selectedSessionTime, setSelectedSessionTime] = useState<SessionTime | null>('1-min');
   const [selectedSessionType, setSelectedSessionType] = useState<SessionType>('record');
 
   const isReadyToStart = useMemo(
@@ -80,7 +80,7 @@ export default function RapearScreen() {
     }
 
     if (selectedSessionTime === 'infinite') {
-      setSelectedSessionTime(null);
+      setSelectedSessionTime('1-min');
     }
   };
 
