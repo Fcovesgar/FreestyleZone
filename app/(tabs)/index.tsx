@@ -44,6 +44,7 @@ export default function RapearScreen() {
   const isDark = effectiveColorScheme === 'dark';
 
   const themeColors = useMemo(() => ({
+    isDark,
     screen: isDark ? '#000000' : '#F3F5F8',
     card: isDark ? '#0D0D0D' : '#FFFFFF',
     border: isDark ? '#1D1D1D' : '#E2E5EA',
@@ -52,8 +53,8 @@ export default function RapearScreen() {
     chipBg: isDark ? '#101010' : '#F4F5F8',
     chipBorder: isDark ? '#242424' : '#DCE1E7',
     chipText: isDark ? '#B7B7B7' : '#4B5563',
-    startBg: isDark ? '#FFFFFF' : '#1F2937',
-    startText: isDark ? '#000000' : '#FFFFFF',
+    startBg: '#6B46FF',
+    startText: '#FFFFFF',
     disabledStartBg: isDark ? '#2A2A2A' : '#D1D5DB',
     disabledStartText: isDark ? '#787878' : '#6B7280',
   }), [isDark]);
@@ -101,7 +102,7 @@ export default function RapearScreen() {
 
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.screen }]}
-        contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 28 }]}>
+        contentContainerStyle={[styles.contentContainer, { paddingTop: insets.top + 10, paddingBottom: insets.bottom + 28 }]}>
         <Text style={[styles.badge, { color: themeColors.textSecondary }]}>FreestyleZone</Text>
         <Text style={[styles.title, { color: themeColors.textPrimary }]}>Configura tu sesión</Text>
 
@@ -257,27 +258,11 @@ function SelectableChip({
   fullWidth?: boolean;
   modePrimary?: boolean;
   selectionVariant?: RapMode | 'default';
-  themeColors: { chipBg: string; chipBorder: string; chipText: string; textPrimary: string; textSecondary: string };
+  themeColors: { isDark: boolean; chipBg: string; chipBorder: string; chipText: string; textPrimary: string; textSecondary: string };
 }) {
-  const isDarkTheme = themeColors.textPrimary === '#FFFFFF';
-  const selectedReadableText = isDarkTheme ? '#FFFFFF' : '#111111';
+  const selectedReadableText = '#FFFFFF';
 
-  const selectedStyle =
-    selected && selectionVariant === 'easy'
-      ? styles.chipSelectedEasy
-      : selected && selectionVariant === 'hard'
-        ? styles.chipSelectedHard
-        : selected && selectionVariant === 'incremental'
-          ? styles.chipSelectedIncremental
-          : selected && selectionVariant === 'history'
-            ? styles.chipSelectedHistory
-            : selected && selectionVariant === 'ending'
-              ? styles.chipSelectedEnding
-              : selected && selectionVariant === 'images'
-                ? styles.chipSelectedImages
-                : selected
-                  ? styles.chipSelected
-                  : null;
+  const selectedStyle = getChipSelectedStyle(selectionVariant, themeColors.isDark, selected);
 
   return (
     <Pressable
@@ -300,6 +285,32 @@ function SelectableChip({
   );
 }
 
+function getChipSelectedStyle(selectionVariant: RapMode | 'default', isDark: boolean, selected: boolean) {
+  if (!selected) {
+    return null;
+  }
+
+  if (selectionVariant === 'default') {
+    return styles.chipSelected;
+  }
+
+  if (isDark) {
+    if (selectionVariant === 'easy') return styles.chipSelectedEasy;
+    if (selectionVariant === 'hard') return styles.chipSelectedHard;
+    if (selectionVariant === 'incremental') return styles.chipSelectedIncremental;
+    if (selectionVariant === 'history') return styles.chipSelectedHistory;
+    if (selectionVariant === 'ending') return styles.chipSelectedEnding;
+    return styles.chipSelectedImages;
+  }
+
+  if (selectionVariant === 'easy') return { borderColor: '#16A34A', backgroundColor: '#2FBF68' };
+  if (selectionVariant === 'hard') return { borderColor: '#EA580C', backgroundColor: '#F27A3E' };
+  if (selectionVariant === 'incremental') return { borderColor: '#DC2626', backgroundColor: '#EB5A5A' };
+  if (selectionVariant === 'history') return { borderColor: '#2563EB', backgroundColor: '#4D8FF6' };
+  if (selectionVariant === 'ending') return { borderColor: '#A16207', backgroundColor: '#C98A17' };
+  return { borderColor: '#7E22CE', backgroundColor: '#9A66E8' };
+}
+
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
@@ -311,7 +322,6 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingHorizontal: 20,
-    paddingTop: 86,
     gap: 24,
   },
   badge: {
