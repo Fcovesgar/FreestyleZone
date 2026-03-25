@@ -39,15 +39,6 @@ const AVATAR_OPTIONS = [
   'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop',
 ];
 
-const RAP_STYLES: RapStyle[] = ['Doble punch', 'Metriquero', 'Batallero'];
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-const AVATAR_OPTIONS = [
-  'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=400&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop',
-];
-
 export default function ProfileScreen() {
   const { effectiveColorScheme, themePreference, setThemePreference } = useAppTheme();
   const isDark = effectiveColorScheme === 'dark';
