@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type RapMode = 'easy' | 'hard' | 'incremental' | 'history' | 'ending' | 'images';
 type Track = 'base-1' | 'base-2' | 'base-3';
@@ -36,6 +37,7 @@ const SESSION_TYPES: { key: SessionType; label: string }[] = [
 ];
 
 export default function RapearScreen() {
+  const insets = useSafeAreaInsets();
   const [selectedMode, setSelectedMode] = useState<RapMode | null>(null);
   const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
   const [selectedSessionTime, setSelectedSessionTime] = useState<SessionTime | null>(null);
@@ -63,17 +65,23 @@ export default function RapearScreen() {
   };
 
   return (
-    <View style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ disabled: !isReadyToStart }}
         disabled={!isReadyToStart}
         onPress={() => {}}
-        style={[styles.startButtonFloating, !isReadyToStart && styles.startButtonDisabled]}>
+        style={[
+          styles.startButtonFloating,
+          { top: insets.top + 10 },
+          !isReadyToStart && styles.startButtonDisabled,
+        ]}>
         <Text style={[styles.startButtonText, !isReadyToStart && styles.startButtonTextDisabled]}>Empezar</Text>
       </Pressable>
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 28 }]}>
         <Text style={styles.badge}>FreestyleZone</Text>
         <Text style={styles.title}>Configura tu sesión</Text>
 
@@ -152,7 +160,7 @@ export default function RapearScreen() {
           </View>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -273,29 +281,28 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingHorizontal: 20,
-    paddingTop: 88,
-    paddingBottom: 24,
-    gap: 28,
+    paddingTop: 86,
+    gap: 24,
   },
   badge: {
-    color: '#9B9B9B',
-    fontSize: 12,
-    letterSpacing: 1.3,
+    color: '#8A8A8A',
+    fontSize: 11,
+    letterSpacing: 1.8,
     textTransform: 'uppercase',
     fontWeight: '600',
   },
   title: {
     color: '#FFFFFF',
-    fontSize: 30,
-    fontWeight: '800',
+    fontSize: 28,
+    fontWeight: '700',
   },
   section: {
     gap: 12,
   },
   sectionTitle: {
     color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '600',
   },
   optionsRow: {
     flexDirection: 'row',
@@ -303,16 +310,16 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   sessionTypeCard: {
-    backgroundColor: '#101010',
+    backgroundColor: '#0D0D0D',
     borderWidth: 1,
-    borderColor: '#242424',
-    borderRadius: 16,
-    padding: 14,
+    borderColor: '#1D1D1D',
+    borderRadius: 14,
+    padding: 12,
     gap: 10,
   },
   sessionTypeHelp: {
-    color: '#9B9B9B',
-    fontSize: 13,
+    color: '#8C8C8C',
+    fontSize: 12,
   },
   sessionTypeRow: {
     flexDirection: 'row',
@@ -326,12 +333,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   chip: {
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
-    backgroundColor: '#121212',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    borderColor: '#242424',
+    backgroundColor: '#101010',
+    paddingVertical: 11,
+    paddingHorizontal: 14,
   },
   chipSelected: {
     borderColor: '#FFFFFF',
@@ -369,24 +376,20 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
-  modePrimaryChip: {
-    flex: 1,
-    minWidth: 0,
-  },
   chipText: {
-    color: '#BDBDBD',
-    fontSize: 15,
-    fontWeight: '600',
+    color: '#B7B7B7',
+    fontSize: 14,
+    fontWeight: '500',
     textAlign: 'center',
   },
   chipTextSelected: {
     color: '#FFFFFF',
   },
   chipDescription: {
-    color: '#8D8D8D',
-    fontSize: 12,
+    color: '#818181',
+    fontSize: 11,
     marginTop: 4,
-    fontWeight: '500',
+    fontWeight: '400',
     textAlign: 'center',
   },
   chipDescriptionSelected: {
@@ -404,15 +407,14 @@ const styles = StyleSheet.create({
   },
   startButtonFloating: {
     position: 'absolute',
-    top: 28,
     right: 20,
     zIndex: 10,
-    borderRadius: 14,
+    borderRadius: 12,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
   },
   startButtonDisabled: {
     backgroundColor: '#2A2A2A',
