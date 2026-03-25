@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Image } from 'expo-image';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAppTheme } from '@/context/app-theme-context';
 
@@ -42,6 +42,7 @@ const AVATAR_OPTIONS = [
 export default function ProfileScreen() {
   const { effectiveColorScheme, themePreference, setThemePreference } = useAppTheme();
   const isDark = effectiveColorScheme === 'dark';
+  const insets = useSafeAreaInsets();
 
   const [profile, setProfile] = useState<ProfileData>({
     username: '@mc_verso',
@@ -149,7 +150,7 @@ export default function ProfileScreen() {
       {isEditing ? (
         <Animated.View style={[styles.editPanel, { backgroundColor: colors.background, transform: [{ translateX: editTranslateX }] }]}>
           <KeyboardAvoidingView style={styles.editKeyboard} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-            <View style={styles.editHeader}>
+            <View style={[styles.editHeader, { paddingTop: insets.top + 10 }]}>
               <Pressable onPress={() => closeEditScreen(false)} style={styles.backButton}>
                 <MaterialIcons name="arrow-back" size={22} color={colors.textPrimary} />
               </Pressable>
