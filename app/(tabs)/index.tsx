@@ -52,8 +52,8 @@ export default function RapearScreen() {
     chipBg: isDark ? '#101010' : '#F4F5F8',
     chipBorder: isDark ? '#242424' : '#DCE1E7',
     chipText: isDark ? '#B7B7B7' : '#4B5563',
-    startBg: isDark ? '#FFFFFF' : '#1F2937',
-    startText: isDark ? '#000000' : '#FFFFFF',
+    startBg: '#6B46FF',
+    startText: '#FFFFFF',
     disabledStartBg: isDark ? '#2A2A2A' : '#D1D5DB',
     disabledStartText: isDark ? '#787878' : '#6B7280',
   }), [isDark]);
@@ -259,8 +259,7 @@ function SelectableChip({
   selectionVariant?: RapMode | 'default';
   themeColors: { chipBg: string; chipBorder: string; chipText: string; textPrimary: string; textSecondary: string };
 }) {
-  const isDarkTheme = themeColors.textPrimary === '#FFFFFF';
-  const selectedReadableText = isDarkTheme ? '#FFFFFF' : '#111111';
+  const selectedReadableText = '#FFFFFF';
 
   const selectedStyle =
     selected && selectionVariant === 'easy'
