@@ -28,6 +28,16 @@ type ProfileData = {
   rapStyle: RapStyle;
   avatarUri: string;
 };
+type ProfileContentTab = 'videos' | 'lines';
+
+const RAP_STYLES: RapStyle[] = ['Doble punch', 'Metriquero', 'Batallero'];
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+const AVATAR_OPTIONS = [
+  'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=400&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop',
+];
 
 const RAP_STYLES: RapStyle[] = ['Doble punch', 'Metriquero', 'Batallero'];
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -52,6 +62,7 @@ export default function ProfileScreen() {
   const [draftProfile, setDraftProfile] = useState<ProfileData>(profile);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState<ProfileContentTab>('videos');
   const slideAnim = useRef(new Animated.Value(0)).current;
 
   const colors = useMemo(
@@ -126,11 +137,20 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.gridHeader}>
-            <MaterialIcons name="grid-view" size={20} color={colors.textSecondary} />
+            <Pressable onPress={() => setActiveTab('videos')} style={styles.profileTabBtn}>
+              <MaterialIcons name="grid-view" size={20} color={activeTab === 'videos' ? colors.textPrimary : colors.textSecondary} />
+              <Text style={[styles.profileTabText, { color: activeTab === 'videos' ? colors.textPrimary : colors.textSecondary }]}>Videos</Text>
+            </Pressable>
+            <Pressable onPress={() => setActiveTab('lines')} style={styles.profileTabBtn}>
+              <MaterialIcons name="lock" size={20} color={activeTab === 'lines' ? colors.textPrimary : colors.textSecondary} />
+              <Text style={[styles.profileTabText, { color: activeTab === 'lines' ? colors.textPrimary : colors.textSecondary }]}>Mis líneas</Text>
+            </Pressable>
           </View>
 
           <View style={[styles.emptyState, { backgroundColor: colors.card }]}>
-            <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>Aún no hay videos.</Text>
+            <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
+              {activeTab === 'videos' ? 'Aún no hay videos.' : 'Aún no hay líneas privadas.'}
+            </Text>
           </View>
         </ScrollView>
       </Animated.View>
@@ -149,6 +169,13 @@ export default function ProfileScreen() {
             </View>
 
             <ScrollView contentContainerStyle={styles.editContent} keyboardShouldPersistTaps="handled">
+              <View style={[styles.editAvatarWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Image source={{ uri: draftProfile.avatarUri }} style={[styles.editAvatar, { borderColor: colors.border }]} contentFit="cover" />
+                <Pressable onPress={rotateAvatar} style={styles.editAvatarButton}>
+                  <MaterialIcons name="edit" size={16} color="#FFFFFF" />
+                </Pressable>
+              </View>
+
               <Field
                 label="Nombre de usuario"
                 value={draftProfile.username}
@@ -169,12 +196,6 @@ export default function ProfileScreen() {
                 multiline
                 doneOnSubmit
               />
-
-              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Imagen de perfil</Text>
-              <Pressable onPress={rotateAvatar} style={[styles.imagePickerBtn, { borderColor: colors.border, backgroundColor: colors.inputBg }]}>
-                <MaterialIcons name="photo-library" size={16} color={colors.textPrimary} />
-                <Text style={[styles.imagePickerBtnText, { color: colors.textPrimary }]}>Seleccionar del dispositivo</Text>
-              </Pressable>
 
               <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Estilo de rapeo</Text>
               <View style={styles.chipsRow}>
@@ -289,7 +310,9 @@ const styles = StyleSheet.create({
   dataCard: { borderRadius: 14, padding: 14, gap: 4 },
   bioLabel: { fontSize: 12, fontWeight: '600' },
   bioText: { fontSize: 14, lineHeight: 20 },
-  gridHeader: { alignItems: 'center', marginTop: 8 },
+  gridHeader: { flexDirection: 'row', justifyContent: 'center', gap: 24, marginTop: 8 },
+  profileTabBtn: { alignItems: 'center', gap: 3 },
+  profileTabText: { fontSize: 12, fontWeight: '600' },
   emptyState: {
     minHeight: 130,
     borderRadius: 14,
@@ -327,9 +350,33 @@ const styles = StyleSheet.create({
   },
   saveButtonText: { color: '#FFFFFF', fontWeight: '700' },
   editContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingBottom: 24,
     gap: 12,
+  },
+  editAvatarWrap: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  editAvatar: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 1,
+  },
+  editAvatarButton: {
+    position: 'absolute',
+    right: '37%',
+    bottom: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#6B46FF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   settingsBackdrop: { flex: 1, justifyContent: 'flex-end', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 0 },
   settingsCard: { borderWidth: 1, borderRadius: 14, padding: 16, gap: 12, alignSelf: 'stretch' },
@@ -338,8 +385,6 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: 13, fontWeight: '600' },
   input: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14 },
   multiline: { minHeight: 74, textAlignVertical: 'top' },
-  imagePickerBtn: { borderWidth: 1, borderRadius: 10, padding: 11, flexDirection: 'row', gap: 8, alignItems: 'center' },
-  imagePickerBtnText: { fontSize: 13, fontWeight: '600' },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
   actionBtnText: { fontWeight: '600' },
