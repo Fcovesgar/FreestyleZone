@@ -9,7 +9,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { AppThemeProvider, useAppTheme } from '@/context/app-theme-context';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -34,8 +34,20 @@ async function restoreSessionState() {
   return Promise.resolve();
 }
 
+function AppNavigator() {
+  const { effectiveColorScheme } = useAppTheme();
+
+  return (
+    <ThemeProvider value={effectiveColorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <Stack>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      </Stack>
+      <StatusBar style={effectiveColorScheme === 'dark' ? 'light' : 'dark'} />
+    </ThemeProvider>
+  );
+}
+
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   const [appReady, setAppReady] = useState(false);
 
   useEffect(() => {
@@ -73,12 +85,9 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      </Stack>
-      <StatusBar style="light" />
-    </ThemeProvider>
+    <AppThemeProvider>
+      <AppNavigator />
+    </AppThemeProvider>
   );
 }
 

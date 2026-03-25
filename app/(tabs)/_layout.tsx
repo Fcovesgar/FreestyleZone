@@ -5,13 +5,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-
-const TAB_BAR_BACKGROUND = '#090909';
-const ACTIVE_COLOR = '#FFFFFF';
-const INACTIVE_COLOR = '#7D7D7D';
+import { useAppTheme } from '@/context/app-theme-context';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+  const { effectiveColorScheme } = useAppTheme();
+  const isDark = effectiveColorScheme === 'dark';
 
   return (
     <Tabs
@@ -19,12 +18,12 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarButton: HapticTab,
-        tabBarActiveTintColor: ACTIVE_COLOR,
-        tabBarInactiveTintColor: INACTIVE_COLOR,
+        tabBarActiveTintColor: isDark ? '#FFFFFF' : '#111111',
+        tabBarInactiveTintColor: isDark ? '#7D7D7D' : '#777777',
         tabBarShowLabel: false,
         tabBarStyle: {
-          backgroundColor: TAB_BAR_BACKGROUND,
-          borderTopColor: '#151515',
+          backgroundColor: isDark ? '#090909' : '#FFFFFF',
+          borderTopColor: isDark ? '#151515' : '#E5E5E5',
           height: 62 + insets.bottom,
           paddingTop: 10,
           paddingBottom: Math.max(insets.bottom, 12),
@@ -42,7 +41,7 @@ export default function TabLayout() {
         options={{
           title: 'Rapear',
           tabBarIcon: ({ focused }) => (
-            <View style={[styles.micTabIcon, focused && styles.micTabIconFocused]}>
+            <View style={[styles.micTabIcon, focused && styles.micTabIconFocused, !isDark && styles.micTabIconLight]}>
               <View style={styles.micTabAccent} />
               <IconSymbol size={20} name="mic.fill" color="#FFFFFF" />
             </View>
@@ -71,6 +70,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#27272E',
+  },
+  micTabIconLight: {
+    backgroundColor: '#17171D',
+    borderColor: '#393943',
   },
   micTabIconFocused: {
     borderColor: '#6B46FF',
