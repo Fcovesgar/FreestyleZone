@@ -72,7 +72,7 @@ export default function RapearScreen() {
   );
 
   const [selectedMode, setSelectedMode] = useState<RapMode | null>('easy');
-  const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
+  const [selectedTrack, setSelectedTrack] = useState<Track | null>('base-1');
   const [selectedSessionTime, setSelectedSessionTime] = useState<SessionTime | null>('1-min');
   const [selectedSessionType, setSelectedSessionType] = useState<SessionType>('record');
   const [setupStep, setSetupStep] = useState<SetupStep>('mode');
@@ -319,7 +319,7 @@ export default function RapearScreen() {
     <SafeAreaView style={[styles.screen, { backgroundColor: themeColors.screen }]} edges={['top']}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={[styles.contentContainer, { paddingTop: insets.top + 4, paddingBottom: setupStep === 'mode' ? insets.bottom + 78 : 0 }]}
+        contentContainerStyle={[styles.contentContainer, { paddingTop: insets.top + 4, paddingBottom: setupStep === 'mode' ? insets.bottom + 36 : 0 }]}
         showsVerticalScrollIndicator={false}>
         <View style={styles.badgeRow}>
           <View style={styles.badgeLeftRow}>
@@ -363,20 +363,21 @@ export default function RapearScreen() {
           <View style={styles.modeRail}>
             {RAP_MODES.map((mode) => {
               const selected = selectedMode === mode.key;
+              const selectedCardTextColor = selected ? '#101828' : themeColors.textPrimary;
               return (
                 <Pressable
                   key={mode.key}
                   onPress={() => setSelectedMode(mode.key)}
                   style={[
                     styles.modeCard,
-                    { borderColor: selected ? '#6B46FF' : '#6B46FF88', backgroundColor: selected ? '#6B46FF22' : themeColors.card },
+                    { borderColor: selected ? '#6B46FF' : themeColors.border, backgroundColor: selected ? '#FFFFFF' : themeColors.card },
                     selected && styles.modeCardSelected,
                   ]}>
                   <View style={[styles.modeAccent, { backgroundColor: mode.accent }]} />
                   <View style={styles.modeCardInner}>
                     <View>
-                      <Text style={[styles.modeTitle, { color: themeColors.textPrimary }]}>{mode.label}</Text>
-                      <Text style={[styles.modeDescription, { color: themeColors.textSecondary }]}>{mode.description}</Text>
+                      <Text style={[styles.modeTitle, { color: selectedCardTextColor }]}>{mode.label}</Text>
+                      <Text style={[styles.modeDescription, { color: selected ? '#475467' : themeColors.textSecondary }]}>{mode.description}</Text>
                     </View>
                     <View style={[styles.modeIconBubble, { borderColor: selected ? mode.accent : themeColors.border }]}>
                       <MaterialIcons name={mode.icon} size={24} color={selected ? mode.accent : themeColors.textSecondary} />
