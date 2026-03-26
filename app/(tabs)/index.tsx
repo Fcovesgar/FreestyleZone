@@ -5,11 +5,12 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { useAppTheme } from '@/context/app-theme-context';
 
-type RapMode = 'easy' | 'hard' | 'incremental' | 'history' | 'ending' | 'images';
+type RapMode = 'easy' | 'hard' | 'incremental' | 'history' | 'ending' | 'images' | 'free';
 type Track = 'base-1' | 'base-2' | 'base-3';
 type SessionTime = '1-min' | '2-min' | '5-min' | 'infinite';
 type SessionType = 'record' | 'train';
 type CameraFacing = 'front' | 'back';
+type SetupStep = 'mode' | 'track' | 'time';
 
 type SessionSummary = {
   mode: RapMode | null;
@@ -18,28 +19,31 @@ type SessionSummary = {
   elapsedSeconds: number;
 };
 
-const RAP_MODES: { key: RapMode; label: string; description: string }[] = [
-  { key: 'easy', label: 'Easy', description: 'Palabras cada 10s' },
-  { key: 'hard', label: 'Hard', description: 'Palabras cada 5s' },
-  { key: 'incremental', label: 'Incremental', description: 'Palabras cada 10s - 5s - 2s' },
-  { key: 'history', label: 'Historia', description: 'Crea historia con palabras' },
-  { key: 'ending', label: 'Terminación', description: 'Rapea con terminaciones' },
-  { key: 'images', label: 'Imágenes', description: 'Rapea con imágenes' },
+const RAP_MODES: { key: RapMode; label: string; description: string; icon: keyof typeof MaterialIcons.glyphMap; accent: string }[] = [
+  { key: 'easy', label: 'Easy', description: 'Palabras cada 10s', icon: 'security', accent: '#22C55E' },
+  { key: 'hard', label: 'Hard', description: 'Palabras cada 5s', icon: 'flash-on', accent: '#F97316' },
+  { key: 'incremental', label: 'Incremental', description: 'Palabras cada 10s - 5s - 2s', icon: 'local-fire-department', accent: '#EF4444' },
+  { key: 'history', label: 'Historia', description: 'Crea historia con palabras', icon: 'history-edu', accent: '#38BDF8' },
+  { key: 'ending', label: 'Terminación', description: 'Rapea con terminaciones', icon: 'text-fields', accent: '#FACC15' },
+  { key: 'images', label: 'Imágenes', description: 'Rapea con imágenes', icon: 'image', accent: '#A855F7' },
+  { key: 'free', label: 'Libre', description: 'Rapea libremente y sin estímulos.', icon: 'graphic-eq', accent: '#14B8A6' },
 ];
 
-const TRACKS: { key: Track; label: string }[] = [
-  { key: 'base-1', label: 'Base Boom Bap' },
-  { key: 'base-2', label: 'Base Trap' },
-  { key: 'base-3', label: 'Base Lo-Fi' },
+const TRACKS: { key: Track; label: string; description: string; bpm: string }[] = [
+  { key: 'base-1', label: 'Base Boom Bap', description: 'Clásico noventero, bombo y caja al frente.', bpm: '92 BPM' },
+  { key: 'base-2', label: 'Base Trap', description: '808 profundo y hi-hat para romper.', bpm: '140 BPM' },
+  { key: 'base-3', label: 'Base Lo-Fi', description: 'Atmósfera relajada para barras melódicas.', bpm: '78 BPM' },
 ];
 
-const SESSION_TIMES: { key: SessionTime; label: string }[] = [
-  { key: '1-min', label: '1 min' },
-  { key: '2-min', label: '2 min' },
-  { key: '5-min', label: '5 min' },
+const SESSION_TIMES: { key: SessionTime; label: string; description: string; icon?: keyof typeof MaterialIcons.glyphMap }[] = [
+  { key: '1-min', label: '1 min', description: 'Ronda rápida' },
+  { key: '2-min', label: '2 min', description: 'Formato clásico' },
+  { key: '5-min', label: '5 min', description: 'Sesión extensa' },
 ];
 
-const TRAINING_TIME: { key: SessionTime; label: string }[] = [{ key: 'infinite', label: 'Infinito' }];
+const TRAINING_TIME: { key: SessionTime; label: string; description: string; icon?: keyof typeof MaterialIcons.glyphMap }[] = [
+  { key: 'infinite', label: '∞', description: 'Sin límite de tiempo', icon: 'all-inclusive' },
+];
 
 const SESSION_TYPES: { key: SessionType; label: string }[] = [
   { key: 'record', label: 'Grabar' },
@@ -55,26 +59,24 @@ export default function RapearScreen() {
 
   const themeColors = useMemo(
     () => ({
-      isDark,
-      screen: isDark ? '#000000' : '#F3F5F8',
-      card: isDark ? '#0D0D0D' : '#FFFFFF',
-      border: isDark ? '#1D1D1D' : '#E2E5EA',
-      textPrimary: isDark ? '#FFFFFF' : '#111111',
-      textSecondary: isDark ? '#8C8C8C' : '#67707D',
-      chipBg: isDark ? '#101010' : '#F4F5F8',
-      chipBorder: isDark ? '#242424' : '#DCE1E7',
-      chipText: isDark ? '#B7B7B7' : '#4B5563',
-      startBg: '#6B46FF',
-      startText: '#FFFFFF',
-      disabledStartBg: isDark ? '#2A2A2A' : '#D1D5DB',
-      disabledStartText: isDark ? '#787878' : '#6B7280',
+      screen: isDark ? '#050505' : '#F3F5F8',
+      card: isDark ? '#0F0F0F' : '#FFFFFF',
+      border: isDark ? '#222222' : '#DFE3E8',
+      textPrimary: isDark ? '#FFFFFF' : '#101828',
+      textSecondary: isDark ? '#A1A1AA' : '#667085',
+      mutedBg: isDark ? '#131313' : '#F2F4F7',
+      mutedBorder: isDark ? '#242424' : '#D8DEE6',
+      activeBg: '#6B46FF',
     }),
     [isDark]
   );
+
   const [selectedMode, setSelectedMode] = useState<RapMode | null>('easy');
-  const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
+  const [selectedTrack, setSelectedTrack] = useState<Track | null>('base-1');
   const [selectedSessionTime, setSelectedSessionTime] = useState<SessionTime | null>('1-min');
   const [selectedSessionType, setSelectedSessionType] = useState<SessionType>('record');
+  const [setupStep, setSetupStep] = useState<SetupStep>('mode');
+  const [previewTrack, setPreviewTrack] = useState<Track | null>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [sessionVisible, setSessionVisible] = useState(false);
   const [cameraFacing, setCameraFacing] = useState<CameraFacing>('front');
@@ -90,6 +92,16 @@ export default function RapearScreen() {
   const sessionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const initialSessionSeconds = getSessionDuration(selectedSessionTime);
+  const availableSessionTimes = selectedSessionType === 'train' ? TRAINING_TIME : SESSION_TIMES;
+  const selectedTrackLabel = TRACKS.find((track) => track.key === selectedTrack)?.label ?? '-';
+  const summaryModeInfo = RAP_MODES.find((mode) => mode.key === sessionSummary?.mode);
+
+  const canAdvance =
+    (setupStep === 'mode' && selectedMode !== null) ||
+    (setupStep === 'track' && selectedTrack !== null) ||
+    (setupStep === 'time' && selectedSessionTime !== null);
+
+  const isReadyToStart = selectedMode !== null && selectedTrack !== null && selectedSessionTime !== null;
 
   useEffect(() => {
     return () => {
@@ -98,30 +110,18 @@ export default function RapearScreen() {
     };
   }, []);
 
-  const isReadyToStart = useMemo(
-    () => selectedMode !== null && selectedTrack !== null && selectedSessionTime !== null,
-    [selectedMode, selectedTrack, selectedSessionTime]
-  );
-  const topModes = RAP_MODES.filter((mode) => ['easy', 'hard', 'incremental'].includes(mode.key));
-  const bottomModes = RAP_MODES.filter((mode) => ['history', 'ending', 'images'].includes(mode.key));
-  const availableSessionTimes = selectedSessionType === 'train' ? TRAINING_TIME : SESSION_TIMES;
+  useEffect(() => {
+    if (!isUnlimitedSession && remainingSeconds === 0) {
+      finishSession();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remainingSeconds, isUnlimitedSession]);
 
-  const selectedTrackLabel = TRACKS.find((track) => track.key === selectedTrack)?.label ?? '-';
-  const summaryModeInfo = RAP_MODES.find((mode) => mode.key === sessionSummary?.mode);
-  const summaryTheme = useMemo(
-    () => ({
-      modalBg: isDark ? '#050505' : '#F2F4F8',
-      cardBg: isDark ? '#101010' : '#FFFFFF',
-      cardBorder: isDark ? '#2B2B2B' : '#DDE1E7',
-      primaryText: isDark ? '#FFFFFF' : '#101828',
-      secondaryText: isDark ? '#D8D8D8' : '#344054',
-      tertiaryText: isDark ? '#AFAFAF' : '#667085',
-      previewBg: isDark ? '#1A1A1A' : '#E9EEF6',
-      buttonBg: isDark ? '#6B46FF' : '#5B3BF1',
-      closeBg: isDark ? '#222222' : '#E4E7EC',
-    }),
-    [isDark]
-  );
+  useEffect(() => {
+    if (setupStep !== 'track') {
+      setPreviewTrack(null);
+    }
+  }, [setupStep]);
 
   const onSelectSessionType = (sessionType: SessionType) => {
     setSelectedSessionType(sessionType);
@@ -134,6 +134,31 @@ export default function RapearScreen() {
     if (selectedSessionTime === 'infinite') {
       setSelectedSessionTime('1-min');
     }
+  };
+
+  const onContinueStep = () => {
+    if (!canAdvance) return;
+    if (setupStep === 'mode') {
+      setSetupStep('track');
+      return;
+    }
+    if (setupStep === 'track') {
+      setSetupStep('time');
+    }
+  };
+
+  const onBackStep = () => {
+    if (setupStep === 'time') {
+      setSetupStep('track');
+      return;
+    }
+    if (setupStep === 'track') {
+      setSetupStep('mode');
+    }
+  };
+
+  const onToggleTrackPreview = (track: Track) => {
+    setPreviewTrack((prev) => (prev === track ? null : track));
   };
 
   const requestCameraPermission = async () => {
@@ -163,7 +188,6 @@ export default function RapearScreen() {
       }
     }
 
-    // En iOS nativo, sin SDK de cámara instalada, no podemos forzar prompt real aquí.
     setHasCameraPermission(true);
     return true;
   };
@@ -269,149 +293,178 @@ export default function RapearScreen() {
   };
 
   const shouldShowExtendAction = !isUnlimitedSession && remainingSeconds !== null && remainingSeconds <= 10;
-
   const displayTimer = isUnlimitedSession || remainingSeconds === null ? formatTime(elapsedSeconds) : formatTime(remainingSeconds);
   const timerColor = getSessionTimerColor(remainingSeconds, initialSessionSeconds, isUnlimitedSession);
 
-  useEffect(() => {
-    if (!isUnlimitedSession && remainingSeconds === 0) {
-      finishSession();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [remainingSeconds, isUnlimitedSession]);
-
-
   const confirmCloseSummary = () => {
-    Alert.alert(
-      '¿Salir del resumen?',
-      'Si sales ahora,se cerrará este resumey y perderás la sesión.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Salir', style: 'destructive', onPress: () => setSummaryVisible(false) },
-      ]
-    );
+    Alert.alert('¿Salir del resumen?', 'Si sales ahora, se cerrará el resumen y perderás la sesión.', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Salir', style: 'destructive', onPress: () => setSummaryVisible(false) },
+    ]);
+  };
+
+  const summaryTheme = {
+    modalBg: isDark ? '#050505' : '#F2F4F8',
+    cardBg: isDark ? '#101010' : '#FFFFFF',
+    cardBorder: isDark ? '#2B2B2B' : '#DDE1E7',
+    primaryText: isDark ? '#FFFFFF' : '#101828',
+    secondaryText: isDark ? '#D8D8D8' : '#344054',
+    tertiaryText: isDark ? '#AFAFAF' : '#667085',
+    previewBg: isDark ? '#1A1A1A' : '#E9EEF6',
+    buttonBg: isDark ? '#6B46FF' : '#5B3BF1',
+    closeBg: isDark ? '#222222' : '#E4E7EC',
   };
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: themeColors.screen }]} edges={['top', 'bottom']}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ disabled: !isReadyToStart }}
-        disabled={!isReadyToStart}
-        onPress={openSession}
-        style={[
-          styles.startButtonFloating,
-          { top: insets.top + 10 },
-          { backgroundColor: themeColors.startBg },
-          !isReadyToStart && [styles.startButtonDisabled, { backgroundColor: themeColors.disabledStartBg }],
-        ]}>
-        <Text style={[styles.startButtonText, { color: themeColors.startText }, !isReadyToStart && [styles.startButtonTextDisabled, { color: themeColors.disabledStartText }]]}>Empezar</Text>
-      </Pressable>
-
+    <SafeAreaView style={[styles.screen, { backgroundColor: themeColors.screen }]} edges={['top']}>
       <ScrollView
-        style={[styles.container, { backgroundColor: themeColors.screen }]}
-        contentContainerStyle={[styles.contentContainer, { paddingTop: insets.top + 10, paddingBottom: insets.bottom + 28 }]}>
-        <Text style={[styles.badge, { color: themeColors.textSecondary }]}>FreestyleZone</Text>
-        <Text style={[styles.title, { color: themeColors.textPrimary }]}>Configura tu sesión</Text>
-
-        <View style={[styles.sessionTypeCard, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
-          <View style={styles.sessionTypeHeaderRow}>
-            <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Rapear</Text>
-            <Text style={[styles.sessionTypeHelp, { color: themeColors.textSecondary }]}>Modo sesión</Text>
+        style={styles.container}
+        contentContainerStyle={[styles.contentContainer, { paddingTop: insets.top + 4, paddingBottom: setupStep === 'mode' ? insets.bottom + 36 : 0 }]}
+        showsVerticalScrollIndicator={false}>
+        <View style={styles.badgeRow}>
+          <View style={styles.badgeLeftRow}>
+            {setupStep === 'mode' ? (
+              <View style={[styles.headerAction, styles.headerGhostAction, { borderColor: themeColors.border, backgroundColor: themeColors.card }]}>
+                <MaterialIcons name="mic" size={18} color={themeColors.textPrimary} />
+              </View>
+            ) : null}
+            {(setupStep === 'track' || setupStep === 'time') ? (
+              <Pressable onPress={onBackStep} style={[styles.headerAction, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
+                <MaterialIcons name="arrow-back" size={18} color={themeColors.textPrimary} />
+              </Pressable>
+            ) : null}
+            <Text style={[styles.badge, { color: themeColors.textSecondary }]}>FreestyleZone</Text>
           </View>
-          <View style={[styles.sessionTypeSegment, { backgroundColor: themeColors.chipBg, borderColor: themeColors.chipBorder }]}>
-            {SESSION_TYPES.map((sessionType) => {
-              const isSelected = selectedSessionType === sessionType.key;
+          <View style={[styles.stepPill, { borderColor: themeColors.border, backgroundColor: themeColors.mutedBg }]}>
+            <Text style={[styles.stepPillText, { color: themeColors.textSecondary }]}>{setupStep === 'mode' ? '1/3' : setupStep === 'track' ? '2/3' : '3/3'}</Text>
+          </View>
+        </View>
 
+        <View style={styles.headerRow}>
+          <View style={styles.headerTitleWrap}>
+            <Text style={[styles.title, { color: themeColors.textPrimary }]}>
+              {setupStep === 'mode' ? 'Selecciona el modo' : setupStep === 'track' ? 'Instrumental' : 'Tiempo de la sesión'}
+            </Text>
+          </View>
+
+          <View style={styles.headerRightActions}>
+            {setupStep !== 'time' ? (
+              <Pressable
+                disabled={!canAdvance}
+                onPress={onContinueStep}
+                style={[styles.continueButton, { backgroundColor: canAdvance ? themeColors.activeBg : themeColors.mutedBorder }]}>
+                <Text style={[styles.continueButtonText, { color: canAdvance ? '#FFFFFF' : themeColors.textSecondary }]}>Continuar</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
+
+        {setupStep === 'mode' ? (
+          <View style={styles.modeRail}>
+            {RAP_MODES.map((mode) => {
+              const selected = selectedMode === mode.key;
+              const selectedCardTextColor = selected ? '#101828' : themeColors.textPrimary;
               return (
                 <Pressable
-                  key={sessionType.key}
-                  onPress={() => onSelectSessionType(sessionType.key)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: isSelected }}
-                  style={[styles.sessionTypeOption, isSelected && styles.sessionTypeOptionSelected]}>
-                  <MaterialIcons
-                    name={sessionType.key === 'record' ? 'mic' : 'school'}
-                    size={16}
-                    color={isSelected ? '#FFFFFF' : themeColors.textSecondary}
-                  />
-                  <Text style={[styles.sessionTypeOptionText, { color: isSelected ? '#FFFFFF' : themeColors.textSecondary }]}>
-                    {sessionType.label}
-                  </Text>
+                  key={mode.key}
+                  onPress={() => setSelectedMode(mode.key)}
+                  style={[
+                    styles.modeCard,
+                    { borderColor: selected ? '#6B46FF' : themeColors.border, backgroundColor: selected ? '#FFFFFF' : themeColors.card },
+                    selected && styles.modeCardSelected,
+                  ]}>
+                  <View style={[styles.modeAccent, { backgroundColor: mode.accent }]} />
+                  <View style={styles.modeCardInner}>
+                    <View>
+                      <Text style={[styles.modeTitle, { color: selectedCardTextColor }]}>{mode.label}</Text>
+                      <Text style={[styles.modeDescription, { color: selected ? '#475467' : themeColors.textSecondary }]}>{mode.description}</Text>
+                    </View>
+                    <View style={[styles.modeIconBubble, { borderColor: selected ? mode.accent : themeColors.border }]}>
+                      <MaterialIcons name={mode.icon} size={24} color={selected ? mode.accent : themeColors.textSecondary} />
+                    </View>
+                  </View>
                 </Pressable>
               );
             })}
           </View>
-        </View>
+        ) : null}
 
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Selecciona el modo.</Text>
-          <View style={styles.modePrimaryRow}>
-            {topModes.map((mode) => (
-              <SelectableChip
-                key={mode.key}
-                label={mode.label}
-                description={mode.description}
-                selected={selectedMode === mode.key}
-                onPress={() => setSelectedMode(mode.key)}
-                selectionVariant={mode.key}
-                modePrimary
-                themeColors={themeColors}
-              />
-            ))}
-          </View>
-          <View style={styles.modePrimaryRow}>
-            {bottomModes.map((mode) => (
-              <SelectableChip
-                key={mode.key}
-                label={mode.label}
-                description={mode.description}
-                selected={selectedMode === mode.key}
-                onPress={() => setSelectedMode(mode.key)}
-                selectionVariant={mode.key}
-                modePrimary
-                themeColors={themeColors}
-              />
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Base de fondo</Text>
+        {setupStep === 'track' ? (
           <View style={styles.optionsColumn}>
-            {TRACKS.map((track) => (
-              <SelectableChip
-                key={track.key}
-                label={track.label}
-                selected={selectedTrack === track.key}
-                onPress={() => setSelectedTrack(track.key)}
-                fullWidth
-                themeColors={themeColors}
-              />
-            ))}
-          </View>
-        </View>
+            {TRACKS.map((track) => {
+              const selected = selectedTrack === track.key;
+              const isPlaying = previewTrack === track.key;
 
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Tiempo de la sesión</Text>
-          <View style={styles.optionsRow}>
-            {availableSessionTimes.map((sessionTime) => (
-              <SelectableChip
-                key={sessionTime.key}
-                label={sessionTime.label}
-                selected={selectedSessionTime === sessionTime.key}
-                onPress={() => setSelectedSessionTime(sessionTime.key)}
-                themeColors={themeColors}
-              />
-            ))}
+              return (
+                <View key={track.key} style={[styles.trackCard, { backgroundColor: themeColors.card, borderColor: selected ? '#6B46FF' : themeColors.border }]}>
+                  <Pressable onPress={() => setSelectedTrack(track.key)} style={styles.trackMainArea}>
+                    <Text style={[styles.trackTitle, { color: themeColors.textPrimary }]}>{track.label}</Text>
+                    <Text style={[styles.trackInfo, { color: themeColors.textSecondary }]}>{track.description}</Text>
+                    <Text style={[styles.trackMeta, { color: themeColors.textSecondary }]}>{track.bpm}</Text>
+                  </Pressable>
+                  <Pressable style={[styles.previewButton, { backgroundColor: isPlaying ? '#DC2626' : '#6B46FF' }]} onPress={() => onToggleTrackPreview(track.key)}>
+                    <MaterialIcons name={isPlaying ? 'stop' : 'play-arrow'} size={16} color="#FFFFFF" />
+                    <Text style={styles.previewButtonText}>{isPlaying ? 'Parar' : 'Reproducir'}</Text>
+                  </Pressable>
+                </View>
+              );
+            })}
           </View>
-        </View>
+        ) : null}
+
+        {setupStep === 'time' ? (
+          <View style={styles.optionsColumn}>
+            <View style={[styles.sessionTypeCard, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
+              <Text style={[styles.sectionCaption, { color: themeColors.textSecondary }]}>MODO DE SESIÓN</Text>
+              <View style={[styles.sessionTypeSegment, { backgroundColor: themeColors.mutedBg, borderColor: themeColors.mutedBorder }]}>
+                {SESSION_TYPES.map((sessionType) => {
+                  const isSelected = selectedSessionType === sessionType.key;
+
+                  return (
+                    <Pressable
+                      key={sessionType.key}
+                      onPress={() => onSelectSessionType(sessionType.key)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: isSelected }}
+                      style={[styles.sessionTypeOption, isSelected && styles.sessionTypeOptionSelected]}>
+                      <MaterialIcons name={sessionType.key === 'record' ? 'mic' : 'school'} size={16} color={isSelected ? '#FFFFFF' : themeColors.textSecondary} />
+                      <Text style={[styles.sessionTypeOptionText, { color: isSelected ? '#FFFFFF' : themeColors.textSecondary }]}>{sessionType.label}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+            {availableSessionTimes.map((sessionTime) => {
+              const selected = selectedSessionTime === sessionTime.key;
+              return (
+                <Pressable
+                  key={sessionTime.key}
+                  onPress={() => setSelectedSessionTime(sessionTime.key)}
+                  style={[styles.timeCard, { borderColor: selected ? '#6B46FF' : themeColors.border, backgroundColor: selected ? '#6B46FF22' : themeColors.card }]}>
+                  {sessionTime.icon ? <MaterialIcons name={sessionTime.icon} size={30} color={themeColors.textPrimary} /> : null}
+                  {!sessionTime.icon ? <Text style={[styles.timeTitle, { color: themeColors.textPrimary }]}>{sessionTime.label}</Text> : null}
+                  <Text style={[styles.timeDescription, { color: themeColors.textSecondary }]}>{sessionTime.description}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
+
+        {setupStep === 'time' ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !isReadyToStart }}
+            disabled={!isReadyToStart}
+            onPress={openSession}
+            style={[styles.startButton, { backgroundColor: isReadyToStart ? themeColors.activeBg : themeColors.mutedBorder }]}>
+            <Text style={[styles.startButtonText, { color: isReadyToStart ? '#FFFFFF' : themeColors.textSecondary }]}>Empezar</Text>
+          </Pressable>
+        ) : null}
       </ScrollView>
-
       <Modal visible={sessionVisible} animationType="slide" onRequestClose={stopSession}>
         <View style={styles.sessionFullscreen}>
           <View style={[styles.cameraPlaceholder, styles.sessionModalCard, selectedSessionType === 'train' ? styles.trainingBackground : styles.recordingBackground, { marginTop: insets.top + 8, marginBottom: insets.bottom + 8 }]}>
-            <View style={[styles.cameraHudTop, { paddingTop: insets.top + 8 }]}> 
+            <View style={[styles.cameraHudTop, { paddingTop: insets.top + 8 }]}>
               <View style={styles.sessionHeaderActions}>
                 <Text style={[styles.timer, { color: timerColor }]}>{displayTimer}</Text>
                 {shouldShowExtendAction ? (
@@ -427,9 +480,7 @@ export default function RapearScreen() {
             </View>
 
             <View style={[styles.sessionBottomActions, { paddingBottom: insets.bottom + 26 }]}> 
-              {countdown !== null ? (
-                <Text style={[styles.countdownNumber, { color: getCountdownColor(countdown) }]}>{countdown}</Text>
-              ) : null}
+              {countdown !== null ? <Text style={[styles.countdownNumber, { color: getCountdownColor(countdown) }]}>{countdown}</Text> : null}
 
               {!hasSessionStarted && countdown === null ? (
                 <View style={styles.preSessionActionsRow}>
@@ -464,9 +515,7 @@ export default function RapearScreen() {
       </Modal>
 
       <Modal visible={summaryVisible} animationType="slide" onRequestClose={confirmCloseSummary}>
-        <SafeAreaView
-          style={[styles.summaryScreen, { backgroundColor: summaryTheme.modalBg, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }]}
-          edges={['left', 'right']}>
+        <SafeAreaView style={[styles.summaryScreen, { backgroundColor: summaryTheme.modalBg, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }]} edges={['left', 'right']}>
           <View style={styles.summaryHeader}>
             <Text style={[styles.summaryTitle, { color: summaryTheme.primaryText }]}>Resumen de la sesión</Text>
             <Pressable onPress={confirmCloseSummary} style={[styles.summaryCloseButton, { backgroundColor: summaryTheme.closeBg }]}>
@@ -475,13 +524,13 @@ export default function RapearScreen() {
           </View>
 
           <View style={styles.previewCard}>
-            <View style={[styles.previewVideo, { backgroundColor: summaryTheme.previewBg, borderColor: summaryTheme.cardBorder }]}>
+            <View style={[styles.previewVideo, { backgroundColor: summaryTheme.previewBg, borderColor: summaryTheme.cardBorder }]}> 
               <Text style={[styles.previewTimer, { color: summaryTheme.primaryText }]}>{formatTime(sessionSummary?.elapsedSeconds ?? 0)}</Text>
             </View>
             <Text style={[styles.previewHint, { color: summaryTheme.tertiaryText }]}>Preview con overlay de tiempo (sin botones de control).</Text>
           </View>
 
-          <View style={[styles.summaryMetaCard, { backgroundColor: summaryTheme.cardBg, borderColor: summaryTheme.cardBorder }]}>
+          <View style={[styles.summaryMetaCard, { backgroundColor: summaryTheme.cardBg, borderColor: summaryTheme.cardBorder }]}> 
             <Text style={[styles.summaryMetaText, { color: summaryTheme.secondaryText }]}>Modo: {summaryModeInfo?.label ?? '-'}</Text>
             <Text style={[styles.summaryMetaDescription, { color: summaryTheme.tertiaryText }]}>Descripción: {summaryModeInfo?.description ?? '-'}</Text>
             <Text style={[styles.summaryMetaText, { color: summaryTheme.secondaryText }]}>Sesión: {sessionSummary?.sessionType === 'record' ? 'Grabar' : 'Entrenar'}</Text>
@@ -543,507 +592,87 @@ function getCountdownColor(value: number) {
   return '#EF4444';
 }
 
-function ModeIcon({ mode, color }: { mode: RapMode; color: string }) {
-  const iconNameByMode: Record<RapMode, string> = {
-    easy: 'security',
-    hard: 'flash-on',
-    incremental: 'local-fire-department',
-    history: 'history-edu',
-    ending: 'text-fields',
-    images: 'image',
-  };
-
-  if (mode === 'easy') {
-    return <MaterialIcons name={iconNameByMode[mode] as any} size={24} color={color} />;
-  }
-
-  if (mode === 'hard') {
-    return <MaterialIcons name={iconNameByMode[mode] as any} size={24} color={color} />;
-  }
-
-  if (mode === 'images') {
-    return <MaterialIcons name={iconNameByMode[mode] as any} size={24} color={color} />;
-  }
-
-  return <MaterialIcons name={iconNameByMode[mode] as any} size={24} color={color} />;
-}
-
-function getModeColor(mode: RapMode, selected: boolean) {
-  if (!selected) {
-    return '#9F9F9F';
-  }
-
-  if (mode === 'easy') return '#22C55E';
-  if (mode === 'hard') return '#F97316';
-  if (mode === 'incremental') return '#EF4444';
-  if (mode === 'history') return '#38BDF8';
-  if (mode === 'ending') return '#FACC15';
-  return '#A855F7';
-}
-
-function getModeIconColor(selected: boolean, isDarkTheme: boolean) {
-  if (!selected) {
-    return '#9F9F9F';
-  }
-
-  return isDarkTheme ? undefined : '#FFFFFF';
-}
-
-function getModeGlow(mode: RapMode, selected: boolean) {
-  if (!selected) {
-    return 'transparent';
-  }
-
-  if (mode === 'easy') return '#22C55E99';
-  if (mode === 'hard') return '#F9731699';
-  if (mode === 'incremental') return '#EF444499';
-  if (mode === 'history') return '#38BDF899';
-  if (mode === 'ending') return '#FACC1599';
-  return '#A855F799';
-}
-
-function SelectableChip({
-  label,
-  description,
-  selected,
-  onPress,
-  fullWidth = false,
-  modePrimary = false,
-  selectionVariant = 'default',
-  themeColors,
-}: {
-  label: string;
-  description?: string;
-  selected: boolean;
-  onPress: () => void;
-  fullWidth?: boolean;
-  modePrimary?: boolean;
-  selectionVariant?: RapMode | 'default';
-  themeColors: { isDark: boolean; chipBg: string; chipBorder: string; chipText: string; textPrimary: string; textSecondary: string };
-}) {
-  const selectedReadableText = '#FFFFFF';
-
-  const selectedStyle = getChipSelectedStyle(selectionVariant, themeColors.isDark, selected);
-
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      onPress={onPress}
-      style={[styles.chip, { backgroundColor: themeColors.chipBg, borderColor: themeColors.chipBorder }, selectedStyle, fullWidth && styles.chipFullWidth, modePrimary && styles.modePrimaryChip]}>
-      {selectionVariant !== 'default' ? (
-        <View style={styles.iconWrap}>
-          <View style={[styles.iconGlowWrap, { shadowColor: getModeGlow(selectionVariant, selected) }]}>
-            <ModeIcon mode={selectionVariant} color={getModeIconColor(selected, themeColors.isDark) ?? getModeColor(selectionVariant, selected)} />
-          </View>
-        </View>
-      ) : null}
-      <Text style={[styles.chipText, { color: themeColors.chipText }, selected && [styles.chipTextSelected, { color: selectedReadableText }]]}>{label}</Text>
-      {description ? (
-        <Text style={[styles.chipDescription, { color: themeColors.textSecondary }, selected && [styles.chipDescriptionSelected, { color: selectedReadableText }]]}>{description}</Text>
-      ) : null}
-    </Pressable>
-  );
-}
-
-function getChipSelectedStyle(selectionVariant: RapMode | 'default', isDark: boolean, selected: boolean) {
-  if (!selected) {
-    return null;
-  }
-
-  if (selectionVariant === 'default') {
-    return styles.chipSelected;
-  }
-
-  if (isDark) {
-    if (selectionVariant === 'easy') return styles.chipSelectedEasy;
-    if (selectionVariant === 'hard') return styles.chipSelectedHard;
-    if (selectionVariant === 'incremental') return styles.chipSelectedIncremental;
-    if (selectionVariant === 'history') return styles.chipSelectedHistory;
-    if (selectionVariant === 'ending') return styles.chipSelectedEnding;
-    return styles.chipSelectedImages;
-  }
-
-  if (selectionVariant === 'easy') return { borderColor: '#16A34A', backgroundColor: '#2FBF68' };
-  if (selectionVariant === 'hard') return { borderColor: '#EA580C', backgroundColor: '#F27A3E' };
-  if (selectionVariant === 'incremental') return { borderColor: '#DC2626', backgroundColor: '#EB5A5A' };
-  if (selectionVariant === 'history') return { borderColor: '#2563EB', backgroundColor: '#4D8FF6' };
-  if (selectionVariant === 'ending') return { borderColor: '#A16207', backgroundColor: '#C98A17' };
-  return { borderColor: '#7E22CE', backgroundColor: '#9A66E8' };
-}
-
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#000000',
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#000000',
-  },
-  contentContainer: {
-    paddingHorizontal: 20,
-    gap: 24,
-  },
-  badge: {
-    color: '#8A8A8A',
-    fontSize: 11,
-    letterSpacing: 1.8,
-    textTransform: 'uppercase',
-    fontWeight: '600',
-  },
-  title: {
-    color: '#FFFFFF',
-    fontSize: 28,
-    fontWeight: '700',
-  },
-  section: {
-    gap: 12,
-  },
-  sectionTitle: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '600',
-  },
-  optionsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  sessionTypeCard: {
-    backgroundColor: '#0D0D0D',
-    borderWidth: 1,
-    borderColor: '#1D1D1D',
-    borderRadius: 14,
-    padding: 10,
-    gap: 8,
-  },
-  sessionTypeHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  sessionTypeHelp: {
-    color: '#8C8C8C',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  sessionTypeSegment: {
-    flexDirection: 'row',
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 4,
-    gap: 6,
-  },
-  sessionTypeOption: {
-    flex: 1,
-    borderRadius: 9,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 6,
-  },
-  sessionTypeOptionSelected: {
-    backgroundColor: '#6B46FF',
-  },
-  sessionTypeOptionText: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  modePrimaryRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  optionsColumn: {
-    gap: 10,
-  },
-  chip: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#242424',
-    backgroundColor: '#101010',
-    paddingVertical: 11,
-    paddingHorizontal: 14,
-  },
-  chipSelected: {
-    borderColor: '#FFFFFF',
-    backgroundColor: '#1F1F1F',
-  },
-  chipSelectedEasy: {
-    borderColor: '#22C55E',
-    backgroundColor: '#16261B',
-  },
-  chipSelectedHard: {
-    borderColor: '#F97316',
-    backgroundColor: '#2B1B12',
-  },
-  chipSelectedIncremental: {
-    borderColor: '#EF4444',
-    backgroundColor: '#321616',
-  },
-  chipSelectedImages: {
-    borderColor: '#A855F7',
-    backgroundColor: '#20152F',
-  },
-  chipSelectedHistory: {
-    borderColor: '#38BDF8',
-    backgroundColor: '#122632',
-  },
-  chipSelectedEnding: {
-    borderColor: '#FACC15',
-    backgroundColor: '#2E2A16',
-  },
-  chipFullWidth: {
-    width: '100%',
-    flex: 1,
-  },
-  modePrimaryChip: {
-    flex: 1,
-    minWidth: 0,
-  },
-  chipText: {
-    color: '#B7B7B7',
-    fontSize: 14,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  chipTextSelected: {
-    color: '#FFFFFF',
-  },
-  chipDescription: {
-    color: '#818181',
-    fontSize: 11,
-    marginTop: 4,
-    fontWeight: '400',
-    textAlign: 'center',
-  },
-  chipDescriptionSelected: {
-    color: '#D8D8D8',
-  },
-  iconWrap: {
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  iconGlowWrap: {
-    shadowOpacity: 0.9,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 8,
-  },
-  startButtonFloating: {
-    position: 'absolute',
-    right: 20,
-    zIndex: 10,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 9,
-    paddingHorizontal: 14,
-  },
-  startButtonDisabled: {
-    backgroundColor: '#2A2A2A',
-  },
-  startButtonText: {
-    color: '#000000',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  startButtonTextDisabled: {
-    color: '#787878',
-  },
-  sessionFullscreen: {
-    flex: 1,
-    backgroundColor: '#000000',
-  },
-  cameraPlaceholder: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  sessionModalCard: {
-    marginHorizontal: 12,
-    borderRadius: 18,
-    overflow: 'hidden',
-  },
-  recordingBackground: {
-    backgroundColor: '#1A1A1A',
-  },
-  trainingBackground: {
-    backgroundColor: '#14122A',
-  },
-  cameraHudTop: {
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  sessionHeaderActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  timer: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  finishButton: {
-    borderRadius: 999,
-    backgroundColor: '#0000007A',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  finishButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  extendButton: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#FFFFFF66',
-    backgroundColor: '#00000066',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  extendButtonText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  preSessionActionsRow: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  bottomSwitchCameraButton: {
-    alignItems: 'center',
-    gap: 2,
-    padding: 8,
-  },
-  bottomSwitchCameraButtonBeforeStart: {
-    position: 'absolute',
-    left: '50%',
-    marginLeft: 58,
-  },
-  bottomSwitchCameraDisabled: {
-    opacity: 0.4,
-  },
+  screen: { flex: 1 },
+  container: { flex: 1 },
+  contentContainer: { paddingHorizontal: 20, gap: 18 },
+  badgeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  badgeLeftRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  badge: { fontSize: 11, letterSpacing: 1.8, textTransform: 'uppercase', fontWeight: '700' },
+  stepPill: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  stepPillText: { fontSize: 11, fontWeight: '700' },
+  headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 },
+  headerRightActions: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 4 },
+  headerAction: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  headerGhostAction: { opacity: 0.95 },
+  headerTitleWrap: { flex: 1 },
+  title: { fontSize: 29, fontWeight: '800', textTransform: 'uppercase' },
+  continueButton: { borderRadius: 12, paddingHorizontal: 14, paddingVertical: 9 },
+  continueButtonText: { fontWeight: '800', fontSize: 13 },
+  sectionCaption: { fontSize: 11, fontWeight: '700', letterSpacing: 1.2 },
+  sessionTypeCard: { borderRadius: 14, borderWidth: 1, padding: 10, gap: 8 },
+  sessionTypeSegment: { flexDirection: 'row', borderRadius: 12, borderWidth: 1, padding: 4, gap: 6 },
+  sessionTypeOption: { flex: 1, borderRadius: 9, paddingVertical: 8, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
+  sessionTypeOptionSelected: { backgroundColor: '#6B46FF' },
+  sessionTypeOptionText: { fontSize: 13, fontWeight: '700' },
 
-  summaryScreen: {
-    flex: 1,
-    backgroundColor: '#050505',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    gap: 16,
-  },
-  summaryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  summaryTitle: {
-    color: '#FFFFFF',
-    fontSize: 22,
-    fontWeight: '800',
-  },
-  summaryCloseButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#222222',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  summaryMetaCard: {
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#2B2B2B',
-    backgroundColor: '#101010',
-    padding: 14,
-    gap: 6,
-  },
-  summaryMetaText: {
-    color: '#D8D8D8',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  summaryMetaDescription: {
-    color: '#AFAFAF',
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  previewCard: {
-    gap: 8,
-  },
-  previewVideo: {
-    height: 320,
-    borderRadius: 16,
-    borderWidth: 1,
-    backgroundColor: '#1A1A1A',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-    padding: 14,
-  },
-  previewTimer: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  previewHint: {
-    color: '#909090',
-    fontSize: 12,
-  },
-  summaryActions: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 'auto',
-  },
-  summaryActionButton: {
-    flex: 1,
-    borderRadius: 12,
-    backgroundColor: '#6B46FF',
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  summaryActionText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-  },
+  modeRail: { gap: 12 },
+  modeCard: { borderRadius: 18, borderWidth: 1, overflow: 'hidden' },
+  modeCardSelected: { shadowColor: '#6B46FF', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 6 },
+  modeAccent: { height: 4, width: '100%' },
+  modeCardInner: { paddingHorizontal: 14, paddingVertical: 14, flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+  modeTitle: { fontSize: 24, fontWeight: '500', marginTop: 2 },
+  modeDescription: { fontSize: 13, marginTop: 4, maxWidth: 250, fontWeight: '400' },
+  modeIconBubble: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
 
-  sessionBottomActions: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 150,
-  },
-  recordButton: {
-    width: 86,
-    height: 86,
-    borderRadius: 43,
-    borderWidth: 4,
-    borderColor: '#FFFFFFAA',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  recordButtonInner: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: '#EF4444',
-  },
-  countdownNumber: {
-    fontSize: 82,
-    fontWeight: '800',
-  },
+  optionsColumn: { gap: 10 },
+  trackCard: { borderWidth: 1, borderRadius: 14, padding: 12, flexDirection: 'row', justifyContent: 'space-between', gap: 12, alignItems: 'center' },
+  trackMainArea: { flex: 1, gap: 4 },
+  trackTitle: { fontSize: 17, fontWeight: '700' },
+  trackInfo: { fontSize: 13 },
+  trackMeta: { fontSize: 12, fontWeight: '700', letterSpacing: 0.8 },
+  previewButton: { borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', gap: 4, alignItems: 'center' },
+  previewButtonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 12 },
+
+  timeCard: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 4 },
+  timeTitle: { fontSize: 24, fontWeight: '500' },
+  timeDescription: { fontSize: 13 },
+  startButton: { marginTop: 4, borderRadius: 16, paddingVertical: 14, alignItems: 'center' },
+  startButtonText: { fontSize: 17, fontWeight: '800' },
+
+  sessionFullscreen: { flex: 1, backgroundColor: '#000000' },
+  cameraPlaceholder: { flex: 1, justifyContent: 'space-between' },
+  sessionModalCard: { marginHorizontal: 12, borderRadius: 18, overflow: 'hidden' },
+  recordingBackground: { backgroundColor: '#1A1A1A' },
+  trainingBackground: { backgroundColor: '#14122A' },
+  cameraHudTop: { paddingHorizontal: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  sessionHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  timer: { fontSize: 20, fontWeight: '800', color: '#FFFFFF' },
+  finishButton: { borderRadius: 999, backgroundColor: '#0000007A', paddingHorizontal: 16, paddingVertical: 10 },
+  finishButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
+  extendButton: { borderRadius: 999, borderWidth: 1, borderColor: '#FFFFFF66', backgroundColor: '#00000066', paddingHorizontal: 10, paddingVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  extendButtonText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
+  preSessionActionsRow: { width: '100%', alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  bottomSwitchCameraButton: { alignItems: 'center', gap: 2, padding: 8 },
+  bottomSwitchCameraButtonBeforeStart: { position: 'absolute', left: '50%', marginLeft: 58 },
+  bottomSwitchCameraDisabled: { opacity: 0.4 },
+  sessionBottomActions: { alignItems: 'center', justifyContent: 'center', minHeight: 150 },
+  recordButton: { width: 86, height: 86, borderRadius: 43, borderWidth: 4, borderColor: '#FFFFFFAA', justifyContent: 'center', alignItems: 'center' },
+  recordButtonInner: { width: 58, height: 58, borderRadius: 29, backgroundColor: '#EF4444' },
+  countdownNumber: { fontSize: 82, fontWeight: '800' },
+
+  summaryScreen: { flex: 1, paddingHorizontal: 20, paddingVertical: 16, gap: 16 },
+  summaryHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  summaryTitle: { fontSize: 22, fontWeight: '800' },
+  summaryCloseButton: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  summaryMetaCard: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 6 },
+  summaryMetaText: { fontSize: 14, fontWeight: '600' },
+  summaryMetaDescription: { fontSize: 13, fontWeight: '500' },
+  previewCard: { gap: 8 },
+  previewVideo: { height: 320, borderRadius: 16, borderWidth: 1, justifyContent: 'flex-start', alignItems: 'flex-start', padding: 14 },
+  previewTimer: { fontSize: 18, fontWeight: '800' },
+  previewHint: { fontSize: 12 },
+  summaryActions: { flexDirection: 'row', gap: 10, marginTop: 'auto' },
+  summaryActionButton: { flex: 1, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  summaryActionText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
 });
