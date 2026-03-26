@@ -310,13 +310,18 @@ export default function RapearScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: themeColors.screen }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.screen, { backgroundColor: themeColors.screen }]} edges={['top']}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={[styles.contentContainer, { paddingTop: insets.top + 4, paddingBottom: 0 }]}
+        contentContainerStyle={[styles.contentContainer, { paddingTop: insets.top + 4 }]}
         showsVerticalScrollIndicator={false}>
         <View style={styles.badgeRow}>
           <View style={styles.badgeLeftRow}>
+            {setupStep === 'mode' ? (
+              <View style={[styles.headerAction, styles.headerGhostAction, { borderColor: themeColors.border, backgroundColor: themeColors.card }]}>
+                <MaterialIcons name="mic" size={18} color={themeColors.textPrimary} />
+              </View>
+            ) : null}
             {(setupStep === 'track' || setupStep === 'time') ? (
               <Pressable onPress={onBackStep} style={[styles.headerAction, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
                 <MaterialIcons name="arrow-back" size={18} color={themeColors.textPrimary} />
@@ -449,8 +454,6 @@ export default function RapearScreen() {
           </Pressable>
         ) : null}
       </ScrollView>
-      <View pointerEvents="none" style={[styles.bottomFade, { bottom: insets.bottom + 48, backgroundColor: themeColors.screen }]} />
-
       <Modal visible={sessionVisible} animationType="slide" onRequestClose={stopSession}>
         <View style={styles.sessionFullscreen}>
           <View style={[styles.cameraPlaceholder, styles.sessionModalCard, selectedSessionType === 'train' ? styles.trainingBackground : styles.recordingBackground, { marginTop: insets.top + 8, marginBottom: insets.bottom + 8 }]}>
@@ -594,6 +597,7 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 },
   headerRightActions: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 4 },
   headerAction: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  headerGhostAction: { opacity: 0.95 },
   headerTitleWrap: { flex: 1 },
   title: { fontSize: 29, fontWeight: '800', textTransform: 'uppercase' },
   continueButton: { borderRadius: 12, paddingHorizontal: 14, paddingVertical: 9 },
@@ -628,7 +632,6 @@ const styles = StyleSheet.create({
   timeDescription: { fontSize: 13 },
   startButton: { marginTop: 4, borderRadius: 16, paddingVertical: 14, alignItems: 'center' },
   startButtonText: { fontSize: 17, fontWeight: '800' },
-  bottomFade: { position: 'absolute', left: 0, right: 0, height: 42, opacity: 0.92 },
 
   sessionFullscreen: { flex: 1, backgroundColor: '#000000' },
   cameraPlaceholder: { flex: 1, justifyContent: 'space-between' },
