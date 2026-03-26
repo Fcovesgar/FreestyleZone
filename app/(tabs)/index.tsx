@@ -395,20 +395,20 @@ export default function RapearScreen() {
           <View style={styles.modeRail}>
             {RAP_MODES.map((mode) => {
               const selected = selectedMode === mode.key;
-              const selectedCardTextColor = selected ? '#101828' : themeColors.textPrimary;
+              const selectedCardTextColor = themeColors.textPrimary;
               return (
                 <Pressable
                   key={mode.key}
                   onPress={() => setSelectedMode(mode.key)}
                   style={[
                     styles.modeCard,
-                    { borderColor: selected ? mode.accent : themeColors.border, backgroundColor: selected ? '#FFFFFF' : themeColors.card },
+                    { borderColor: selected ? mode.accent : themeColors.border, backgroundColor: selected ? `${mode.accent}22` : themeColors.card },
                     selected && styles.modeCardSelected,
                   ]}>
                   <View style={styles.modeCardInner}>
                     <View>
                       <Text style={[styles.modeTitle, { color: selectedCardTextColor }]}>{mode.label}</Text>
-                      <Text style={[styles.modeDescription, { color: selected ? '#475467' : themeColors.textSecondary }]}>{mode.description}</Text>
+                      <Text style={[styles.modeDescription, { color: themeColors.textSecondary }]}>{mode.description}</Text>
                     </View>
                     <View style={[styles.modeIconBubble, { borderColor: selected ? mode.accent : themeColors.border }]}>
                       <MaterialIcons name={mode.icon} size={24} color={selected ? mode.accent : themeColors.textSecondary} />
@@ -500,11 +500,11 @@ export default function RapearScreen() {
                 <View style={[styles.trainingHeader, { paddingTop: insets.top + 8 }]}>
                   <View>
                     <Text style={styles.trainingAppName}>FreestyleZone</Text>
-                    <View style={styles.trainingModeTag}>
-                      <MaterialIcons name="school" size={13} color="#CFC5FF" />
-                      <Text style={styles.trainingModeTagText}>Modo entrenar</Text>
-                    </View>
                     <Text style={[styles.timer, { color: timerColor }]}>{displayTimer}</Text>
+                    <View style={styles.trainingModeTag}>
+                      <MaterialIcons name="school" size={11} color="#CFC5FF" />
+                      <Text style={styles.trainingModeTagText}>Entrenar</Text>
+                    </View>
                   </View>
                   <Pressable style={styles.finishButton} onPress={finishSession}>
                     <Text style={styles.finishButtonText}>Finalizar</Text>
@@ -779,8 +779,8 @@ const styles = StyleSheet.create({
   cameraHudTop: { paddingHorizontal: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   trainingHeader: { paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   trainingAppName: { color: '#D4CCFF', fontSize: 12, letterSpacing: 1.6, textTransform: 'uppercase', fontWeight: '700', marginBottom: 6 },
-  trainingModeTag: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  trainingModeTagText: { color: '#CFC5FF', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8 },
+  trainingModeTag: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  trainingModeTagText: { color: '#CFC5FF', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6 },
   trainingCenterClearSpace: { flex: 1 },
   trainingBottomArea: { gap: 12, paddingHorizontal: 12 },
   selectBeatButton: { alignSelf: 'flex-end', borderRadius: 999, paddingVertical: 10, paddingHorizontal: 14, backgroundColor: '#6B46FF', flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -812,7 +812,7 @@ const styles = StyleSheet.create({
   baseModalClose: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#FFFFFF1A', alignItems: 'center', justifyContent: 'center' },
   baseOptionsColumn: { gap: 8 },
   baseOptionItem: { borderRadius: 12, borderWidth: 1, borderColor: '#FFFFFF1F', backgroundColor: '#FFFFFF0A', padding: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  baseOptionSelected: { borderColor: '#9F7AEA', backgroundColor: '#9F7AEA20' },
+  baseOptionSelected: { borderColor: '#6B46FF', backgroundColor: '#6B46FF22' },
   baseOptionMain: { gap: 2 },
   baseOptionTitle: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
   baseOptionDesc: { color: '#BDB7E5', fontSize: 12, fontWeight: '600' },
