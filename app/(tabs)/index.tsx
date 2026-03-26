@@ -117,6 +117,12 @@ export default function RapearScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remainingSeconds, isUnlimitedSession]);
 
+  useEffect(() => {
+    if (setupStep !== 'track') {
+      setPreviewTrack(null);
+    }
+  }, [setupStep]);
+
   const onSelectSessionType = (sessionType: SessionType) => {
     setSelectedSessionType(sessionType);
 
@@ -313,7 +319,7 @@ export default function RapearScreen() {
     <SafeAreaView style={[styles.screen, { backgroundColor: themeColors.screen }]} edges={['top']}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={[styles.contentContainer, { paddingTop: insets.top + 4 }]}
+        contentContainerStyle={[styles.contentContainer, { paddingTop: insets.top + 4, paddingBottom: setupStep === 'mode' ? insets.bottom + 78 : 0 }]}
         showsVerticalScrollIndicator={false}>
         <View style={styles.badgeRow}>
           <View style={styles.badgeLeftRow}>
@@ -363,7 +369,7 @@ export default function RapearScreen() {
                   onPress={() => setSelectedMode(mode.key)}
                   style={[
                     styles.modeCard,
-                    { borderColor: selected ? mode.accent : themeColors.border, backgroundColor: selected ? `${mode.accent}22` : themeColors.card },
+                    { borderColor: selected ? '#6B46FF' : '#6B46FF88', backgroundColor: selected ? '#6B46FF22' : themeColors.card },
                     selected && styles.modeCardSelected,
                   ]}>
                   <View style={[styles.modeAccent, { backgroundColor: mode.accent }]} />
@@ -614,8 +620,8 @@ const styles = StyleSheet.create({
   modeCardSelected: { shadowColor: '#6B46FF', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 6 },
   modeAccent: { height: 4, width: '100%' },
   modeCardInner: { paddingHorizontal: 14, paddingVertical: 14, flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  modeTitle: { fontSize: 22, fontWeight: '800', marginTop: 4 },
-  modeDescription: { fontSize: 13, marginTop: 4, maxWidth: 250 },
+  modeTitle: { fontSize: 24, fontWeight: '500', marginTop: 2 },
+  modeDescription: { fontSize: 13, marginTop: 4, maxWidth: 250, fontWeight: '400' },
   modeIconBubble: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
 
   optionsColumn: { gap: 10 },
