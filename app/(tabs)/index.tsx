@@ -373,7 +373,6 @@ export default function RapearScreen() {
                     { borderColor: selected ? '#6B46FF' : themeColors.border, backgroundColor: selected ? '#FFFFFF' : themeColors.card },
                     selected && styles.modeCardSelected,
                   ]}>
-                  <View style={[styles.modeAccent, { backgroundColor: mode.accent }]} />
                   <View style={styles.modeCardInner}>
                     <View>
                       <Text style={[styles.modeTitle, { color: selectedCardTextColor }]}>{mode.label}</Text>
@@ -619,7 +618,6 @@ const styles = StyleSheet.create({
   modeRail: { gap: 12 },
   modeCard: { borderRadius: 18, borderWidth: 1, overflow: 'hidden' },
   modeCardSelected: { shadowColor: '#6B46FF', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 6 },
-  modeAccent: { height: 4, width: '100%' },
   modeCardInner: { paddingHorizontal: 14, paddingVertical: 14, flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
   modeTitle: { fontSize: 24, fontWeight: '500', marginTop: 2 },
   modeDescription: { fontSize: 13, marginTop: 4, maxWidth: 250, fontWeight: '400' },
