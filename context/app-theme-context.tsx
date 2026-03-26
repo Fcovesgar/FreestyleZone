@@ -13,9 +13,9 @@ const AppThemeContext = createContext<AppThemeContextValue | null>(null);
 
 export function AppThemeProvider({ children }: { children: ReactNode }) {
   const systemColorScheme = useSystemColorScheme();
-  const [themePreference, setThemePreference] = useState<ThemePreference>('dark');
+  const [themePreference, setThemePreference] = useState<ThemePreference>('light');
 
-  const effectiveColorScheme = themePreference ?? systemColorScheme ?? 'dark';
+  const effectiveColorScheme = themePreference ?? systemColorScheme ?? 'light';
 
   const value = useMemo(
     () => ({
