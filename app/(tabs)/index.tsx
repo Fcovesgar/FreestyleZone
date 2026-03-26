@@ -5,7 +5,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { useAppTheme } from '@/context/app-theme-context';
 
-type RapMode = 'easy' | 'hard' | 'incremental' | 'history' | 'ending' | 'images';
+type RapMode = 'easy' | 'hard' | 'incremental' | 'history' | 'ending' | 'images' | 'free';
 type Track = 'base-1' | 'base-2' | 'base-3';
 type SessionTime = '1-min' | '2-min' | '5-min' | 'infinite';
 type SessionType = 'record' | 'train';
@@ -19,13 +19,14 @@ type SessionSummary = {
   elapsedSeconds: number;
 };
 
-const RAP_MODES: { key: RapMode; label: string; description: string; vibe: string; icon: keyof typeof MaterialIcons.glyphMap; accent: string }[] = [
-  { key: 'easy', label: 'Easy', description: 'Palabras cada 10s para entrar en calor sin freno.', vibe: 'Flow chill', icon: 'security', accent: '#22C55E' },
-  { key: 'hard', label: 'Hard', description: 'Palabras cada 5s para tirar barras agresivas.', vibe: 'Pura presión', icon: 'flash-on', accent: '#F97316' },
-  { key: 'incremental', label: 'Incremental', description: 'Empieza suave y acaba en modo metralla.', vibe: 'Subida extrema', icon: 'local-fire-department', accent: '#EF4444' },
-  { key: 'history', label: 'Historia', description: 'Construye una historia conectando cada palabra.', vibe: 'Storytelling', icon: 'history-edu', accent: '#38BDF8' },
-  { key: 'ending', label: 'Terminación', description: 'Remata barras con finales que te marcan.', vibe: 'Punchline', icon: 'text-fields', accent: '#FACC15' },
-  { key: 'images', label: 'Imágenes', description: 'Inspírate en visuales y suelta imaginación.', vibe: 'Modo visual', icon: 'image', accent: '#A855F7' },
+const RAP_MODES: { key: RapMode; label: string; description: string; icon: keyof typeof MaterialIcons.glyphMap; accent: string }[] = [
+  { key: 'easy', label: 'Easy', description: 'Palabras cada 10s', icon: 'security', accent: '#22C55E' },
+  { key: 'hard', label: 'Hard', description: 'Palabras cada 5s', icon: 'flash-on', accent: '#F97316' },
+  { key: 'incremental', label: 'Incremental', description: 'Palabras cada 10s - 5s - 2s', icon: 'local-fire-department', accent: '#EF4444' },
+  { key: 'history', label: 'Historia', description: 'Crea historia con palabras', icon: 'history-edu', accent: '#38BDF8' },
+  { key: 'ending', label: 'Terminación', description: 'Rapea con terminaciones', icon: 'text-fields', accent: '#FACC15' },
+  { key: 'images', label: 'Imágenes', description: 'Rapea con imágenes', icon: 'image', accent: '#A855F7' },
+  { key: 'free', label: 'Libre', description: 'Rapea libremente y sin estímulos.', icon: 'graphic-eq', accent: '#14B8A6' },
 ];
 
 const TRACKS: { key: Track; label: string; description: string; bpm: string }[] = [
@@ -34,13 +35,15 @@ const TRACKS: { key: Track; label: string; description: string; bpm: string }[] 
   { key: 'base-3', label: 'Base Lo-Fi', description: 'Atmósfera relajada para barras melódicas.', bpm: '78 BPM' },
 ];
 
-const SESSION_TIMES: { key: SessionTime; label: string; description: string }[] = [
+const SESSION_TIMES: { key: SessionTime; label: string; description: string; icon?: keyof typeof MaterialIcons.glyphMap }[] = [
   { key: '1-min', label: '1 min', description: 'Ronda rápida' },
   { key: '2-min', label: '2 min', description: 'Formato clásico' },
   { key: '5-min', label: '5 min', description: 'Sesión extensa' },
 ];
 
-const TRAINING_TIME: { key: SessionTime; label: string; description: string }[] = [{ key: 'infinite', label: 'Infinito', description: 'Sin límite de tiempo' }];
+const TRAINING_TIME: { key: SessionTime; label: string; description: string; icon?: keyof typeof MaterialIcons.glyphMap }[] = [
+  { key: 'infinite', label: '∞', description: 'Sin límite de tiempo', icon: 'all-inclusive' },
+];
 
 const SESSION_TYPES: { key: SessionType; label: string }[] = [
   { key: 'record', label: 'Grabar' },
@@ -320,48 +323,26 @@ export default function RapearScreen() {
         </View>
 
         <View style={styles.headerRow}>
-          {(setupStep === 'track' || setupStep === 'time') && (
-            <Pressable onPress={onBackStep} style={[styles.headerAction, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
-              <MaterialIcons name="arrow-back" size={18} color={themeColors.textPrimary} />
-            </Pressable>
-          )}
-
           <View style={styles.headerTitleWrap}>
             <Text style={[styles.title, { color: themeColors.textPrimary }]}>
               {setupStep === 'mode' ? 'Selecciona el modo' : setupStep === 'track' ? 'Instrumental' : 'Tiempo de la sesión'}
             </Text>
           </View>
 
-          {setupStep !== 'time' ? (
-            <Pressable
-              disabled={!canAdvance}
-              onPress={onContinueStep}
-              style={[styles.continueButton, { backgroundColor: canAdvance ? themeColors.activeBg : themeColors.mutedBorder }]}>
-              <Text style={[styles.continueButtonText, { color: canAdvance ? '#FFFFFF' : themeColors.textSecondary }]}>Continuar</Text>
-            </Pressable>
-          ) : (
-            <View style={styles.headerSpacer} />
-          )}
-        </View>
-
-        <View style={[styles.sessionTypeCard, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
-          <Text style={[styles.sectionCaption, { color: themeColors.textSecondary }]}>MODO DE SESIÓN</Text>
-          <View style={[styles.sessionTypeSegment, { backgroundColor: themeColors.mutedBg, borderColor: themeColors.mutedBorder }]}>
-            {SESSION_TYPES.map((sessionType) => {
-              const isSelected = selectedSessionType === sessionType.key;
-
-              return (
-                <Pressable
-                  key={sessionType.key}
-                  onPress={() => onSelectSessionType(sessionType.key)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: isSelected }}
-                  style={[styles.sessionTypeOption, isSelected && styles.sessionTypeOptionSelected]}>
-                  <MaterialIcons name={sessionType.key === 'record' ? 'mic' : 'school'} size={16} color={isSelected ? '#FFFFFF' : themeColors.textSecondary} />
-                  <Text style={[styles.sessionTypeOptionText, { color: isSelected ? '#FFFFFF' : themeColors.textSecondary }]}>{sessionType.label}</Text>
-                </Pressable>
-              );
-            })}
+          <View style={styles.headerRightActions}>
+            {(setupStep === 'track' || setupStep === 'time') ? (
+              <Pressable onPress={onBackStep} style={[styles.headerAction, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
+                <MaterialIcons name="arrow-back" size={18} color={themeColors.textPrimary} />
+              </Pressable>
+            ) : null}
+            {setupStep !== 'time' ? (
+              <Pressable
+                disabled={!canAdvance}
+                onPress={onContinueStep}
+                style={[styles.continueButton, { backgroundColor: canAdvance ? themeColors.activeBg : themeColors.mutedBorder }]}>
+                <Text style={[styles.continueButtonText, { color: canAdvance ? '#FFFFFF' : themeColors.textSecondary }]}>Continuar</Text>
+              </Pressable>
+            ) : null}
           </View>
         </View>
 
@@ -381,7 +362,6 @@ export default function RapearScreen() {
                   <View style={[styles.modeAccent, { backgroundColor: mode.accent }]} />
                   <View style={styles.modeCardInner}>
                     <View>
-                      <Text style={[styles.modeVibe, { color: selected ? mode.accent : themeColors.textSecondary }]}>{mode.vibe}</Text>
                       <Text style={[styles.modeTitle, { color: themeColors.textPrimary }]}>{mode.label}</Text>
                       <Text style={[styles.modeDescription, { color: themeColors.textSecondary }]}>{mode.description}</Text>
                     </View>
@@ -420,6 +400,26 @@ export default function RapearScreen() {
 
         {setupStep === 'time' ? (
           <View style={styles.optionsColumn}>
+            <View style={[styles.sessionTypeCard, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
+              <Text style={[styles.sectionCaption, { color: themeColors.textSecondary }]}>MODO DE SESIÓN</Text>
+              <View style={[styles.sessionTypeSegment, { backgroundColor: themeColors.mutedBg, borderColor: themeColors.mutedBorder }]}>
+                {SESSION_TYPES.map((sessionType) => {
+                  const isSelected = selectedSessionType === sessionType.key;
+
+                  return (
+                    <Pressable
+                      key={sessionType.key}
+                      onPress={() => onSelectSessionType(sessionType.key)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: isSelected }}
+                      style={[styles.sessionTypeOption, isSelected && styles.sessionTypeOptionSelected]}>
+                      <MaterialIcons name={sessionType.key === 'record' ? 'mic' : 'school'} size={16} color={isSelected ? '#FFFFFF' : themeColors.textSecondary} />
+                      <Text style={[styles.sessionTypeOptionText, { color: isSelected ? '#FFFFFF' : themeColors.textSecondary }]}>{sessionType.label}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
             {availableSessionTimes.map((sessionTime) => {
               const selected = selectedSessionTime === sessionTime.key;
               return (
@@ -427,6 +427,7 @@ export default function RapearScreen() {
                   key={sessionTime.key}
                   onPress={() => setSelectedSessionTime(sessionTime.key)}
                   style={[styles.timeCard, { borderColor: selected ? '#6B46FF' : themeColors.border, backgroundColor: selected ? '#6B46FF22' : themeColors.card }]}>
+                  {sessionTime.icon ? <MaterialIcons name={sessionTime.icon} size={28} color={themeColors.textPrimary} /> : null}
                   <Text style={[styles.timeTitle, { color: themeColors.textPrimary }]}>{sessionTime.label}</Text>
                   <Text style={[styles.timeDescription, { color: themeColors.textSecondary }]}>{sessionTime.description}</Text>
                 </Pressable>
@@ -586,13 +587,13 @@ const styles = StyleSheet.create({
   badge: { fontSize: 11, letterSpacing: 1.8, textTransform: 'uppercase', fontWeight: '700' },
   stepPill: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
   stepPillText: { fontSize: 11, fontWeight: '700' },
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 },
+  headerRightActions: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 4 },
   headerAction: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   headerTitleWrap: { flex: 1 },
   title: { fontSize: 29, fontWeight: '800', textTransform: 'uppercase' },
   continueButton: { borderRadius: 12, paddingHorizontal: 14, paddingVertical: 9 },
   continueButtonText: { fontWeight: '800', fontSize: 13 },
-  headerSpacer: { width: 36 },
   sectionCaption: { fontSize: 11, fontWeight: '700', letterSpacing: 1.2 },
   sessionTypeCard: { borderRadius: 14, borderWidth: 1, padding: 10, gap: 8 },
   sessionTypeSegment: { flexDirection: 'row', borderRadius: 12, borderWidth: 1, padding: 4, gap: 6 },
@@ -605,7 +606,6 @@ const styles = StyleSheet.create({
   modeCardSelected: { shadowColor: '#6B46FF', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 6 },
   modeAccent: { height: 4, width: '100%' },
   modeCardInner: { paddingHorizontal: 14, paddingVertical: 14, flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  modeVibe: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
   modeTitle: { fontSize: 22, fontWeight: '800', marginTop: 4 },
   modeDescription: { fontSize: 13, marginTop: 4, maxWidth: 250 },
   modeIconBubble: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
