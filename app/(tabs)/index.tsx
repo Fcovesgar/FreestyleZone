@@ -500,6 +500,10 @@ export default function RapearScreen() {
                 <View style={[styles.trainingHeader, { paddingTop: insets.top + 8 }]}>
                   <View>
                     <Text style={styles.trainingAppName}>FreestyleZone</Text>
+                    <View style={styles.trainingModeTag}>
+                      <MaterialIcons name="school" size={13} color="#CFC5FF" />
+                      <Text style={styles.trainingModeTagText}>Modo entrenar</Text>
+                    </View>
                     <Text style={[styles.timer, { color: timerColor }]}>{displayTimer}</Text>
                   </View>
                   <Pressable style={styles.finishButton} onPress={finishSession}>
@@ -533,6 +537,34 @@ export default function RapearScreen() {
                     </View>
                   </View>
                 </View>
+
+                {baseSelectorVisible ? (
+                  <Pressable style={styles.baseModalBackdrop} onPress={() => setBaseSelectorVisible(false)}>
+                    <Pressable style={styles.baseModalCard} onPress={(event) => event.stopPropagation()}>
+                      <View style={styles.baseModalHeader}>
+                        <Text style={styles.baseModalTitle}>Selecciona una base</Text>
+                        <Pressable style={styles.baseModalClose} onPress={() => setBaseSelectorVisible(false)}>
+                          <MaterialIcons name="close" size={18} color="#FFFFFF" />
+                        </Pressable>
+                      </View>
+
+                      <View style={styles.baseOptionsColumn}>
+                        {TRACKS.map((track) => {
+                          const isSelected = selectedTrack === track.key;
+                          return (
+                            <Pressable key={track.key} style={[styles.baseOptionItem, isSelected && styles.baseOptionSelected]} onPress={() => onSelectTrainingTrack(track.key)}>
+                              <View style={styles.baseOptionMain}>
+                                <Text style={styles.baseOptionTitle}>{track.label}</Text>
+                                <Text style={styles.baseOptionDesc}>{track.bpm}</Text>
+                              </View>
+                              {isSelected ? <MaterialIcons name="check-circle" size={20} color="#9F7AEA" /> : null}
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    </Pressable>
+                  </Pressable>
+                ) : null}
               </>
             ) : (
               <>
@@ -747,6 +779,8 @@ const styles = StyleSheet.create({
   cameraHudTop: { paddingHorizontal: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   trainingHeader: { paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   trainingAppName: { color: '#D4CCFF', fontSize: 12, letterSpacing: 1.6, textTransform: 'uppercase', fontWeight: '700', marginBottom: 6 },
+  trainingModeTag: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  trainingModeTagText: { color: '#CFC5FF', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8 },
   trainingCenterClearSpace: { flex: 1 },
   trainingBottomArea: { gap: 12, paddingHorizontal: 12 },
   selectBeatButton: { alignSelf: 'flex-end', borderRadius: 999, paddingVertical: 10, paddingHorizontal: 14, backgroundColor: '#6B46FF', flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -771,8 +805,8 @@ const styles = StyleSheet.create({
   recordButton: { width: 86, height: 86, borderRadius: 43, borderWidth: 4, borderColor: '#FFFFFFAA', justifyContent: 'center', alignItems: 'center' },
   recordButtonInner: { width: 58, height: 58, borderRadius: 29, backgroundColor: '#EF4444' },
   countdownNumber: { fontSize: 82, fontWeight: '800' },
-  baseModalBackdrop: { flex: 1, backgroundColor: '#000000A6', justifyContent: 'center', paddingHorizontal: 18 },
-  baseModalCard: { borderRadius: 20, borderWidth: 1, borderColor: '#FFFFFF1F', backgroundColor: '#121022', padding: 14, gap: 12 },
+  baseModalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: '#000000A6', justifyContent: 'center', paddingHorizontal: 18, zIndex: 20 },
+  baseModalCard: { borderRadius: 20, borderWidth: 1, borderColor: '#FFFFFF1F', backgroundColor: '#121022', padding: 14, gap: 12, maxHeight: '70%' },
   baseModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   baseModalTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '800' },
   baseModalClose: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#FFFFFF1A', alignItems: 'center', justifyContent: 'center' },
