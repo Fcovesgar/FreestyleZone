@@ -313,10 +313,17 @@ export default function RapearScreen() {
     <SafeAreaView style={[styles.screen, { backgroundColor: themeColors.screen }]} edges={['top', 'bottom']}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={[styles.contentContainer, { paddingTop: insets.top + 4, paddingBottom: insets.bottom + 28 }]}
+        contentContainerStyle={[styles.contentContainer, { paddingTop: insets.top + 4, paddingBottom: 0 }]}
         showsVerticalScrollIndicator={false}>
         <View style={styles.badgeRow}>
-          <Text style={[styles.badge, { color: themeColors.textSecondary }]}>FreestyleZone</Text>
+          <View style={styles.badgeLeftRow}>
+            {(setupStep === 'track' || setupStep === 'time') ? (
+              <Pressable onPress={onBackStep} style={[styles.headerAction, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
+                <MaterialIcons name="arrow-back" size={18} color={themeColors.textPrimary} />
+              </Pressable>
+            ) : null}
+            <Text style={[styles.badge, { color: themeColors.textSecondary }]}>FreestyleZone</Text>
+          </View>
           <View style={[styles.stepPill, { borderColor: themeColors.border, backgroundColor: themeColors.mutedBg }]}>
             <Text style={[styles.stepPillText, { color: themeColors.textSecondary }]}>{setupStep === 'mode' ? '1/3' : setupStep === 'track' ? '2/3' : '3/3'}</Text>
           </View>
@@ -330,11 +337,6 @@ export default function RapearScreen() {
           </View>
 
           <View style={styles.headerRightActions}>
-            {(setupStep === 'track' || setupStep === 'time') ? (
-              <Pressable onPress={onBackStep} style={[styles.headerAction, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
-                <MaterialIcons name="arrow-back" size={18} color={themeColors.textPrimary} />
-              </Pressable>
-            ) : null}
             {setupStep !== 'time' ? (
               <Pressable
                 disabled={!canAdvance}
@@ -427,8 +429,8 @@ export default function RapearScreen() {
                   key={sessionTime.key}
                   onPress={() => setSelectedSessionTime(sessionTime.key)}
                   style={[styles.timeCard, { borderColor: selected ? '#6B46FF' : themeColors.border, backgroundColor: selected ? '#6B46FF22' : themeColors.card }]}>
-                  {sessionTime.icon ? <MaterialIcons name={sessionTime.icon} size={28} color={themeColors.textPrimary} /> : null}
-                  <Text style={[styles.timeTitle, { color: themeColors.textPrimary }]}>{sessionTime.label}</Text>
+                  {sessionTime.icon ? <MaterialIcons name={sessionTime.icon} size={30} color={themeColors.textPrimary} /> : null}
+                  {!sessionTime.icon ? <Text style={[styles.timeTitle, { color: themeColors.textPrimary }]}>{sessionTime.label}</Text> : null}
                   <Text style={[styles.timeDescription, { color: themeColors.textSecondary }]}>{sessionTime.description}</Text>
                 </Pressable>
               );
@@ -447,6 +449,7 @@ export default function RapearScreen() {
           </Pressable>
         ) : null}
       </ScrollView>
+      <View pointerEvents="none" style={[styles.bottomFade, { bottom: insets.bottom + 48, backgroundColor: themeColors.screen }]} />
 
       <Modal visible={sessionVisible} animationType="slide" onRequestClose={stopSession}>
         <View style={styles.sessionFullscreen}>
@@ -584,6 +587,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   contentContainer: { paddingHorizontal: 20, gap: 18 },
   badgeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  badgeLeftRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   badge: { fontSize: 11, letterSpacing: 1.8, textTransform: 'uppercase', fontWeight: '700' },
   stepPill: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
   stepPillText: { fontSize: 11, fontWeight: '700' },
@@ -620,10 +624,11 @@ const styles = StyleSheet.create({
   previewButtonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 12 },
 
   timeCard: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 4 },
-  timeTitle: { fontSize: 24, fontWeight: '800' },
+  timeTitle: { fontSize: 24, fontWeight: '500' },
   timeDescription: { fontSize: 13 },
   startButton: { marginTop: 4, borderRadius: 16, paddingVertical: 14, alignItems: 'center' },
   startButtonText: { fontSize: 17, fontWeight: '800' },
+  bottomFade: { position: 'absolute', left: 0, right: 0, height: 42, opacity: 0.92 },
 
   sessionFullscreen: { flex: 1, backgroundColor: '#000000' },
   cameraPlaceholder: { flex: 1, justifyContent: 'space-between' },
