@@ -25,7 +25,7 @@ export default function DailyChallengeOverlayScreen() {
           showsVerticalScrollIndicator={false}>
           <View
             style={[styles.overlayCard, { borderColor: isDark ? '#202020' : '#DFE3E8', backgroundColor: isDark ? '#0E0E0E' : '#FFFFFF' }]}>
-            <Text style={[styles.title, { color: isDark ? '#FFFFFF' : '#111111' }]}>Reto diario</Text>
+            <Text style={[styles.title, { color: isDark ? '#FFFFFF' : '#111111' }]}>Inicio</Text>
             <Text style={[styles.description, { color: isDark ? '#9C9C9C' : '#667085' }]}>Overlay pendiente de diseño.</Text>
           </View>
         </ScrollView>

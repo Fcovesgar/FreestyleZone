@@ -1,6 +1,6 @@
 import { type ReactNode, useCallback, useMemo } from 'react';
 import { Platform, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useNavigation } from 'expo-router';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
@@ -12,12 +12,7 @@ import Animated, {
 
 type TabKey = 'challenge' | 'index' | 'profile';
 
-const TAB_ORDER: TabKey[] = ['challenge', 'index', 'profile'];
-const TAB_PATH: Record<TabKey, string> = {
-  challenge: '/(tabs)/challenge',
-  index: '/(tabs)',
-  profile: '/(tabs)/profile',
-};
+const TAB_ORDER: TabKey[] = ['index', 'challenge', 'profile'];
 const SWIPE_THRESHOLD = 70;
 
 type SwipeableTabScreenProps = {
@@ -26,7 +21,7 @@ type SwipeableTabScreenProps = {
 };
 
 export function SwipeableTabScreen({ currentTab, children }: SwipeableTabScreenProps) {
-  const router = useRouter();
+  const navigation = useNavigation();
   const translateX = useSharedValue(0);
   const canSwipe = Platform.OS === 'ios' || Platform.OS === 'android';
 
@@ -39,9 +34,9 @@ export function SwipeableTabScreen({ currentTab, children }: SwipeableTabScreenP
       if (nextIndex < 0 || nextIndex >= TAB_ORDER.length) return;
 
       const nextTab = TAB_ORDER[nextIndex];
-      router.replace(TAB_PATH[nextTab]);
+      navigation.navigate(nextTab as never);
     },
-    [currentTab, router]
+    [currentTab, navigation]
   );
 
   const pan = useMemo(
