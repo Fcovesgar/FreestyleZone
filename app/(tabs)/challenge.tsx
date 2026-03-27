@@ -29,7 +29,6 @@ export default function DailyChallengeOverlayScreen() {
           </View>
         </ScrollView>
     </SafeAreaView>
-    </SwipeableTabScreen>
   );
 }
 
