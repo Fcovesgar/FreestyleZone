@@ -51,6 +51,7 @@ const SESSION_TYPES: { key: SessionType; label: string }[] = [
 ];
 
 const PRE_RECORD_COUNTDOWN_SECONDS = 5;
+const VIEW_TOP_OFFSET = 12;
 
 export default function RapearScreen() {
   const insets = useSafeAreaInsets();
@@ -59,7 +60,7 @@ export default function RapearScreen() {
 
   const themeColors = useMemo(
     () => ({
-      screen: isDark ? '#050505' : '#F3F5F8',
+      screen: isDark ? '#0D0A1A' : '#F5F2FF',
       card: isDark ? '#0F0F0F' : '#FFFFFF',
       border: isDark ? '#222222' : '#DFE3E8',
       textPrimary: isDark ? '#FFFFFF' : '#101828',
@@ -378,7 +379,7 @@ export default function RapearScreen() {
     <SafeAreaView style={[styles.screen, { backgroundColor: themeColors.screen }]} edges={['top']}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={[styles.contentContainer, { paddingTop: 4, paddingBottom: setupStep === 'mode' ? insets.bottom + 36 : 0 }]}
+        contentContainerStyle={[styles.contentContainer, { paddingTop: VIEW_TOP_OFFSET, paddingBottom: setupStep === 'mode' ? insets.bottom + 36 : 0 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#FFFFFF' : '#111111'} />}
         showsVerticalScrollIndicator={false}>
         <View style={styles.badgeRow}>

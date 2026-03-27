@@ -8,6 +8,7 @@ import { useAppTheme } from '@/context/app-theme-context';
 const WEEK_DAYS = ['Día 1', 'Día 2', 'Día 3', 'Día 4', 'Día 5', 'Día 6', 'Día 7'] as const;
 const CURRENT_PROGRESS_DAY = 0;
 const STREAK_DAYS = 3;
+const VIEW_TOP_OFFSET = 12;
 
 const NOTIFICATIONS: { id: string; title: string; detail: string }[] = [];
 
@@ -42,15 +43,15 @@ export default function DailyChallengeOverlayScreen() {
   const colors = useMemo(
     () => ({
       screen: isDark ? '#0D0A1A' : '#F5F2FF',
-      card: isDark ? '#161028' : '#FFFFFF',
-      border: isDark ? '#2B2247' : '#DCCFFF',
+      card: isDark ? '#1B1430' : '#FFFFFF',
+      border: isDark ? '#3A2E63' : '#DCCFFF',
       textPrimary: isDark ? '#FFFFFF' : '#111111',
-      textSecondary: isDark ? '#9C9C9C' : '#667085',
+      textSecondary: isDark ? '#C5BDE6' : '#667085',
       purple: '#6B46FF',
       yellowFlag: '#FACC15',
-      pill: isDark ? '#1F1A38' : '#ECE7FF',
-      iconChip: isDark ? '#171717' : '#FFFFFF',
-      mutedBg: isDark ? '#141414' : '#F8FAFC',
+      pill: isDark ? '#2C2350' : '#ECE7FF',
+      iconChip: isDark ? '#221A3D' : '#FFFFFF',
+      mutedBg: isDark ? '#20173A' : '#F8FAFC',
     }),
     [isDark]
   );
@@ -153,77 +154,81 @@ export default function DailyChallengeOverlayScreen() {
 
       <Modal animationType="fade" transparent visible={notificationsModalVisible} onRequestClose={() => setNotificationsModalVisible(false)}>
         <View style={styles.modalBackdropCenter}>
-          <View style={[styles.centerModalCard, { borderColor: colors.border, backgroundColor: colors.card }]}> 
-            <View style={styles.modalHeader}>
-              <Text style={[styles.centerModalTitle, { color: colors.textPrimary }]}>Mis notificaciones</Text>
-              <Pressable onPress={() => setNotificationsModalVisible(false)} hitSlop={8}>
-                <MaterialIcons name="close" size={22} color={colors.textPrimary} />
-              </Pressable>
-            </View>
-
-            {NOTIFICATIONS.length === 0 ? (
-              <View style={[styles.emptyBox, { backgroundColor: colors.mutedBg, borderColor: colors.border }]}>
-                <MaterialIcons name="notifications-none" size={22} color={colors.textSecondary} />
-                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No hay notificaciones por ahora.</Text>
+          <View style={[styles.centerModalCard, { borderColor: colors.border, backgroundColor: colors.card }]}>
+            <ScrollView contentContainerStyle={styles.centerModalContent} showsVerticalScrollIndicator={false}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.centerModalTitle, { color: colors.textPrimary }]}>Mis notificaciones</Text>
+                <Pressable onPress={() => setNotificationsModalVisible(false)} hitSlop={8}>
+                  <MaterialIcons name="close" size={22} color={colors.textPrimary} />
+                </Pressable>
               </View>
-            ) : (
-              NOTIFICATIONS.map((item) => (
-                <View key={item.id} style={[styles.upcomingBox, { borderColor: colors.border, backgroundColor: colors.mutedBg }]}>
-                  <Text style={[styles.upcomingTitle, { color: colors.textPrimary }]}>{item.title}</Text>
-                  <Text style={[styles.upcomingText, { color: colors.textSecondary }]}>{item.detail}</Text>
+
+              {NOTIFICATIONS.length === 0 ? (
+                <View style={[styles.emptyBox, { backgroundColor: colors.mutedBg, borderColor: colors.border }]}>
+                  <MaterialIcons name="notifications-none" size={22} color={colors.textSecondary} />
+                  <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No hay notificaciones por ahora.</Text>
                 </View>
-              ))
-            )}
+              ) : (
+                NOTIFICATIONS.map((item) => (
+                  <View key={item.id} style={[styles.upcomingBox, { borderColor: colors.border, backgroundColor: colors.mutedBg }]}>
+                    <Text style={[styles.upcomingTitle, { color: colors.textPrimary }]}>{item.title}</Text>
+                    <Text style={[styles.upcomingText, { color: colors.textSecondary }]}>{item.detail}</Text>
+                  </View>
+                ))
+              )}
+            </ScrollView>
           </View>
         </View>
       </Modal>
 
       <Modal animationType="fade" transparent visible={boardModalVisible} onRequestClose={() => setBoardModalVisible(false)}>
         <View style={styles.modalBackdropCenter}>
-          <View style={[styles.centerModalCard, { borderColor: colors.border, backgroundColor: colors.card }]}> 
-            <View style={styles.modalHeader}>
-              <Text style={[styles.centerModalTitle, { color: colors.textPrimary }]}>Tablón de anuncios</Text>
-              <Pressable onPress={() => setBoardModalVisible(false)} hitSlop={8}>
-                <MaterialIcons name="close" size={22} color={colors.textPrimary} />
-              </Pressable>
-            </View>
-
-            {boardNews.length === 0 ? (
-              <View style={[styles.emptyBox, { backgroundColor: colors.mutedBg, borderColor: colors.border }]}>
-                <MaterialIcons name="campaign" size={22} color={colors.textSecondary} />
-                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No hay anuncios por ahora.</Text>
+          <View style={[styles.centerModalCard, { borderColor: colors.border, backgroundColor: colors.card }]}>
+            <ScrollView contentContainerStyle={styles.centerModalContent} showsVerticalScrollIndicator={false}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.centerModalTitle, { color: colors.textPrimary }]}>Tablón de anuncios</Text>
+                <Pressable onPress={() => setBoardModalVisible(false)} hitSlop={8}>
+                  <MaterialIcons name="close" size={22} color={colors.textPrimary} />
+                </Pressable>
               </View>
-            ) : (
-              boardNews.map((item) => (
-                <View key={item.id} style={[styles.upcomingBox, { borderColor: colors.border, backgroundColor: colors.mutedBg }]}>
-                  <View style={styles.newsHeaderRow}>
-                    <Text style={[styles.upcomingTitle, { color: colors.textPrimary }]}>{item.title}</Text>
-                    <Pressable onPress={() => setBoardNews((prev) => prev.filter((news) => news.id !== item.id))} hitSlop={8}>
-                      <MaterialIcons name="delete-outline" size={18} color={colors.textSecondary} />
-                    </Pressable>
+
+              {boardNews.length === 0 ? (
+                <View style={[styles.emptyBox, { backgroundColor: colors.mutedBg, borderColor: colors.border }]}>
+                  <MaterialIcons name="campaign" size={22} color={colors.textSecondary} />
+                  <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No hay anuncios por ahora.</Text>
+                </View>
+              ) : (
+                boardNews.map((item) => (
+                  <View key={item.id} style={[styles.upcomingBox, { borderColor: colors.border, backgroundColor: colors.mutedBg }]}>
+                    <View style={styles.newsHeaderRow}>
+                      <Text style={[styles.upcomingTitle, { color: colors.textPrimary }]}>{item.title}</Text>
+                      <Pressable onPress={() => setBoardNews((prev) => prev.filter((news) => news.id !== item.id))} hitSlop={8}>
+                        <MaterialIcons name="delete-outline" size={18} color={colors.textSecondary} />
+                      </Pressable>
+                    </View>
+                    <Text style={[styles.upcomingText, { color: colors.textSecondary }]}>{item.detail}</Text>
                   </View>
+                ))
+              )}
+
+              <View style={styles.categoryRow}>
+                <MaterialIcons name="schedule" size={14} color={colors.textSecondary} />
+                <Text style={[styles.categoryText, { color: colors.textSecondary }]}>Próximamente</Text>
+              </View>
+
+              {UPCOMING_NEWS.map((item) => (
+                <View key={item.id} style={[styles.upcomingBox, { borderColor: colors.border, backgroundColor: colors.mutedBg }]}>
+                  <Text style={[styles.upcomingTitle, { color: colors.textPrimary }]}>{item.title}</Text>
                   <Text style={[styles.upcomingText, { color: colors.textSecondary }]}>{item.detail}</Text>
                 </View>
-              ))
-            )}
+              ))}
 
-            <View style={styles.categoryRow}>
-              <MaterialIcons name="schedule" size={14} color={colors.textSecondary} />
-              <Text style={[styles.categoryText, { color: colors.textSecondary }]}>Próximamente</Text>
-            </View>
-
-            {UPCOMING_NEWS.map((item) => (
-              <View key={item.id} style={[styles.upcomingBox, { borderColor: colors.border, backgroundColor: colors.mutedBg }]}>
-                <Text style={[styles.upcomingTitle, { color: colors.textPrimary }]}>{item.title}</Text>
-                <Text style={[styles.upcomingText, { color: colors.textSecondary }]}>{item.detail}</Text>
+              <View style={[styles.upcomingBox, { borderColor: colors.border, backgroundColor: colors.mutedBg }]}>
+                <Text style={[styles.upcomingTitle, { color: colors.textPrimary }]}>Rapea con gente</Text>
+                <Text style={[styles.upcomingText, { color: colors.textSecondary }]}>Buscar enfrentamiento: busca oponente para medir tu nivel de freestyle.</Text>
+                <Text style={[styles.upcomingText, { color: colors.textSecondary }]}>Rapear como dupla: Rapea junto a otro MC y crea nuevas combinaciones.</Text>
               </View>
-            ))}
-
-            <View style={[styles.upcomingBox, { borderColor: colors.border, backgroundColor: colors.mutedBg }]}>
-              <Text style={[styles.upcomingTitle, { color: colors.textPrimary }]}>Rapea con gente</Text>
-              <Text style={[styles.upcomingText, { color: colors.textSecondary }]}>Buscar enfrentamiento: busca oponente para medir tu nivel de freestyle.</Text>
-              <Text style={[styles.upcomingText, { color: colors.textSecondary }]}>Rapear como dupla: Rapea junto a otro MC y crea nuevas combinaciones.</Text>
-            </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -237,7 +242,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   scrollContent: {
-    paddingTop: 4,
+    paddingTop: VIEW_TOP_OFFSET,
     paddingBottom: 16,
     gap: 14,
   },
@@ -320,10 +325,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 20,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: 'rgba(0,0,0,0.58)',
   },
   modalCard: { borderTopLeftRadius: 20, borderTopRightRadius: 20, borderWidth: 1, borderBottomWidth: 0, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 28, gap: 14, minHeight: '60%' },
-  centerModalCard: { borderRadius: 18, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 16, gap: 14 },
+  centerModalCard: { borderRadius: 18, borderWidth: 1, maxHeight: '82%' },
+  centerModalContent: { paddingHorizontal: 16, paddingVertical: 16, gap: 14 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   modalTitle: { fontSize: 24, fontWeight: '800' },
   centerModalTitle: { fontSize: 20, fontWeight: '800' },
