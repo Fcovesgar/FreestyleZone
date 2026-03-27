@@ -20,13 +20,13 @@ type SessionSummary = {
 };
 
 const RAP_MODES: { key: RapMode; label: string; description: string; icon: keyof typeof MaterialIcons.glyphMap; accent: string }[] = [
-  { key: 'free', label: 'Libre', description: 'Rapea libremente y sin estímulos.', icon: 'graphic-eq', accent: '#38BDF8' },
-  { key: 'easy', label: 'Easy', description: 'Palabras cada 10s', icon: 'security', accent: '#22C55E' },
-  { key: 'hard', label: 'Hard', description: 'Palabras cada 5s', icon: 'flash-on', accent: '#F97316' },
-  { key: 'incremental', label: 'Incremental', description: 'Palabras cada 10s - 5s - 2s', icon: 'local-fire-department', accent: '#EF4444' },
-  { key: 'history', label: 'Historia', description: 'Crea historia con palabras', icon: 'history-edu', accent: '#EC4899' },
-  { key: 'ending', label: 'Terminación', description: 'Rapea con terminaciones', icon: 'text-fields', accent: '#FACC15' },
-  { key: 'images', label: 'Imágenes', description: 'Rapea con imágenes', icon: 'image', accent: '#A855F7' },
+  { key: 'free', label: 'Libre', description: 'Rapea libremente y sin estímulos.', icon: 'graphic-eq', accent: '#0EA5E9' },
+  { key: 'easy', label: 'Easy', description: 'Palabras cada 10s', icon: 'security', accent: '#16A34A' },
+  { key: 'hard', label: 'Hard', description: 'Palabras cada 5s', icon: 'flash-on', accent: '#EA580C' },
+  { key: 'incremental', label: 'Incremental', description: 'Palabras cada 10s - 5s - 2s', icon: 'local-fire-department', accent: '#DC2626' },
+  { key: 'history', label: 'Historia', description: 'Crea historia con palabras', icon: 'history-edu', accent: '#DB2777' },
+  { key: 'ending', label: 'Terminación', description: 'Rapea con terminaciones', icon: 'text-fields', accent: '#EAB308' },
+  { key: 'images', label: 'Imágenes', description: 'Rapea con imágenes', icon: 'image', accent: '#9333EA' },
 ];
 
 const TRACKS: { key: Track; label: string; description: string; bpm: string }[] = [
@@ -592,7 +592,7 @@ export default function RapearScreen() {
                     <Text style={[styles.timer, { color: timerColor }]}>{displayTimer}</Text>
                     <View style={styles.trainingModeTag}>
                       <MaterialIcons name="mic" size={11} color="#FFD9D9" />
-                      <Text style={styles.recordingModeTagText}>{hasSessionStarted ? 'Grabando...' : 'Listo para grabar'}</Text>
+                      <Text style={styles.recordingModeTagText}>{hasSessionStarted ? 'Grabando' : 'Listo para grabar'}</Text>
                     </View>
                   </View>
                   <View style={styles.sessionHeaderActions}>
