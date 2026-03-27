@@ -71,7 +71,7 @@ export default function ProfileScreen() {
       background: isDark ? '#0D0A1A' : '#F5F2FF',
       card: isDark ? '#0E0E0E' : '#FFFFFF',
       border: isDark ? '#1E1E1E' : '#DFE3E8',
-      sectionBorder: isDark ? '#FFFFFF66' : '#C7A5FF',
+      sectionBorder: isDark ? '#8A8A8A' : '#C7A5FF',
       textPrimary: isDark ? '#FFFFFF' : '#141414',
       textSecondary: isDark ? '#AFAFAF' : '#5F646D',
       inputBg: isDark ? '#131313' : '#F4F5F7',

@@ -49,6 +49,7 @@ export default function DailyChallengeOverlayScreen() {
       textSecondary: isDark ? '#B8B8B8' : '#667085',
       purple: '#6B46FF',
       yellowFlag: '#FACC15',
+      sectionBorder: isDark ? '#8A8A8A' : '#C7A5FF',
       pill: isDark ? '#1A1A1A' : '#ECE7FF',
       iconChip: isDark ? '#171717' : '#FFFFFF',
       mutedBg: isDark ? '#141414' : '#F8FAFC',
@@ -80,7 +81,7 @@ export default function DailyChallengeOverlayScreen() {
           </View>
         </View>
 
-        <View style={[styles.sectionCard, { borderColor: colors.border, backgroundColor: colors.card }]}>
+        <View style={[styles.sectionCard, { borderColor: colors.sectionBorder, backgroundColor: colors.card }]}>
           <View style={styles.sectionTitleWithIcon}>
             <MaterialIcons name="school" size={20} color={colors.purple} />
             <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Tus primeros pasos</Text>
@@ -91,7 +92,7 @@ export default function DailyChallengeOverlayScreen() {
           </Pressable>
         </View>
 
-        <View style={[styles.sectionCard, { borderColor: colors.border, backgroundColor: colors.card }]}>
+        <View style={[styles.sectionCard, { borderColor: colors.sectionBorder, backgroundColor: colors.card }]}>
           <View style={styles.sectionHeaderInline}>
             <View style={styles.flagTitleWrap}>
               <MaterialIcons name="flag" size={20} color={colors.yellowFlag} />
