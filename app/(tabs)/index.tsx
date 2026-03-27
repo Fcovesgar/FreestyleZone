@@ -618,6 +618,34 @@ export default function RapearScreen() {
         </View>
       </Modal>
 
+      <Modal visible={baseSelectorVisible} animationType="fade" transparent onRequestClose={() => setBaseSelectorVisible(false)}>
+        <Pressable style={styles.baseModalBackdrop} onPress={() => setBaseSelectorVisible(false)}>
+          <Pressable style={styles.baseModalCard} onPress={(event) => event.stopPropagation()}>
+            <View style={styles.baseModalHeader}>
+              <Text style={styles.baseModalTitle}>Selecciona una base</Text>
+              <Pressable style={styles.baseModalClose} onPress={() => setBaseSelectorVisible(false)}>
+                <MaterialIcons name="close" size={18} color="#FFFFFF" />
+              </Pressable>
+            </View>
+
+            <View style={styles.baseOptionsColumn}>
+              {TRACKS.map((track) => {
+                const isSelected = selectedTrack === track.key;
+                return (
+                  <Pressable key={track.key} style={[styles.baseOptionItem, isSelected && styles.baseOptionSelected]} onPress={() => onSelectTrainingTrack(track.key)}>
+                    <View style={styles.baseOptionMain}>
+                      <Text style={styles.baseOptionTitle}>{track.label}</Text>
+                      <Text style={styles.baseOptionDesc}>{track.bpm}</Text>
+                    </View>
+                    {isSelected ? <MaterialIcons name="check-circle" size={20} color="#9F7AEA" /> : null}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       <Modal visible={summaryVisible} animationType="slide" onRequestClose={confirmCloseSummary}>
         <SafeAreaView style={[styles.summaryScreen, { backgroundColor: summaryTheme.modalBg, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }]} edges={['left', 'right']}>
           <View style={styles.summaryHeader}>
