@@ -272,13 +272,24 @@ export default function RapearScreen() {
     setRemainingSeconds(initialSessionSeconds);
     setIsUnlimitedSession(initialSessionSeconds === null);
     setHasSessionStarted(false);
-    setSessionSummary({
+    setBaseSelectorVisible(false);
+
+    const nextSummary: SessionSummary = {
       mode: selectedMode,
       sessionType: selectedSessionType,
       track: selectedTrack,
       elapsedSeconds,
-    });
-    setSummaryVisible(true);
+    };
+
+    if (selectedSessionType === 'record') {
+      setSessionSummary(nextSummary);
+      setSummaryVisible(true);
+    } else {
+      setSessionSummary(null);
+      setSummaryVisible(false);
+      setSetupStep('mode');
+    }
+
     setElapsedSeconds(0);
   };
 
@@ -307,8 +318,15 @@ export default function RapearScreen() {
   const confirmCloseSummary = () => {
     Alert.alert('¿Salir del resumen?', 'Si sales ahora, se cerrará el resumen y perderás la sesión.', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Salir', style: 'destructive', onPress: () => setSummaryVisible(false) },
+      { text: 'Salir', style: 'destructive', onPress: closeSummaryAndReset },
     ]);
+  };
+
+  const closeSummaryAndReset = () => {
+    setSummaryVisible(false);
+    setSessionSummary(null);
+    setBaseSelectorVisible(false);
+    setSetupStep('mode');
   };
 
   const onSelectTrainingTrack = (track: Track) => {
@@ -618,7 +636,7 @@ export default function RapearScreen() {
         </View>
       </Modal>
 
-      <Modal visible={baseSelectorVisible} animationType="fade" transparent onRequestClose={() => setBaseSelectorVisible(false)}>
+      <Modal visible={baseSelectorVisible && !sessionVisible} animationType="fade" transparent onRequestClose={() => setBaseSelectorVisible(false)}>
         <Pressable style={styles.baseModalBackdrop} onPress={() => setBaseSelectorVisible(false)}>
           <Pressable style={styles.baseModalCard} onPress={(event) => event.stopPropagation()}>
             <View style={styles.baseModalHeader}>
@@ -646,7 +664,7 @@ export default function RapearScreen() {
         </Pressable>
       </Modal>
 
-      <Modal visible={summaryVisible} animationType="slide" onRequestClose={confirmCloseSummary}>
+      <Modal visible={summaryVisible && sessionSummary?.sessionType === 'record'} animationType="slide" onRequestClose={confirmCloseSummary}>
         <SafeAreaView style={[styles.summaryScreen, { backgroundColor: summaryTheme.modalBg, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }]} edges={['left', 'right']}>
           <View style={styles.summaryHeader}>
             <Text style={[styles.summaryTitle, { color: summaryTheme.primaryText }]}>Resumen de la sesión</Text>
