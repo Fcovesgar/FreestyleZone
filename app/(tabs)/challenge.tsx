@@ -192,8 +192,13 @@ export default function DailyChallengeOverlayScreen() {
               ))
             )}
 
+            <View style={styles.categoryRow}>
+              <MaterialIcons name="schedule" size={14} color={colors.textSecondary} />
+              <Text style={[styles.categoryText, { color: colors.textSecondary }]}>Próximamente</Text>
+            </View>
+
             <View style={[styles.upcomingBox, { borderColor: colors.border, backgroundColor: colors.mutedBg }]}> 
-              <Text style={[styles.upcomingTitle, { color: colors.textPrimary }]}>Próximamente: Rapea con gente</Text>
+              <Text style={[styles.upcomingTitle, { color: colors.textPrimary }]}>Rapea con gente</Text>
               <Text style={[styles.upcomingText, { color: colors.textSecondary }]}>Buscar enfrentamiento: busca oponente para medir tu nivel de freestyle.</Text>
               <Text style={[styles.upcomingText, { color: colors.textSecondary }]}>Rapear como dupla: Rapea junto a otro MC y crea nuevas combinaciones.</Text>
             </View>
@@ -354,6 +359,57 @@ const styles = StyleSheet.create({
   dayValue: {
     fontSize: 16,
     fontWeight: '700',
+    fontSize: 14,
+  },
+  streakPill: {
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  streakText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  modalBackdropCenter: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  modalCard: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 28,
+    gap: 14,
+    minHeight: '60%',
+  },
+  centerModalCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 14,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '800',
   },
   emptyBox: {
     borderRadius: 12,
@@ -383,5 +439,17 @@ const styles = StyleSheet.create({
   upcomingText: {
     fontSize: 12,
     lineHeight: 17,
+  },
+  categoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 2,
+  },
+  categoryText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
   },
 });
