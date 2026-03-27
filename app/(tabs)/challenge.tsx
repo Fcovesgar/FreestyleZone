@@ -49,7 +49,7 @@ export default function DailyChallengeOverlayScreen() {
       textSecondary: isDark ? '#B8B8B8' : '#667085',
       purple: '#6B46FF',
       yellowFlag: '#FACC15',
-      sectionBorder: isDark ? '#8A8A8A' : '#C7A5FF',
+      sectionBorder: isDark ? '#5E5E5E' : '#C7A5FF',
       pill: isDark ? '#1A1A1A' : '#ECE7FF',
       iconChip: isDark ? '#171717' : '#FFFFFF',
       mutedBg: isDark ? '#141414' : '#F8FAFC',

@@ -63,7 +63,7 @@ export default function RapearScreen() {
       screen: isDark ? '#0D0A1A' : '#F5F2FF',
       card: isDark ? '#0F0F0F' : '#FFFFFF',
       border: isDark ? '#222222' : '#DFE3E8',
-      optionBorder: isDark ? '#8A8A8A' : '#C7A5FF',
+      optionBorder: isDark ? '#5E5E5E' : '#C7A5FF',
       textPrimary: isDark ? '#FFFFFF' : '#101828',
       textSecondary: isDark ? '#A1A1AA' : '#667085',
       mutedBg: isDark ? '#131313' : '#F2F4F7',
