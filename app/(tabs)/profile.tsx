@@ -111,29 +111,29 @@ export default function ProfileScreen() {
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       <Animated.View style={[styles.mainPanel, { transform: [{ translateX: profileTranslateX }] }]}>
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, { paddingTop: insets.top + 4 }]}
           keyboardShouldPersistTaps="handled"
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#FFFFFF' : '#111111'} />}>
-          <View style={styles.headerRow}>
-            <View style={styles.userRow}>
-              <Image source={{ uri: profile.avatarUri }} style={[styles.avatar, { borderColor: colors.border }]} contentFit="cover" />
-              <View>
-                <View style={styles.nameRow}>
-                  <Text style={[styles.username, { color: colors.textPrimary }]}>{profile.username}</Text>
-                  <Pressable onPress={openEditScreen} style={styles.iconBtn}>
-                    <MaterialIcons name="edit" size={18} color={colors.textPrimary} />
-                  </Pressable>
-                </View>
-                <Text style={[styles.metaText, { color: colors.textSecondary }]}>{profile.city}</Text>
-                <Text style={[styles.metaText, { color: colors.textSecondary }]}>Estilo: {profile.rapStyle}</Text>
-              </View>
-            </View>
-
+          <View style={styles.topActionsRow}>
             <Pressable
               onPress={() => setSettingsVisible(true)}
               style={[styles.settingsBtn, { borderColor: colors.border, backgroundColor: colors.card }]}>
               <MaterialIcons name="settings" size={20} color={colors.textPrimary} />
             </Pressable>
+          </View>
+
+          <View style={styles.profileStack}>
+            <Image source={{ uri: profile.avatarUri }} style={[styles.avatar, { borderColor: colors.border }]} contentFit="cover" />
+            <View style={styles.profileInfoStack}>
+              <View style={styles.nameRow}>
+                <Text style={[styles.username, { color: colors.textPrimary }]}>{profile.username}</Text>
+                <Pressable onPress={openEditScreen} style={styles.iconBtn}>
+                  <MaterialIcons name="edit" size={18} color={colors.textPrimary} />
+                </Pressable>
+              </View>
+              <Text style={[styles.metaText, { color: colors.textSecondary }]}>{profile.city}</Text>
+              <Text style={[styles.metaText, { color: colors.textSecondary }]}>Estilo: {profile.rapStyle}</Text>
+            </View>
           </View>
 
           <View style={[styles.dataCard, { backgroundColor: colors.card }]}>
@@ -297,11 +297,12 @@ function Field({
 const styles = StyleSheet.create({
   container: { flex: 1 },
   mainPanel: { flex: 1 },
-  content: { paddingHorizontal: 20, paddingTop: 24, gap: 18, paddingBottom: 30 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  userRow: { flexDirection: 'row', gap: 12 },
-  avatar: { width: 70, height: 70, borderRadius: 35, borderWidth: 1 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  content: { paddingHorizontal: 20, gap: 18, paddingBottom: 30 },
+  topActionsRow: { alignItems: 'flex-end' },
+  profileStack: { alignItems: 'center', gap: 10, marginTop: 4 },
+  profileInfoStack: { alignItems: 'center' },
+  avatar: { width: 96, height: 96, borderRadius: 48, borderWidth: 1.5 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center' },
   username: { fontSize: 24, fontWeight: '700' },
   iconBtn: { padding: 4 },
   metaText: { fontSize: 13, fontWeight: '500', marginTop: 2 },
