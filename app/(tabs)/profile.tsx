@@ -33,6 +33,7 @@ type ProfileContentTab = 'videos' | 'lines';
 
 const RAP_STYLES: RapStyle[] = ['Doble punch', 'Metriquero', 'Batallero'];
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const VIEW_TOP_OFFSET = 12;
 
 const AVATAR_OPTIONS = [
   'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=400&h=400&fit=crop',
@@ -67,7 +68,7 @@ export default function ProfileScreen() {
 
   const colors = useMemo(
     () => ({
-      background: isDark ? '#020202' : '#F2F4F7',
+      background: isDark ? '#0D0A1A' : '#F5F2FF',
       card: isDark ? '#0E0E0E' : '#FFFFFF',
       border: isDark ? '#1E1E1E' : '#DFE3E8',
       textPrimary: isDark ? '#FFFFFF' : '#141414',
@@ -109,7 +110,7 @@ export default function ProfileScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       <Animated.View style={[styles.mainPanel, { transform: [{ translateX: profileTranslateX }] }]}>
         <ScrollView
-          contentContainerStyle={[styles.content, { paddingTop: 4 }]}
+          contentContainerStyle={[styles.content, { paddingTop: VIEW_TOP_OFFSET }]}
           keyboardShouldPersistTaps="handled"
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#FFFFFF' : '#111111'} />}>
           <View style={styles.topActionsRow}>
