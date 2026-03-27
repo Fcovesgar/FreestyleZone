@@ -420,7 +420,7 @@ export default function RapearScreen() {
                   onPress={() => setSelectedMode(mode.key)}
                   style={[
                     styles.modeCard,
-                    { borderColor: selected ? mode.accent : themeColors.border, backgroundColor: themeColors.card },
+                    { borderColor: selected ? mode.accent : themeColors.border, backgroundColor: selected ? `${mode.accent}22` : themeColors.card },
                     selected && styles.modeCardSelected,
                   ]}>
                   <View style={styles.modeCardInner}>
