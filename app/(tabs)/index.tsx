@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Modal, PermissionsAndroid, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useAppTheme } from '@/context/app-theme-context';
+import { useAppThemeColors } from '@/hooks/use-app-theme-colors';
 
 type RapMode = 'easy' | 'hard' | 'incremental' | 'history' | 'ending' | 'images' | 'free';
 type Track = 'base-1' | 'base-2' | 'base-3';
@@ -55,23 +55,19 @@ const VIEW_TOP_OFFSET = 12;
 
 export default function RapearScreen() {
   const insets = useSafeAreaInsets();
-  const { effectiveColorScheme } = useAppTheme();
-  const isDark = effectiveColorScheme === 'dark';
-
-  const themeColors = useMemo(
-    () => ({
-      screen: isDark ? '#0D0A1A' : '#F5F2FF',
-      card: isDark ? '#0F0F0F' : '#FFFFFF',
-      border: isDark ? '#222222' : '#DFE3E8',
-      optionBorder: isDark ? '#5E5E5E' : '#C7A5FF',
-      textPrimary: isDark ? '#FFFFFF' : '#101828',
-      textSecondary: isDark ? '#A1A1AA' : '#667085',
-      mutedBg: isDark ? '#131313' : '#F2F4F7',
-      mutedBorder: isDark ? '#242424' : '#D8DEE6',
-      activeBg: '#6B46FF',
-    }),
-    [isDark]
-  );
+  const appColors = useAppThemeColors();
+  const isDark = appColors.isDark;
+  const themeColors = {
+    screen: appColors.screen,
+    card: appColors.card,
+    border: appColors.border,
+    optionBorder: appColors.sectionBorder,
+    textPrimary: appColors.textPrimary,
+    textSecondary: appColors.textSecondary,
+    mutedBg: appColors.inputBg,
+    mutedBorder: isDark ? '#242424' : '#D8DEE6',
+    activeBg: appColors.purple,
+  };
 
   const [selectedMode, setSelectedMode] = useState<RapMode | null>('free');
   const [selectedTrack, setSelectedTrack] = useState<Track | null>('base-1');
@@ -97,6 +93,8 @@ export default function RapearScreen() {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     setPreviewTrack(null);
+    setPressedMode(null);
+    setBaseSelectorVisible(false);
     await new Promise((resolve) => setTimeout(resolve, 700));
     setRefreshing(false);
   }, []);
@@ -366,13 +364,13 @@ export default function RapearScreen() {
 
   const summaryTheme = {
     modalBg: isDark ? '#050505' : '#F2F4F8',
-    cardBg: isDark ? '#101010' : '#FFFFFF',
-    cardBorder: isDark ? '#2B2B2B' : '#DDE1E7',
-    primaryText: isDark ? '#FFFFFF' : '#101828',
+    cardBg: appColors.card,
+    cardBorder: appColors.border,
+    primaryText: appColors.textPrimary,
     secondaryText: isDark ? '#D8D8D8' : '#344054',
-    tertiaryText: isDark ? '#AFAFAF' : '#667085',
+    tertiaryText: appColors.textSecondary,
     previewBg: isDark ? '#1A1A1A' : '#E9EEF6',
-    buttonBg: isDark ? '#6B46FF' : '#5B3BF1',
+    buttonBg: appColors.purple,
     closeBg: isDark ? '#222222' : '#E4E7EC',
   };
 
