@@ -16,7 +16,7 @@ export default function TabLayout() {
       initialRouteName="index"
       screenOptions={{
         headerShown: false,
-        animationEnabled: false,
+        animation: 'shift',
         tabBarButton: HapticTab,
         tabBarActiveTintColor: isDark ? '#FFFFFF' : '#111111',
         tabBarInactiveTintColor: isDark ? '#7D7D7D' : '#777777',

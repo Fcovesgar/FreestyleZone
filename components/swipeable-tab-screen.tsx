@@ -12,29 +12,37 @@ import Animated, {
 
 type TabKey = 'challenge' | 'index' | 'profile';
 
+const TAB_ORDER: TabKey[] = ['challenge', 'index', 'profile'];
+const TAB_PATH: Record<TabKey, string> = {
+  challenge: '/(tabs)/challenge',
+  index: '/(tabs)',
+  profile: '/(tabs)/profile',
+};
+const SWIPE_THRESHOLD = 70;
+
 type SwipeableTabScreenProps = {
   currentTab: TabKey;
   children: ReactNode;
 };
 
-const TAB_ORDER: TabKey[] = ['challenge', 'index', 'profile'];
-const SWIPE_THRESHOLD = 70;
-
 export function SwipeableTabScreen({ currentTab, children }: SwipeableTabScreenProps) {
   const router = useRouter();
   const translateX = useSharedValue(0);
-
   const canSwipe = Platform.OS === 'ios' || Platform.OS === 'android';
 
-  const navigateToTab = useCallback((direction: 'left' | 'right') => {
-    const currentIndex = TAB_ORDER.indexOf(currentTab);
-    if (currentIndex === -1) return;
+  const navigateToTab = useCallback(
+    (direction: 'left' | 'right') => {
+      const currentIndex = TAB_ORDER.indexOf(currentTab);
+      if (currentIndex === -1) return;
 
-    const nextIndex = direction === 'left' ? currentIndex + 1 : currentIndex - 1;
-    if (nextIndex < 0 || nextIndex >= TAB_ORDER.length) return;
+      const nextIndex = direction === 'left' ? currentIndex + 1 : currentIndex - 1;
+      if (nextIndex < 0 || nextIndex >= TAB_ORDER.length) return;
 
-    router.replace(`/(tabs)/${TAB_ORDER[nextIndex]}`);
-  }, [currentTab, router]);
+      const nextTab = TAB_ORDER[nextIndex];
+      router.replace(TAB_PATH[nextTab]);
+    },
+    [currentTab, router]
+  );
 
   const pan = useMemo(
     () =>
