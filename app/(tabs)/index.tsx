@@ -414,19 +414,20 @@ export default function RapearScreen() {
             {RAP_MODES.map((mode) => {
               const selected = selectedMode === mode.key;
               const selectedCardTextColor = themeColors.textPrimary;
+              const selectedModeBackground = isDark ? `${mode.accent}2B` : `${mode.accent}14`;
               return (
                 <Pressable
                   key={mode.key}
                   onPress={() => setSelectedMode(mode.key)}
                   style={[
                     styles.modeCard,
-                    { borderColor: selected ? mode.accent : themeColors.border, backgroundColor: selected ? `${mode.accent}22` : themeColors.card },
+                    { borderColor: selected ? mode.accent : themeColors.border, backgroundColor: selected ? selectedModeBackground : themeColors.card },
                     selected && styles.modeCardSelected,
                   ]}>
                   <View style={styles.modeCardInner}>
                     <View>
                       <Text style={[styles.modeTitle, { color: selectedCardTextColor }]}>{mode.label}</Text>
-                      <Text style={[styles.modeDescription, { color: themeColors.textSecondary }]}>{mode.description}</Text>
+                      <Text style={[styles.modeDescription, { color: selected ? themeColors.textPrimary : themeColors.textSecondary }]}>{mode.description}</Text>
                     </View>
                     <View style={[styles.modeIconBubble, { borderColor: selected ? mode.accent : themeColors.border, backgroundColor: selected ? `${mode.accent}22` : 'transparent' }]}>
                       <MaterialIcons name={mode.icon} size={24} color={selected ? mode.accent : themeColors.textSecondary} />
