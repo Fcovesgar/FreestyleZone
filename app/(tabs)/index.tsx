@@ -378,7 +378,7 @@ export default function RapearScreen() {
     <SafeAreaView style={[styles.screen, { backgroundColor: themeColors.screen }]} edges={['top']}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={[styles.contentContainer, { paddingTop: insets.top + 4, paddingBottom: setupStep === 'mode' ? insets.bottom + 36 : 0 }]}
+        contentContainerStyle={[styles.contentContainer, { paddingTop: 4, paddingBottom: setupStep === 'mode' ? insets.bottom + 36 : 0 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#FFFFFF' : '#111111'} />}
         showsVerticalScrollIndicator={false}>
         <View style={styles.badgeRow}>
