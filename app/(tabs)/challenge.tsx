@@ -17,8 +17,7 @@ export default function DailyChallengeOverlayScreen() {
   }, []);
 
   return (
-    <SwipeableTabScreen currentTab="challenge">
-      <SafeAreaView style={[styles.backdrop, { backgroundColor: isDark ? '#060606' : '#F2F4F7' }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.backdrop, { backgroundColor: isDark ? '#060606' : '#F2F4F7' }]} edges={['top', 'bottom']}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#FFFFFF' : '#111111'} />}
