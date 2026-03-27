@@ -1,11 +1,10 @@
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Asset } from 'expo-asset';
 import * as SplashScreen from 'expo-splash-screen';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
@@ -26,13 +25,8 @@ async function loadCoreAssets() {
   ]);
 }
 
-async function restoreSessionState() {
-  /**
-   * Punto de extensión:
-   * aquí se puede hidratar sesión real (token/perfil) cuando exista
-   * infraestructura de autenticación persistente.
-   */
-  return Promise.resolve();
+function waitForMinimumLaunchTime(milliseconds: number) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
 function AppNavigator() {
@@ -55,7 +49,7 @@ export default function RootLayout() {
     let mounted = true;
 
     const prepare = async () => {
-      await Promise.all([loadCoreAssets(), restoreSessionState()]);
+      await Promise.all([loadCoreAssets(), waitForMinimumLaunchTime(1500)]);
 
       if (!mounted) {
         return;
@@ -76,12 +70,7 @@ export default function RootLayout() {
     return (
       <GestureHandlerRootView style={styles.gestureRoot}>
         <SafeAreaView style={styles.launchScreen} edges={['top', 'bottom']}>
-        <View style={styles.logoWrap}>
-          <MaterialIcons name="mic" size={44} color="#FFFFFF" />
-        </View>
-        <Text style={styles.launchTitle}>FreestyleZone</Text>
-        <Text style={styles.launchSubtitle}>Cargando recursos y sesión...</Text>
-        <ActivityIndicator size="small" color="#7C5CFF" style={styles.loader} />
+          <Text style={styles.launchTitle}>FreestyleZone</Text>
         </SafeAreaView>
       </GestureHandlerRootView>
     );
@@ -106,29 +95,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoWrap: {
-    width: 86,
-    height: 86,
-    borderRadius: 43,
-    borderWidth: 1,
-    borderColor: '#2B2B2B',
-    backgroundColor: '#101010',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   launchTitle: {
-    marginTop: 18,
     color: '#FFFFFF',
-    fontSize: 22,
+    fontSize: 32,
     fontWeight: '700',
-    letterSpacing: 0.2,
-  },
-  loader: {
-    marginTop: 12,
-  },
-  launchSubtitle: {
-    marginTop: 8,
-    color: '#9B9B9B',
-    fontSize: 13,
+    letterSpacing: 0.3,
   },
 });
