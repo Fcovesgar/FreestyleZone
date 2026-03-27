@@ -16,7 +16,7 @@ export default function TabLayout() {
       initialRouteName="challenge"
       screenOptions={{
         headerShown: false,
-        animation: 'shift',
+        animation: 'none',
         tabBarButton: HapticTab,
         tabBarActiveTintColor: isDark ? '#FFFFFF' : '#111111',
         tabBarInactiveTintColor: isDark ? '#7D7D7D' : '#777777',
