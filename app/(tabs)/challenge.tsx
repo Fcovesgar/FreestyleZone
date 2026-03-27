@@ -279,6 +279,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    marginTop: 2,
+  },
+  categoryText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
   },
   sectionTitleWithIcon: {
     flexDirection: 'row',
@@ -304,6 +311,73 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 14,
+    lineHeight: 20,
+  },
+  progressGrid: {
+    marginTop: 8,
+    gap: 10,
+  },
+  dayNode: {
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    gap: 4,
+  },
+  dayLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  dayValue: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  emptyBox: {
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  emptyText: {
+    fontSize: 14,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  upcomingBox: {
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    gap: 6,
+  },
+  upcomingTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  upcomingText: {
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  newsHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 8,
+  },
+  categoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 2,
+  },
+  categoryText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
   },
   streakPill: {
     borderRadius: 999,
