@@ -37,12 +37,13 @@ export default function DailyChallengeOverlayScreen() {
   const [challengeModalVisible, setChallengeModalVisible] = useState(false);
   const [notificationsModalVisible, setNotificationsModalVisible] = useState(false);
   const [boardModalVisible, setBoardModalVisible] = useState(false);
+  const [boardNews, setBoardNews] = useState(BOARD_NEWS);
 
   const colors = useMemo(
     () => ({
-      screen: isDark ? '#060606' : '#F2F4F7',
-      card: isDark ? '#0E0E0E' : '#FFFFFF',
-      border: isDark ? '#202020' : '#DFE3E8',
+      screen: isDark ? '#0D0A1A' : '#F5F2FF',
+      card: isDark ? '#161028' : '#FFFFFF',
+      border: isDark ? '#2B2247' : '#DCCFFF',
       textPrimary: isDark ? '#FFFFFF' : '#111111',
       textSecondary: isDark ? '#9C9C9C' : '#667085',
       purple: '#6B46FF',
@@ -67,7 +68,7 @@ export default function DailyChallengeOverlayScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#FFFFFF' : '#111111'} />}
         showsVerticalScrollIndicator={false}>
         <View style={styles.topBar}>
-          <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>Inicio</Text>
+          <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>Bienvenido freestyler</Text>
           <View style={styles.topActions}>
             <Pressable style={[styles.iconButton, { backgroundColor: colors.iconChip, borderColor: colors.border }]} onPress={() => setBoardModalVisible(true)}>
               <MaterialIcons name="campaign" size={20} color={colors.textPrimary} />
@@ -187,15 +188,20 @@ export default function DailyChallengeOverlayScreen() {
               </Pressable>
             </View>
 
-            {BOARD_NEWS.length === 0 ? (
+            {boardNews.length === 0 ? (
               <View style={[styles.emptyBox, { backgroundColor: colors.mutedBg, borderColor: colors.border }]}>
                 <MaterialIcons name="campaign" size={22} color={colors.textSecondary} />
                 <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No hay anuncios por ahora.</Text>
               </View>
             ) : (
-              BOARD_NEWS.map((item) => (
+              boardNews.map((item) => (
                 <View key={item.id} style={[styles.upcomingBox, { borderColor: colors.border, backgroundColor: colors.mutedBg }]}>
-                  <Text style={[styles.upcomingTitle, { color: colors.textPrimary }]}>{item.title}</Text>
+                  <View style={styles.newsHeaderRow}>
+                    <Text style={[styles.upcomingTitle, { color: colors.textPrimary }]}>{item.title}</Text>
+                    <Pressable onPress={() => setBoardNews((prev) => prev.filter((news) => news.id !== item.id))} hitSlop={8}>
+                      <MaterialIcons name="delete-outline" size={18} color={colors.textSecondary} />
+                    </Pressable>
+                  </View>
                   <Text style={[styles.upcomingText, { color: colors.textSecondary }]}>{item.detail}</Text>
                 </View>
               ))
@@ -273,6 +279,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    marginTop: 2,
+  },
+  categoryText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  streakPill: {
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   sectionTitleWithIcon: {
     flexDirection: 'row',
@@ -296,6 +317,27 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  progressGrid: {
+    marginTop: 8,
+    gap: 10,
+  },
+  dayNode: {
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    gap: 4,
+  },
+  dayLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  dayValue: {
+    fontSize: 16,
     fontWeight: '700',
     fontSize: 14,
   },
@@ -348,33 +390,6 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 24,
     fontWeight: '800',
-  },
-  centerModalTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  modalDescription: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  progressGrid: {
-    marginTop: 8,
-    gap: 10,
-  },
-  dayNode: {
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    gap: 4,
-  },
-  dayLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  dayValue: {
-    fontSize: 16,
-    fontWeight: '700',
   },
   emptyBox: {
     borderRadius: 12,
@@ -493,57 +508,6 @@ const styles = StyleSheet.create({
   dayValue: {
     fontSize: 16,
     fontWeight: '700',
-    fontSize: 14,
-  },
-  streakPill: {
-    borderRadius: 999,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  streakText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  modalBackdrop: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.45)',
-  },
-  modalBackdropCenter: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-  },
-  modalCard: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderWidth: 1,
-    borderBottomWidth: 0,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 28,
-    gap: 14,
-    minHeight: '60%',
-  },
-  centerModalCard: {
-    borderRadius: 18,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    gap: 14,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: '800',
   },
   emptyBox: {
     borderRadius: 12,
@@ -573,6 +537,12 @@ const styles = StyleSheet.create({
   upcomingText: {
     fontSize: 12,
     lineHeight: 17,
+  },
+  newsHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 8,
   },
   categoryRow: {
     flexDirection: 'row',
