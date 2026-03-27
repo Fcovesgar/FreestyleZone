@@ -1,6 +1,5 @@
 import { type ReactNode, useCallback, useMemo, useRef } from 'react';
 import { useNavigation } from 'expo-router';
-import { TabActions } from '@react-navigation/native';
 import { Directions, Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import { StyleSheet, View } from 'react-native';
@@ -31,22 +30,15 @@ export function SwipeableTabScreen({ currentTab, children }: SwipeableTabScreenP
       if (nextIndex < 0 || nextIndex >= TAB_ORDER.length) return;
 
       const nextTab = TAB_ORDER[nextIndex];
-      let navigator: any = navigation;
-
-      while (navigator) {
-        const state = navigator.getState?.();
-        const routeNames = state?.routeNames as string[] | undefined;
-
-        if (routeNames?.includes('index') && routeNames.includes('challenge') && routeNames.includes('profile')) {
-          lastNavigationAtRef.current = now;
-          navigator.dispatch(TabActions.jumpTo(nextTab));
-          return;
-        }
-
-        navigator = navigator.getParent?.();
-      }
+      const tabNavigation = navigation as any;
 
       lastNavigationAtRef.current = now;
+
+      if (typeof tabNavigation.jumpTo === 'function') {
+        tabNavigation.jumpTo(nextTab);
+        return;
+      }
+
       navigation.navigate(nextTab as never);
     },
     [currentTab, navigation]
