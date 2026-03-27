@@ -1,6 +1,7 @@
 import { type ReactNode, useCallback, useMemo } from 'react';
-import { Platform, StyleSheet } from 'react-native';
 import { useNavigation } from 'expo-router';
+import { TabActions, useFocusEffect } from '@react-navigation/native';
+import { StyleSheet, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
@@ -22,8 +23,16 @@ type SwipeableTabScreenProps = {
 
 export function SwipeableTabScreen({ currentTab, children }: SwipeableTabScreenProps) {
   const navigation = useNavigation();
+  const { width } = useWindowDimensions();
   const translateX = useSharedValue(0);
-  const canSwipe = Platform.OS === 'ios' || Platform.OS === 'android';
+  const isNavigating = useSharedValue(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      translateX.value = 0;
+      isNavigating.value = false;
+    }, [isNavigating, translateX])
+  );
 
   const navigateToTab = useCallback(
     (direction: 'left' | 'right') => {
@@ -34,7 +43,8 @@ export function SwipeableTabScreen({ currentTab, children }: SwipeableTabScreenP
       if (nextIndex < 0 || nextIndex >= TAB_ORDER.length) return;
 
       const nextTab = TAB_ORDER[nextIndex];
-      navigation.navigate(nextTab as never);
+      const navigator = navigation.getParent() ?? navigation;
+      navigator.dispatch(TabActions.jumpTo(nextTab));
     },
     [currentTab, navigation]
   );
@@ -42,35 +52,48 @@ export function SwipeableTabScreen({ currentTab, children }: SwipeableTabScreenP
   const pan = useMemo(
     () =>
       Gesture.Pan()
-        .enabled(canSwipe)
         .activeOffsetX([-14, 14])
         .failOffsetY([-12, 12])
         .onUpdate((event) => {
+          if (isNavigating.value) return;
           translateX.value = event.translationX * 0.35;
         })
         .onEnd((event) => {
+          if (isNavigating.value) return;
+
           const hasSwipeIntent = Math.abs(event.translationX) > SWIPE_THRESHOLD;
 
           if (hasSwipeIntent) {
             const direction = event.translationX < 0 ? 'left' : 'right';
-            translateX.value = withTiming(event.translationX < 0 ? -42 : 42, {
-              duration: 160,
-              easing: Easing.out(Easing.quad),
-            });
-            translateX.value = withTiming(0, {
-              duration: 200,
-              easing: Easing.out(Easing.cubic),
-            });
-            runOnJS(navigateToTab)(direction);
+            const exitDistance = direction === 'left' ? -Math.min(width * 0.2, 64) : Math.min(width * 0.2, 64);
+
+            isNavigating.value = true;
+            translateX.value = withTiming(
+              exitDistance,
+              {
+                duration: 150,
+                easing: Easing.out(Easing.cubic),
+              },
+              (finished) => {
+                if (!finished) {
+                  isNavigating.value = false;
+                  return;
+                }
+
+                translateX.value = 0;
+                isNavigating.value = false;
+                runOnJS(navigateToTab)(direction);
+              }
+            );
             return;
           }
 
           translateX.value = withTiming(0, {
-            duration: 220,
+            duration: 180,
             easing: Easing.out(Easing.cubic),
           });
         }),
-    [canSwipe, navigateToTab, translateX]
+    [isNavigating, navigateToTab, translateX, width]
   );
 
   const animatedStyle = useAnimatedStyle(() => ({
