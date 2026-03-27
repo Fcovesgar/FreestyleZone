@@ -109,7 +109,7 @@ export default function ProfileScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       <Animated.View style={[styles.mainPanel, { transform: [{ translateX: profileTranslateX }] }]}>
         <ScrollView
-          contentContainerStyle={[styles.content, { paddingTop: insets.top + 4 }]}
+          contentContainerStyle={[styles.content, { paddingTop: 4 }]}
           keyboardShouldPersistTaps="handled"
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#FFFFFF' : '#111111'} />}>
           <View style={styles.topActionsRow}>
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
   topActionsRow: { alignItems: 'flex-end' },
   profileStack: { alignItems: 'center', gap: 10, marginTop: 4 },
   profileInfoStack: { alignItems: 'center' },
-  avatar: { width: 96, height: 96, borderRadius: 48, borderWidth: 1.5 },
+  avatar: { width: 116, height: 116, borderRadius: 58, borderWidth: 1.5 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center' },
   username: { fontSize: 24, fontWeight: '700' },
   iconBtn: { padding: 4 },
@@ -365,9 +365,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   editAvatar: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: 116,
+    height: 116,
+    borderRadius: 58,
     borderWidth: 1,
   },
   editAvatarButton: {
