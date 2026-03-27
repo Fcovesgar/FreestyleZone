@@ -433,7 +433,14 @@ export default function RapearScreen() {
                       <Text style={[styles.modeTitle, { color: selectedCardTextColor }]}>{mode.label}</Text>
                       <Text style={[styles.modeDescription, { color: selected ? themeColors.textPrimary : themeColors.textSecondary }]}>{mode.description}</Text>
                     </View>
-                    <View style={[styles.modeIconBubble, { borderColor: selected ? mode.accent : themeColors.border, backgroundColor: selected ? `${mode.accent}22` : 'transparent' }]}>
+                    <View
+                      style={[
+                        styles.modeIconBubble,
+                        {
+                          borderColor: selected ? mode.accent : themeColors.border,
+                          backgroundColor: selected ? (isDark ? `${mode.accent}26` : `${mode.accent}12`) : 'transparent',
+                        },
+                      ]}>
                       <MaterialIcons name={mode.icon} size={24} color={isActiveMode ? mode.accent : themeColors.textSecondary} />
                     </View>
                   </View>
