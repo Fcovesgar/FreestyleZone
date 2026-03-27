@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Modal, PermissionsAndroid, Platform, Pressable, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Modal, PermissionsAndroid, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { SwipeableTabScreen } from '@/components/swipeable-tab-screen';
 import { useAppTheme } from '@/context/app-theme-context';
 
 type RapMode = 'easy' | 'hard' | 'incremental' | 'history' | 'ending' | 'images' | 'free';
@@ -90,6 +91,14 @@ export default function RapearScreen() {
   const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null);
   const [baseSelectorVisible, setBaseSelectorVisible] = useState(false);
   const [isTrainingBeatPlaying, setIsTrainingBeatPlaying] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    setPreviewTrack(null);
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    setRefreshing(false);
+  }, []);
 
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -367,10 +376,12 @@ export default function RapearScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: themeColors.screen }]} edges={['top']}>
+    <SwipeableTabScreen currentTab="index">
+      <SafeAreaView style={[styles.screen, { backgroundColor: themeColors.screen }]} edges={['top']}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={[styles.contentContainer, { paddingTop: insets.top + 4, paddingBottom: setupStep === 'mode' ? insets.bottom + 36 : 0 }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#FFFFFF' : '#111111'} />}
         showsVerticalScrollIndicator={false}>
         <View style={styles.badgeRow}>
           <View style={styles.badgeLeftRow}>
@@ -725,6 +736,7 @@ export default function RapearScreen() {
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
+    </SwipeableTabScreen>
   );
 }
 
