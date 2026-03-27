@@ -63,6 +63,7 @@ export default function RapearScreen() {
       screen: isDark ? '#0D0A1A' : '#F5F2FF',
       card: isDark ? '#0F0F0F' : '#FFFFFF',
       border: isDark ? '#222222' : '#DFE3E8',
+      optionBorder: isDark ? '#FFFFFF66' : '#C7A5FF',
       textPrimary: isDark ? '#FFFFFF' : '#101828',
       textSecondary: isDark ? '#A1A1AA' : '#667085',
       mutedBg: isDark ? '#131313' : '#F2F4F7',
@@ -435,7 +436,7 @@ export default function RapearScreen() {
                   onPress={() => setSelectedMode(mode.key)}
                   style={[
                     styles.modeCard,
-                    { borderColor: selected ? mode.accent : themeColors.border, backgroundColor: selected ? selectedModeBackground : themeColors.card },
+                    { borderColor: selected ? mode.accent : themeColors.optionBorder, backgroundColor: selected ? selectedModeBackground : themeColors.card },
                     selected && styles.modeCardSelected,
                   ]}>
                   <View style={styles.modeCardInner}>
@@ -447,7 +448,7 @@ export default function RapearScreen() {
                       style={[
                         styles.modeIconBubble,
                         {
-                          borderColor: selected ? mode.accent : themeColors.border,
+                          borderColor: selected ? mode.accent : themeColors.optionBorder,
                           backgroundColor: selected ? (isDark ? `${mode.accent}26` : `${mode.accent}12`) : 'transparent',
                         },
                       ]}>
@@ -467,7 +468,7 @@ export default function RapearScreen() {
               const isPlaying = previewTrack === track.key;
 
               return (
-                <View key={track.key} style={[styles.trackCard, { backgroundColor: selected ? '#6B46FF22' : themeColors.card, borderColor: selected ? '#6B46FF' : themeColors.border }]}>
+                <View key={track.key} style={[styles.trackCard, { backgroundColor: selected ? '#6B46FF22' : themeColors.card, borderColor: selected ? '#6B46FF' : themeColors.optionBorder }]}>
                   <Pressable onPress={() => setSelectedTrack(track.key)} style={styles.trackMainArea}>
                     <Text style={[styles.trackTitle, { color: themeColors.textPrimary }]}>{track.label}</Text>
                     <Text style={[styles.trackInfo, { color: themeColors.textSecondary }]}>{track.description}</Text>
@@ -511,7 +512,7 @@ export default function RapearScreen() {
                 <Pressable
                   key={sessionTime.key}
                   onPress={() => setSelectedSessionTime(sessionTime.key)}
-                  style={[styles.timeCard, { borderColor: selected ? '#6B46FF' : themeColors.border, backgroundColor: selected ? '#6B46FF22' : themeColors.card }]}>
+                  style={[styles.timeCard, { borderColor: selected ? '#6B46FF' : themeColors.optionBorder, backgroundColor: selected ? '#6B46FF22' : themeColors.card }]}>
                   {sessionTime.icon ? <MaterialIcons name={sessionTime.icon} size={30} color={themeColors.textPrimary} /> : null}
                   {!sessionTime.icon ? <Text style={[styles.timeTitle, { color: themeColors.textPrimary }]}>{sessionTime.label}</Text> : null}
                   <Text style={[styles.timeDescription, { color: themeColors.textSecondary }]}>{sessionTime.description}</Text>
