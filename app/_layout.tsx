@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 import { AppThemeProvider, useAppTheme } from '@/context/app-theme-context';
@@ -73,25 +74,32 @@ export default function RootLayout() {
 
   if (!appReady) {
     return (
-      <SafeAreaView style={styles.launchScreen} edges={['top', 'bottom']}>
+      <GestureHandlerRootView style={styles.gestureRoot}>
+        <SafeAreaView style={styles.launchScreen} edges={['top', 'bottom']}>
         <View style={styles.logoWrap}>
           <MaterialIcons name="mic" size={44} color="#FFFFFF" />
         </View>
         <Text style={styles.launchTitle}>FreestyleZone</Text>
         <Text style={styles.launchSubtitle}>Cargando recursos y sesión...</Text>
         <ActivityIndicator size="small" color="#7C5CFF" style={styles.loader} />
-      </SafeAreaView>
+        </SafeAreaView>
+      </GestureHandlerRootView>
     );
   }
 
   return (
-    <AppThemeProvider>
-      <AppNavigator />
-    </AppThemeProvider>
+    <GestureHandlerRootView style={styles.gestureRoot}>
+      <AppThemeProvider>
+        <AppNavigator />
+      </AppThemeProvider>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
+  gestureRoot: {
+    flex: 1,
+  },
   launchScreen: {
     flex: 1,
     backgroundColor: '#000000',
