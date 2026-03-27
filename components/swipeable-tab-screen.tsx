@@ -1,6 +1,6 @@
 import { type ReactNode, useCallback, useMemo, useRef } from 'react';
 import { useNavigation } from 'expo-router';
-import { Directions, Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import { StyleSheet, View } from 'react-native';
 
@@ -8,6 +8,7 @@ type TabKey = 'challenge' | 'index' | 'profile';
 
 const TAB_ORDER: TabKey[] = ['index', 'challenge', 'profile'];
 const NAVIGATION_COOLDOWN_MS = 260;
+const SWIPE_DISTANCE_PX = 72;
 
 type SwipeableTabScreenProps = {
   currentTab: TabKey;
@@ -44,21 +45,23 @@ export function SwipeableTabScreen({ currentTab, children }: SwipeableTabScreenP
     [currentTab, navigation]
   );
 
-  const gesture = useMemo(() => {
-    const leftFling = Gesture.Fling()
-      .direction(Directions.LEFT)
-      .onEnd(() => {
-        runOnJS(navigateToTab)('left');
-      });
+  const gesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .activeOffsetX([-18, 18])
+        .failOffsetY([-16, 16])
+        .onEnd((event) => {
+          const isHorizontalSwipe =
+            Math.abs(event.translationX) >= SWIPE_DISTANCE_PX &&
+            Math.abs(event.translationX) > Math.abs(event.translationY) * 1.35;
 
-    const rightFling = Gesture.Fling()
-      .direction(Directions.RIGHT)
-      .onEnd(() => {
-        runOnJS(navigateToTab)('right');
-      });
+          if (!isHorizontalSwipe) return;
 
-    return Gesture.Race(leftFling, rightFling);
-  }, [navigateToTab]);
+          const direction = event.translationX < 0 ? 'left' : 'right';
+          runOnJS(navigateToTab)(direction);
+        }),
+    [navigateToTab]
+  );
 
   return (
     <GestureDetector gesture={gesture}>
