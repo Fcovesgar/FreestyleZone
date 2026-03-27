@@ -1,9 +1,9 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
-import { useAppTheme } from '@/context/app-theme-context';
+import { useAppThemeColors } from '@/hooks/use-app-theme-colors';
 
 const WEEK_DAYS = ['Día 1', 'Día 2', 'Día 3', 'Día 4', 'Día 5', 'Día 6', 'Día 7'] as const;
 const CURRENT_PROGRESS_DAY = 0;
@@ -31,8 +31,8 @@ const UPCOMING_NEWS = [
 ];
 
 export default function DailyChallengeOverlayScreen() {
-  const { effectiveColorScheme } = useAppTheme();
-  const isDark = effectiveColorScheme === 'dark';
+  const colors = useAppThemeColors();
+  const isDark = colors.isDark;
 
   const [refreshing, setRefreshing] = useState(false);
   const [challengeModalVisible, setChallengeModalVisible] = useState(false);
@@ -40,25 +40,14 @@ export default function DailyChallengeOverlayScreen() {
   const [boardModalVisible, setBoardModalVisible] = useState(false);
   const [boardNews, setBoardNews] = useState(BOARD_NEWS);
 
-  const colors = useMemo(
-    () => ({
-      screen: isDark ? '#0D0A1A' : '#F5F2FF',
-      card: isDark ? '#121212' : '#FFFFFF',
-      border: isDark ? '#2A2A2A' : '#DCCFFF',
-      textPrimary: isDark ? '#FFFFFF' : '#111111',
-      textSecondary: isDark ? '#B8B8B8' : '#667085',
-      purple: '#6B46FF',
-      yellowFlag: '#FACC15',
-      sectionBorder: isDark ? '#5E5E5E' : '#C7A5FF',
-      pill: isDark ? '#1A1A1A' : '#ECE7FF',
-      iconChip: isDark ? '#171717' : '#FFFFFF',
-      mutedBg: isDark ? '#141414' : '#F8FAFC',
-    }),
-    [isDark]
-  );
+  const pillColor = isDark ? '#1A1A1A' : '#ECE7FF';
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    setBoardNews(BOARD_NEWS);
+    setBoardModalVisible(false);
+    setNotificationsModalVisible(false);
+    setChallengeModalVisible(false);
     await new Promise((resolve) => setTimeout(resolve, 700));
     setRefreshing(false);
   }, []);
@@ -98,7 +87,7 @@ export default function DailyChallengeOverlayScreen() {
               <MaterialIcons name="flag" size={20} color={colors.yellowFlag} />
               <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Retos diarios</Text>
             </View>
-            <View style={[styles.streakPill, { backgroundColor: colors.pill }]}>
+            <View style={[styles.streakPill, { backgroundColor: pillColor }]}>
               <MaterialIcons name="local-fire-department" size={14} color={colors.purple} />
               <Text style={[styles.streakText, { color: colors.purple }]}>{STREAK_DAYS} días</Text>
             </View>

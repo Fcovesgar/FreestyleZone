@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
@@ -19,6 +19,7 @@ import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAppTheme } from '@/context/app-theme-context';
+import { useAppThemeColors } from '@/hooks/use-app-theme-colors';
 
 type RapStyle = 'Doble punch' | 'Metriquero' | 'Batallero';
 
@@ -44,6 +45,7 @@ const AVATAR_OPTIONS = [
 export default function ProfileScreen() {
   const { effectiveColorScheme, themePreference, setThemePreference } = useAppTheme();
   const isDark = effectiveColorScheme === 'dark';
+  const colors = useAppThemeColors();
   const insets = useSafeAreaInsets();
 
   const [profile, setProfile] = useState<ProfileData>({
@@ -62,23 +64,12 @@ export default function ProfileScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    setDraftProfile(profile);
+    setActiveTab('videos');
+    setSettingsVisible(false);
     await new Promise((resolve) => setTimeout(resolve, 700));
     setRefreshing(false);
-  }, []);
-
-  const colors = useMemo(
-    () => ({
-      background: isDark ? '#0D0A1A' : '#F5F2FF',
-      card: isDark ? '#0E0E0E' : '#FFFFFF',
-      border: isDark ? '#1E1E1E' : '#DFE3E8',
-      sectionBorder: isDark ? '#5E5E5E' : '#C7A5FF',
-      textPrimary: isDark ? '#FFFFFF' : '#141414',
-      textSecondary: isDark ? '#AFAFAF' : '#5F646D',
-      inputBg: isDark ? '#131313' : '#F4F5F7',
-      overlay: isDark ? '#000000A8' : '#00000066',
-    }),
-    [isDark]
-  );
+  }, [profile]);
 
   const profileTranslateX = slideAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -SCREEN_WIDTH] });
   const editTranslateX = slideAnim.interpolate({ inputRange: [0, 1], outputRange: [SCREEN_WIDTH, 0] });
@@ -108,13 +99,18 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.screen }]} edges={['top', 'bottom']}>
       <Animated.View style={[styles.mainPanel, { transform: [{ translateX: profileTranslateX }] }]}>
         <ScrollView
           contentContainerStyle={[styles.content, { paddingTop: VIEW_TOP_OFFSET }]}
           keyboardShouldPersistTaps="handled"
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#FFFFFF' : '#111111'} />}>
           <View style={styles.topActionsRow}>
+            <Pressable
+              onPress={() => setThemePreference(themePreference === 'dark' ? 'light' : 'dark')}
+              style={[styles.settingsBtn, { borderColor: colors.border, backgroundColor: colors.card }]}>
+              <MaterialIcons name={themePreference === 'dark' ? 'dark-mode' : 'light-mode'} size={20} color={colors.textPrimary} />
+            </Pressable>
             <Pressable
               onPress={() => setSettingsVisible(true)}
               style={[styles.settingsBtn, { borderColor: colors.border, backgroundColor: colors.card }]}>
@@ -161,7 +157,7 @@ export default function ProfileScreen() {
       </Animated.View>
 
       {isEditing ? (
-        <Animated.View style={[styles.editPanel, { backgroundColor: colors.background, transform: [{ translateX: editTranslateX }] }]}>
+        <Animated.View style={[styles.editPanel, { backgroundColor: colors.screen, transform: [{ translateX: editTranslateX }] }]}>
           <KeyboardAvoidingView style={styles.editKeyboard} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <View style={[styles.editHeader, { paddingTop: insets.top + 10 }]}>
               <Pressable onPress={() => closeEditScreen(false)} style={styles.backButton}>
@@ -233,19 +229,7 @@ export default function ProfileScreen() {
         <View style={[styles.settingsBackdrop, { backgroundColor: colors.overlay }]}>
           <View style={[styles.settingsCard, { backgroundColor: colors.card, borderColor: colors.border }]}> 
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Configuración</Text>
-            <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Tema de la app</Text>
-            <View style={styles.themeButtonsWrap}>
-              <Pressable
-                onPress={() => setThemePreference('light')}
-                style={[styles.themeBtn, themePreference === 'light' && styles.themeBtnActive]}>
-                <Text style={styles.themeBtnText}>Claro</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setThemePreference('dark')}
-                style={[styles.themeBtn, themePreference === 'dark' && styles.themeBtnActive]}>
-                <Text style={styles.themeBtnText}>Oscuro</Text>
-              </Pressable>
-            </View>
+            <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Por ahora este panel no tiene opciones configurables.</Text>
             <Pressable onPress={() => setSettingsVisible(false)} style={[styles.closeSettingsBtn, { borderColor: colors.border }]}> 
               <Text style={[styles.actionBtnText, { color: colors.textPrimary }]}>Cerrar</Text>
             </Pressable>
@@ -297,7 +281,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   mainPanel: { flex: 1 },
   content: { paddingHorizontal: 20, gap: 18, paddingBottom: 30 },
-  topActionsRow: { alignItems: 'flex-end' },
+  topActionsRow: { alignItems: 'center', justifyContent: 'space-between', flexDirection: 'row' },
   profileStack: { alignItems: 'center', gap: 10, marginTop: 4 },
   profileInfoStack: { alignItems: 'center' },
   avatar: { width: 116, height: 116, borderRadius: 58, borderWidth: 1.5 },
@@ -394,9 +378,5 @@ const styles = StyleSheet.create({
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
   actionBtnText: { fontWeight: '600' },
-  themeButtonsWrap: { flexDirection: 'row', gap: 10 },
-  themeBtn: { backgroundColor: '#2A2A2A', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 9 },
-  themeBtnActive: { backgroundColor: '#6B46FF' },
-  themeBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 13 },
   closeSettingsBtn: { borderWidth: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
 });
