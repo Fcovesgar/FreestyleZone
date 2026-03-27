@@ -87,6 +87,8 @@ export default function RapearScreen() {
   const [hasSessionStarted, setHasSessionStarted] = useState(false);
   const [summaryVisible, setSummaryVisible] = useState(false);
   const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null);
+  const [baseSelectorVisible, setBaseSelectorVisible] = useState(false);
+  const [isTrainingBeatPlaying, setIsTrainingBeatPlaying] = useState(true);
 
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -208,6 +210,11 @@ export default function RapearScreen() {
     setIsUnlimitedSession(initialSessionSeconds === null);
     setRemainingSeconds(initialSessionSeconds);
     setHasSessionStarted(false);
+    setIsTrainingBeatPlaying(true);
+
+    if (selectedSessionType === 'train') {
+      startSessionTimer();
+    }
   };
 
   const startSessionTimer = () => {
@@ -285,6 +292,7 @@ export default function RapearScreen() {
     setElapsedSeconds(0);
     setIsUnlimitedSession(initialSessionSeconds === null);
     setHasSessionStarted(false);
+    setBaseSelectorVisible(false);
   };
 
   const extendSession = () => {
@@ -301,6 +309,30 @@ export default function RapearScreen() {
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Salir', style: 'destructive', onPress: () => setSummaryVisible(false) },
     ]);
+  };
+
+  const onSelectTrainingTrack = (track: Track) => {
+    setSelectedTrack(track);
+    setBaseSelectorVisible(false);
+    setIsTrainingBeatPlaying(true);
+  };
+
+  const onTrainingPreviousTrack = () => {
+    if (!selectedTrack) return;
+    const currentTrackIndex = TRACKS.findIndex((track) => track.key === selectedTrack);
+    if (currentTrackIndex === -1) return;
+    const previousTrack = TRACKS[(currentTrackIndex - 1 + TRACKS.length) % TRACKS.length];
+    setSelectedTrack(previousTrack.key);
+    setIsTrainingBeatPlaying(true);
+  };
+
+  const onTrainingNextTrack = () => {
+    if (!selectedTrack) return;
+    const currentTrackIndex = TRACKS.findIndex((track) => track.key === selectedTrack);
+    if (currentTrackIndex === -1) return;
+    const nextTrack = TRACKS[(currentTrackIndex + 1) % TRACKS.length];
+    setSelectedTrack(nextTrack.key);
+    setIsTrainingBeatPlaying(true);
   };
 
   const summaryTheme = {
@@ -363,22 +395,22 @@ export default function RapearScreen() {
           <View style={styles.modeRail}>
             {RAP_MODES.map((mode) => {
               const selected = selectedMode === mode.key;
-              const selectedCardTextColor = selected ? '#101828' : themeColors.textPrimary;
+              const selectedCardTextColor = themeColors.textPrimary;
               return (
                 <Pressable
                   key={mode.key}
                   onPress={() => setSelectedMode(mode.key)}
                   style={[
                     styles.modeCard,
-                    { borderColor: selected ? mode.accent : themeColors.border, backgroundColor: selected ? '#FFFFFF' : themeColors.card },
+                    { borderColor: selected ? mode.accent : themeColors.border, backgroundColor: themeColors.card },
                     selected && styles.modeCardSelected,
                   ]}>
                   <View style={styles.modeCardInner}>
                     <View>
                       <Text style={[styles.modeTitle, { color: selectedCardTextColor }]}>{mode.label}</Text>
-                      <Text style={[styles.modeDescription, { color: selected ? '#475467' : themeColors.textSecondary }]}>{mode.description}</Text>
+                      <Text style={[styles.modeDescription, { color: themeColors.textSecondary }]}>{mode.description}</Text>
                     </View>
-                    <View style={[styles.modeIconBubble, { borderColor: selected ? mode.accent : themeColors.border }]}>
+                    <View style={[styles.modeIconBubble, { borderColor: selected ? mode.accent : themeColors.border, backgroundColor: selected ? `${mode.accent}22` : 'transparent' }]}>
                       <MaterialIcons name={mode.icon} size={24} color={selected ? mode.accent : themeColors.textSecondary} />
                     </View>
                   </View>
@@ -395,7 +427,7 @@ export default function RapearScreen() {
               const isPlaying = previewTrack === track.key;
 
               return (
-                <View key={track.key} style={[styles.trackCard, { backgroundColor: themeColors.card, borderColor: selected ? '#6B46FF' : themeColors.border }]}>
+                <View key={track.key} style={[styles.trackCard, { backgroundColor: selected ? '#6B46FF22' : themeColors.card, borderColor: selected ? '#6B46FF' : themeColors.border }]}>
                   <Pressable onPress={() => setSelectedTrack(track.key)} style={styles.trackMainArea}>
                     <Text style={[styles.trackTitle, { color: themeColors.textPrimary }]}>{track.label}</Text>
                     <Text style={[styles.trackInfo, { color: themeColors.textSecondary }]}>{track.description}</Text>
@@ -463,52 +495,125 @@ export default function RapearScreen() {
       <Modal visible={sessionVisible} animationType="slide" onRequestClose={stopSession}>
         <View style={styles.sessionFullscreen}>
           <View style={[styles.cameraPlaceholder, styles.sessionModalCard, selectedSessionType === 'train' ? styles.trainingBackground : styles.recordingBackground, { marginTop: insets.top + 8, marginBottom: insets.bottom + 8 }]}>
-            <View style={[styles.cameraHudTop, { paddingTop: insets.top + 8 }]}>
-              <View style={styles.sessionHeaderActions}>
-                <Text style={[styles.timer, { color: timerColor }]}>{displayTimer}</Text>
-                {shouldShowExtendAction ? (
-                  <Pressable style={styles.extendButton} onPress={extendSession}>
-                    <MaterialIcons name="add-circle" size={14} color="#FFFFFF" />
-                    <Text style={styles.extendButtonText}>Ampliar</Text>
+            {selectedSessionType === 'train' ? (
+              <>
+                <View style={[styles.trainingHeader, { paddingTop: insets.top + 8 }]}>
+                  <View>
+                    <Text style={styles.trainingAppName}>FreestyleZone</Text>
+                    <Text style={[styles.timer, { color: timerColor }]}>{displayTimer}</Text>
+                    <View style={styles.trainingModeTag}>
+                      <MaterialIcons name="school" size={11} color="#CFC5FF" />
+                      <Text style={styles.trainingModeTagText}>Entrenar</Text>
+                    </View>
+                  </View>
+                  <Pressable style={styles.finishButton} onPress={finishSession}>
+                    <Text style={styles.finishButtonText}>Finalizar</Text>
+                  </Pressable>
+                </View>
+
+                <View style={styles.trainingCenterClearSpace} />
+
+                <View style={[styles.trainingBottomArea, { paddingBottom: insets.bottom + 18 }]}>
+                  <Pressable style={styles.selectBeatButton} onPress={() => setBaseSelectorVisible(true)}>
+                    <MaterialIcons name="library-music" size={18} color="#FFFFFF" />
+                    <Text style={styles.selectBeatButtonText}>Seleccionar base</Text>
+                  </Pressable>
+
+                  <View style={styles.trainingPlayerBar}>
+                    <View style={styles.trainingTrackMeta}>
+                      <Text style={styles.trainingTrackTitle}>{selectedTrackLabel}</Text>
+                      <Text style={styles.trainingTrackSub}>{isTrainingBeatPlaying ? 'Sonando ahora' : 'Pausada'}</Text>
+                    </View>
+                    <View style={styles.trainingPlayerControls}>
+                      <Pressable style={styles.trainingControlButton} onPress={onTrainingPreviousTrack}>
+                        <MaterialIcons name="skip-previous" size={22} color="#FFFFFF" />
+                      </Pressable>
+                      <Pressable style={styles.trainingControlButton} onPress={() => setIsTrainingBeatPlaying((previous) => !previous)}>
+                        <MaterialIcons name={isTrainingBeatPlaying ? 'pause' : 'play-arrow'} size={22} color="#FFFFFF" />
+                      </Pressable>
+                      <Pressable style={styles.trainingControlButton} onPress={onTrainingNextTrack}>
+                        <MaterialIcons name="skip-next" size={22} color="#FFFFFF" />
+                      </Pressable>
+                    </View>
+                  </View>
+                </View>
+
+                {baseSelectorVisible ? (
+                  <Pressable style={styles.baseModalBackdrop} onPress={() => setBaseSelectorVisible(false)}>
+                    <Pressable style={styles.baseModalCard} onPress={(event) => event.stopPropagation()}>
+                      <View style={styles.baseModalHeader}>
+                        <Text style={styles.baseModalTitle}>Selecciona una base</Text>
+                        <Pressable style={styles.baseModalClose} onPress={() => setBaseSelectorVisible(false)}>
+                          <MaterialIcons name="close" size={18} color="#FFFFFF" />
+                        </Pressable>
+                      </View>
+
+                      <View style={styles.baseOptionsColumn}>
+                        {TRACKS.map((track) => {
+                          const isSelected = selectedTrack === track.key;
+                          return (
+                            <Pressable key={track.key} style={[styles.baseOptionItem, isSelected && styles.baseOptionSelected]} onPress={() => onSelectTrainingTrack(track.key)}>
+                              <View style={styles.baseOptionMain}>
+                                <Text style={styles.baseOptionTitle}>{track.label}</Text>
+                                <Text style={styles.baseOptionDesc}>{track.bpm}</Text>
+                              </View>
+                              {isSelected ? <MaterialIcons name="check-circle" size={20} color="#9F7AEA" /> : null}
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    </Pressable>
                   </Pressable>
                 ) : null}
-              </View>
-              <Pressable style={styles.finishButton} onPress={finishSession}>
-                <Text style={styles.finishButtonText}>Finalizar</Text>
-              </Pressable>
-            </View>
-
-            <View style={[styles.sessionBottomActions, { paddingBottom: insets.bottom + 26 }]}> 
-              {countdown !== null ? <Text style={[styles.countdownNumber, { color: getCountdownColor(countdown) }]}>{countdown}</Text> : null}
-
-              {!hasSessionStarted && countdown === null ? (
-                <View style={styles.preSessionActionsRow}>
-                  <Pressable style={styles.recordButton} onPress={onStartRecordingPress}>
-                    <View style={styles.recordButtonInner} />
+              </>
+            ) : (
+              <>
+                <View style={[styles.cameraHudTop, { paddingTop: insets.top + 8 }]}>
+                  <View style={styles.sessionHeaderActions}>
+                    <Text style={[styles.timer, { color: timerColor }]}>{displayTimer}</Text>
+                    {shouldShowExtendAction ? (
+                      <Pressable style={styles.extendButton} onPress={extendSession}>
+                        <MaterialIcons name="add-circle" size={14} color="#FFFFFF" />
+                        <Text style={styles.extendButtonText}>Ampliar</Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
+                  <Pressable style={styles.finishButton} onPress={finishSession}>
+                    <Text style={styles.finishButtonText}>Finalizar</Text>
                   </Pressable>
+                </View>
 
-                  {selectedSessionType === 'record' ? (
+                <View style={[styles.sessionBottomActions, { paddingBottom: insets.bottom + 26 }]}>
+                  {countdown !== null ? <Text style={[styles.countdownNumber, { color: getCountdownColor(countdown) }]}>{countdown}</Text> : null}
+
+                  {!hasSessionStarted && countdown === null ? (
+                    <View style={styles.preSessionActionsRow}>
+                      <Pressable style={styles.recordButton} onPress={onStartRecordingPress}>
+                        <View style={styles.recordButtonInner} />
+                      </Pressable>
+
+                      <Pressable
+                        style={[styles.bottomSwitchCameraButton, styles.bottomSwitchCameraButtonBeforeStart, hasCameraPermission === false && styles.bottomSwitchCameraDisabled]}
+                        accessibilityLabel={`alternar cámara ${cameraFacing === 'front' ? 'frontal' : 'trasera'}`}
+                        disabled={hasCameraPermission === false}
+                        onPress={() => setCameraFacing((previous) => (previous === 'front' ? 'back' : 'front'))}>
+                        <MaterialIcons name="sync-alt" size={20} color="#FFFFFF" />
+                      </Pressable>
+                    </View>
+                  ) : null}
+
+                  {hasSessionStarted ? (
                     <Pressable
-                      style={[styles.bottomSwitchCameraButton, styles.bottomSwitchCameraButtonBeforeStart, hasCameraPermission === false && styles.bottomSwitchCameraDisabled]}
+                      style={[styles.bottomSwitchCameraButton, hasCameraPermission === false && styles.bottomSwitchCameraDisabled]}
                       accessibilityLabel={`alternar cámara ${cameraFacing === 'front' ? 'frontal' : 'trasera'}`}
                       disabled={hasCameraPermission === false}
                       onPress={() => setCameraFacing((previous) => (previous === 'front' ? 'back' : 'front'))}>
-                      <MaterialIcons name="sync-alt" size={20} color="#FFFFFF" />
+                      <MaterialIcons name="sync-alt" size={22} color="#FFFFFF" />
                     </Pressable>
                   ) : null}
                 </View>
-              ) : null}
-
-              {hasSessionStarted && selectedSessionType === 'record' ? (
-                <Pressable
-                  style={[styles.bottomSwitchCameraButton, hasCameraPermission === false && styles.bottomSwitchCameraDisabled]}
-                  accessibilityLabel={`alternar cámara ${cameraFacing === 'front' ? 'frontal' : 'trasera'}`}
-                  disabled={hasCameraPermission === false}
-                  onPress={() => setCameraFacing((previous) => (previous === 'front' ? 'back' : 'front'))}>
-                  <MaterialIcons name="sync-alt" size={22} color="#FFFFFF" />
-                </Pressable>
-              ) : null}
-            </View>
+              </>
+            )}
           </View>
         </View>
       </Modal>
@@ -644,6 +749,20 @@ const styles = StyleSheet.create({
   recordingBackground: { backgroundColor: '#1A1A1A' },
   trainingBackground: { backgroundColor: '#14122A' },
   cameraHudTop: { paddingHorizontal: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  trainingHeader: { paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  trainingAppName: { color: '#D4CCFF', fontSize: 12, letterSpacing: 1.6, textTransform: 'uppercase', fontWeight: '700', marginBottom: 6 },
+  trainingModeTag: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  trainingModeTagText: { color: '#CFC5FF', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6 },
+  trainingCenterClearSpace: { flex: 1 },
+  trainingBottomArea: { gap: 12, paddingHorizontal: 12 },
+  selectBeatButton: { alignSelf: 'flex-end', borderRadius: 999, paddingVertical: 10, paddingHorizontal: 14, backgroundColor: '#6B46FF', flexDirection: 'row', alignItems: 'center', gap: 8 },
+  selectBeatButtonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  trainingPlayerBar: { borderRadius: 18, borderWidth: 1, borderColor: '#FFFFFF20', backgroundColor: '#00000099', paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
+  trainingTrackMeta: { flex: 1, gap: 2 },
+  trainingTrackTitle: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  trainingTrackSub: { color: '#B3B3C4', fontSize: 12, fontWeight: '600' },
+  trainingPlayerControls: { flexDirection: 'row', gap: 8 },
+  trainingControlButton: { width: 38, height: 38, borderRadius: 19, borderWidth: 1, borderColor: '#FFFFFF26', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF14' },
   sessionHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   timer: { fontSize: 20, fontWeight: '800', color: '#FFFFFF' },
   finishButton: { borderRadius: 999, backgroundColor: '#0000007A', paddingHorizontal: 16, paddingVertical: 10 },
@@ -658,6 +777,17 @@ const styles = StyleSheet.create({
   recordButton: { width: 86, height: 86, borderRadius: 43, borderWidth: 4, borderColor: '#FFFFFFAA', justifyContent: 'center', alignItems: 'center' },
   recordButtonInner: { width: 58, height: 58, borderRadius: 29, backgroundColor: '#EF4444' },
   countdownNumber: { fontSize: 82, fontWeight: '800' },
+  baseModalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: '#000000A6', justifyContent: 'center', paddingHorizontal: 18, zIndex: 20 },
+  baseModalCard: { borderRadius: 20, borderWidth: 1, borderColor: '#FFFFFF1F', backgroundColor: '#121022', padding: 14, gap: 12, maxHeight: '70%' },
+  baseModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  baseModalTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '800' },
+  baseModalClose: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#FFFFFF1A', alignItems: 'center', justifyContent: 'center' },
+  baseOptionsColumn: { gap: 8 },
+  baseOptionItem: { borderRadius: 12, borderWidth: 1, borderColor: '#FFFFFF1F', backgroundColor: '#FFFFFF0A', padding: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  baseOptionSelected: { borderColor: '#6B46FF', backgroundColor: '#6B46FF22' },
+  baseOptionMain: { gap: 2 },
+  baseOptionTitle: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  baseOptionDesc: { color: '#BDB7E5', fontSize: 12, fontWeight: '600' },
 
   summaryScreen: { flex: 1, paddingHorizontal: 20, paddingVertical: 16, gap: 16 },
   summaryHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
