@@ -18,7 +18,6 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { SwipeableTabScreen } from '@/components/swipeable-tab-screen';
 import { useAppTheme } from '@/context/app-theme-context';
 
 type RapStyle = 'Doble punch' | 'Metriquero' | 'Batallero';
@@ -107,8 +106,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SwipeableTabScreen currentTab="profile">
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       <Animated.View style={[styles.mainPanel, { transform: [{ translateX: profileTranslateX }] }]}>
         <ScrollView
           contentContainerStyle={[styles.content, { paddingTop: insets.top + 4 }]}
@@ -253,7 +251,6 @@ export default function ProfileScreen() {
         </View>
       </Modal>
     </SafeAreaView>
-    </SwipeableTabScreen>
   );
 }
 

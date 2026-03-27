@@ -2,7 +2,6 @@ import { useCallback, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { SwipeableTabScreen } from '@/components/swipeable-tab-screen';
 import { useAppTheme } from '@/context/app-theme-context';
 
 export default function DailyChallengeOverlayScreen() {
