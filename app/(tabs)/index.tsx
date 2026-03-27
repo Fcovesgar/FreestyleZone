@@ -76,6 +76,7 @@ export default function RapearScreen() {
   const [selectedSessionTime, setSelectedSessionTime] = useState<SessionTime | null>('1-min');
   const [selectedSessionType, setSelectedSessionType] = useState<SessionType>('record');
   const [setupStep, setSetupStep] = useState<SetupStep>('mode');
+  const [pressedMode, setPressedMode] = useState<RapMode | null>(null);
   const [previewTrack, setPreviewTrack] = useState<Track | null>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [sessionVisible, setSessionVisible] = useState(false);
@@ -413,11 +414,14 @@ export default function RapearScreen() {
           <View style={styles.modeRail}>
             {RAP_MODES.map((mode) => {
               const selected = selectedMode === mode.key;
+              const isActiveMode = selected || pressedMode === mode.key;
               const selectedCardTextColor = themeColors.textPrimary;
               const selectedModeBackground = isDark ? `${mode.accent}2B` : `${mode.accent}14`;
               return (
                 <Pressable
                   key={mode.key}
+                  onPressIn={() => setPressedMode(mode.key)}
+                  onPressOut={() => setPressedMode((currentMode) => (currentMode === mode.key ? null : currentMode))}
                   onPress={() => setSelectedMode(mode.key)}
                   style={[
                     styles.modeCard,
@@ -430,7 +434,7 @@ export default function RapearScreen() {
                       <Text style={[styles.modeDescription, { color: selected ? themeColors.textPrimary : themeColors.textSecondary }]}>{mode.description}</Text>
                     </View>
                     <View style={[styles.modeIconBubble, { borderColor: selected ? mode.accent : themeColors.border, backgroundColor: selected ? `${mode.accent}22` : 'transparent' }]}>
-                      <MaterialIcons name={mode.icon} size={24} color={themeColors.textSecondary} />
+                      <MaterialIcons name={mode.icon} size={24} color={isActiveMode ? mode.accent : themeColors.textSecondary} />
                     </View>
                   </View>
                 </Pressable>
