@@ -41,7 +41,7 @@ function AppNavigator() {
   return (
     <ThemeProvider value={effectiveColorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false, gestureEnabled: false }} />
       </Stack>
       <StatusBar style={effectiveColorScheme === 'dark' ? 'light' : 'dark'} />
     </ThemeProvider>
