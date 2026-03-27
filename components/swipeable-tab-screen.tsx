@@ -43,8 +43,21 @@ export function SwipeableTabScreen({ currentTab, children }: SwipeableTabScreenP
       if (nextIndex < 0 || nextIndex >= TAB_ORDER.length) return;
 
       const nextTab = TAB_ORDER[nextIndex];
-      const navigator = navigation.getParent() ?? navigation;
-      navigator.dispatch(TabActions.jumpTo(nextTab));
+      let navigator: any = navigation;
+
+      while (navigator) {
+        const state = navigator.getState?.();
+        const routeNames = state?.routeNames as string[] | undefined;
+
+        if (routeNames?.includes('index') && routeNames.includes('challenge') && routeNames.includes('profile')) {
+          navigator.dispatch(TabActions.jumpTo(nextTab));
+          return;
+        }
+
+        navigator = navigator.getParent?.();
+      }
+
+      navigation.navigate(nextTab as never);
     },
     [currentTab, navigation]
   );
