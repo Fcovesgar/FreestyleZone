@@ -43,15 +43,15 @@ export default function DailyChallengeOverlayScreen() {
   const colors = useMemo(
     () => ({
       screen: isDark ? '#0D0A1A' : '#F5F2FF',
-      card: isDark ? '#1B1430' : '#FFFFFF',
-      border: isDark ? '#3A2E63' : '#DCCFFF',
+      card: isDark ? '#121212' : '#FFFFFF',
+      border: isDark ? '#2A2A2A' : '#DCCFFF',
       textPrimary: isDark ? '#FFFFFF' : '#111111',
-      textSecondary: isDark ? '#C5BDE6' : '#667085',
+      textSecondary: isDark ? '#B8B8B8' : '#667085',
       purple: '#6B46FF',
       yellowFlag: '#FACC15',
-      pill: isDark ? '#2C2350' : '#ECE7FF',
-      iconChip: isDark ? '#221A3D' : '#FFFFFF',
-      mutedBg: isDark ? '#20173A' : '#F8FAFC',
+      pill: isDark ? '#1A1A1A' : '#ECE7FF',
+      iconChip: isDark ? '#171717' : '#FFFFFF',
+      mutedBg: isDark ? '#141414' : '#F8FAFC',
     }),
     [isDark]
   );
