@@ -17,8 +17,7 @@ export default function DailyChallengeOverlayScreen() {
   }, []);
 
   return (
-    <SwipeableTabScreen currentTab="challenge">
-      <SafeAreaView style={[styles.backdrop, { backgroundColor: isDark ? '#060606' : '#F2F4F7' }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.backdrop, { backgroundColor: isDark ? '#060606' : '#F2F4F7' }]} edges={['top', 'bottom']}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#FFFFFF' : '#111111'} />}
@@ -29,8 +28,7 @@ export default function DailyChallengeOverlayScreen() {
             <Text style={[styles.description, { color: isDark ? '#9C9C9C' : '#667085' }]}>Overlay pendiente de diseño.</Text>
           </View>
         </ScrollView>
-      </SafeAreaView>
-    </SwipeableTabScreen>
+    </SafeAreaView>
   );
 }
 
