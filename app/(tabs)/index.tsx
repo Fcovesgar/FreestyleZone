@@ -592,7 +592,7 @@ export default function RapearScreen() {
                     <Text style={[styles.timer, { color: timerColor }]}>{displayTimer}</Text>
                     <View style={styles.trainingModeTag}>
                       <MaterialIcons name="mic" size={11} color="#FFD9D9" />
-                      <Text style={styles.recordingModeTagText}>{hasSessionStarted ? 'Grabando' : 'Listo para grabar'}</Text>
+                      <Text style={styles.recordingModeTagText}>{hasSessionStarted ? 'Grabando...' : 'Listo para grabar'}</Text>
                     </View>
                   </View>
                   <View style={styles.sessionHeaderActions}>
