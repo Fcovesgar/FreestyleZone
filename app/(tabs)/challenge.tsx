@@ -9,9 +9,21 @@ const WEEK_DAYS = ['Día 1', 'Día 2', 'Día 3', 'Día 4', 'Día 5', 'Día 6', '
 const CURRENT_PROGRESS_DAY = 0;
 const STREAK_DAYS = 3;
 
+const NOTIFICATIONS: { id: string; title: string; detail: string }[] = [];
+
+const BOARD_NEWS = [
+  {
+    id: 'metrics-ia',
+    title: 'Descubre las métricas en tus versos',
+    detail:
+      'La IA se encargará de colorear tus versos para poder identificar las métricas internas de tus patrones.',
+  },
+];
+
 export default function DailyChallengeOverlayScreen() {
   const { effectiveColorScheme } = useAppTheme();
   const isDark = effectiveColorScheme === 'dark';
+
   const [refreshing, setRefreshing] = useState(false);
   const [challengeModalVisible, setChallengeModalVisible] = useState(false);
   const [notificationsModalVisible, setNotificationsModalVisible] = useState(false);
@@ -27,8 +39,6 @@ export default function DailyChallengeOverlayScreen() {
       purple: '#6B46FF',
       yellowFlag: '#FACC15',
       pill: isDark ? '#1F1A38' : '#ECE7FF',
-      heroFrom: isDark ? '#2B1A6D' : '#6B46FF',
-      heroTo: isDark ? '#171027' : '#8E6DFF',
       iconChip: isDark ? '#171717' : '#FFFFFF',
       mutedBg: isDark ? '#141414' : '#F8FAFC',
     }),
@@ -50,36 +60,20 @@ export default function DailyChallengeOverlayScreen() {
         <View style={styles.topBar}>
           <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>Inicio</Text>
           <View style={styles.topActions}>
-            <Pressable
-              style={[styles.iconButton, { backgroundColor: colors.iconChip, borderColor: colors.border }]}
-              onPress={() => setBoardModalVisible(true)}>
+            <Pressable style={[styles.iconButton, { backgroundColor: colors.iconChip, borderColor: colors.border }]} onPress={() => setBoardModalVisible(true)}>
               <MaterialIcons name="campaign" size={20} color={colors.textPrimary} />
             </Pressable>
-            <Pressable
-              style={[styles.iconButton, { backgroundColor: colors.iconChip, borderColor: colors.border }]}
-              onPress={() => setNotificationsModalVisible(true)}>
+            <Pressable style={[styles.iconButton, { backgroundColor: colors.iconChip, borderColor: colors.border }]} onPress={() => setNotificationsModalVisible(true)}>
               <MaterialIcons name="notifications" size={20} color={colors.textPrimary} />
             </Pressable>
           </View>
         </View>
 
-        <View style={[styles.heroCard, { borderColor: colors.border, backgroundColor: colors.heroFrom }]}>
-          <View style={[styles.heroTint, { backgroundColor: colors.heroTo }]} />
-          <Text style={styles.heroTitle}>Tu zona de entrenamiento</Text>
-          <Text style={styles.heroDescription}>Entrena, mantén tu racha y prepárate para romperla en cada sesión de freestyle.</Text>
-          <View style={styles.heroPillsRow}>
-            <View style={[styles.streakPill, { backgroundColor: 'rgba(255,255,255,0.18)' }]}>
-              <MaterialIcons name="local-fire-department" size={14} color="#FFFFFF" />
-              <Text style={[styles.streakText, { color: '#FFFFFF' }]}>{STREAK_DAYS} días de racha</Text>
-            </View>
-            <View style={[styles.heroSmallPill, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
-              <Text style={styles.heroSmallPillText}>Nivel Novato</Text>
-            </View>
-          </View>
-        </View>
-
         <View style={[styles.sectionCard, { borderColor: colors.border, backgroundColor: colors.card }]}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Tus primeros pasos</Text>
+          <View style={styles.sectionTitleWithIcon}>
+            <MaterialIcons name="school" size={20} color={colors.purple} />
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Tus primeros pasos</Text>
+          </View>
           <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>Aprende las nociones básicas para empezar a rapear y formar tus primeros versos improvisados.</Text>
           <Pressable style={[styles.primaryButton, { backgroundColor: colors.purple }]}>
             <Text style={styles.primaryButtonText}>Empezar tutorial</Text>
@@ -108,7 +102,7 @@ export default function DailyChallengeOverlayScreen() {
 
       <Modal animationType="slide" visible={challengeModalVisible} transparent onRequestClose={() => setChallengeModalVisible(false)}>
         <View style={styles.modalBackdrop}>
-          <View style={[styles.modalCard, { borderColor: colors.border, backgroundColor: colors.card }]}>
+          <View style={[styles.modalCard, { borderColor: colors.border, backgroundColor: colors.card }]}> 
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Reto diario</Text>
               <Pressable onPress={() => setChallengeModalVisible(false)} hitSlop={8}>
@@ -122,6 +116,7 @@ export default function DailyChallengeOverlayScreen() {
               {WEEK_DAYS.map((day, index) => {
                 const isCurrentDay = index === CURRENT_PROGRESS_DAY;
                 const isFirstDay = index === 0;
+
                 return (
                   <View
                     key={day}
@@ -155,10 +150,20 @@ export default function DailyChallengeOverlayScreen() {
                 <MaterialIcons name="close" size={22} color={colors.textPrimary} />
               </Pressable>
             </View>
-            <View style={[styles.emptyBox, { backgroundColor: colors.mutedBg, borderColor: colors.border }]}> 
-              <MaterialIcons name="notifications-none" size={22} color={colors.textSecondary} />
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No hay notificaciones por ahora.</Text>
-            </View>
+
+            {NOTIFICATIONS.length === 0 ? (
+              <View style={[styles.emptyBox, { backgroundColor: colors.mutedBg, borderColor: colors.border }]}>
+                <MaterialIcons name="notifications-none" size={22} color={colors.textSecondary} />
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No hay notificaciones por ahora.</Text>
+              </View>
+            ) : (
+              NOTIFICATIONS.map((item) => (
+                <View key={item.id} style={[styles.upcomingBox, { borderColor: colors.border, backgroundColor: colors.mutedBg }]}>
+                  <Text style={[styles.upcomingTitle, { color: colors.textPrimary }]}>{item.title}</Text>
+                  <Text style={[styles.upcomingText, { color: colors.textSecondary }]}>{item.detail}</Text>
+                </View>
+              ))
+            )}
           </View>
         </View>
       </Modal>
@@ -173,10 +178,19 @@ export default function DailyChallengeOverlayScreen() {
               </Pressable>
             </View>
 
-            <View style={[styles.emptyBox, { backgroundColor: colors.mutedBg, borderColor: colors.border }]}> 
-              <MaterialIcons name="campaign" size={22} color={colors.textSecondary} />
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No hay anuncios por ahora.</Text>
-            </View>
+            {BOARD_NEWS.length === 0 ? (
+              <View style={[styles.emptyBox, { backgroundColor: colors.mutedBg, borderColor: colors.border }]}>
+                <MaterialIcons name="campaign" size={22} color={colors.textSecondary} />
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No hay anuncios por ahora.</Text>
+              </View>
+            ) : (
+              BOARD_NEWS.map((item) => (
+                <View key={item.id} style={[styles.upcomingBox, { borderColor: colors.border, backgroundColor: colors.mutedBg }]}>
+                  <Text style={[styles.upcomingTitle, { color: colors.textPrimary }]}>{item.title}</Text>
+                  <Text style={[styles.upcomingText, { color: colors.textSecondary }]}>{item.detail}</Text>
+                </View>
+              ))
+            )}
 
             <View style={[styles.upcomingBox, { borderColor: colors.border, backgroundColor: colors.mutedBg }]}> 
               <Text style={[styles.upcomingTitle, { color: colors.textPrimary }]}>Próximamente: Rapea con gente</Text>
@@ -221,44 +235,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  heroCard: {
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 16,
-    overflow: 'hidden',
-    gap: 10,
-  },
-  heroTint: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.35,
-  },
-  heroTitle: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: '800',
-  },
-  heroDescription: {
-    color: '#F4F0FF',
-    fontSize: 14,
-    lineHeight: 20,
-    maxWidth: '95%',
-  },
-  heroPillsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    alignItems: 'center',
-  },
-  heroSmallPill: {
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  heroSmallPillText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
-  },
   sectionCard: {
     borderRadius: 16,
     borderWidth: 1,
@@ -276,6 +252,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  sectionTitleWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   sectionTitle: {
     fontSize: 20,
