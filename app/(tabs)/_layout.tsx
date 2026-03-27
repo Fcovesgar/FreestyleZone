@@ -13,9 +13,10 @@ export default function TabLayout() {
 
   return (
     <Tabs
-      initialRouteName="index"
+      initialRouteName="challenge"
       screenOptions={{
         headerShown: false,
+        animation: 'shift',
         tabBarButton: HapticTab,
         tabBarActiveTintColor: isDark ? '#FFFFFF' : '#111111',
         tabBarInactiveTintColor: isDark ? '#7D7D7D' : '#777777',
@@ -34,17 +35,17 @@ export default function TabLayout() {
         },
       }}>
       <Tabs.Screen
-        name="challenge"
-        options={{
-          title: 'Reto diario',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="flag.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="index"
         options={{
           title: 'Rapear',
           tabBarIcon: ({ color }) => <IconSymbol size={24} name="mic.fill" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="challenge"
+        options={{
+          title: 'Inicio',
+          tabBarIcon: ({ color }) => <IconSymbol size={24} name="house.fill" color={color} />,
         }}
       />
       <Tabs.Screen
