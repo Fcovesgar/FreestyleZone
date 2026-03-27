@@ -402,7 +402,7 @@ export default function RapearScreen() {
                   onPress={() => setSelectedMode(mode.key)}
                   style={[
                     styles.modeCard,
-                    { borderColor: selected ? mode.accent : themeColors.border, backgroundColor: selected ? `${mode.accent}22` : themeColors.card },
+                    { borderColor: selected ? mode.accent : themeColors.border, backgroundColor: themeColors.card },
                     selected && styles.modeCardSelected,
                   ]}>
                   <View style={styles.modeCardInner}>
@@ -410,7 +410,7 @@ export default function RapearScreen() {
                       <Text style={[styles.modeTitle, { color: selectedCardTextColor }]}>{mode.label}</Text>
                       <Text style={[styles.modeDescription, { color: themeColors.textSecondary }]}>{mode.description}</Text>
                     </View>
-                    <View style={[styles.modeIconBubble, { borderColor: selected ? mode.accent : themeColors.border }]}>
+                    <View style={[styles.modeIconBubble, { borderColor: selected ? mode.accent : themeColors.border, backgroundColor: selected ? `${mode.accent}22` : 'transparent' }]}>
                       <MaterialIcons name={mode.icon} size={24} color={selected ? mode.accent : themeColors.textSecondary} />
                     </View>
                   </View>
@@ -427,7 +427,7 @@ export default function RapearScreen() {
               const isPlaying = previewTrack === track.key;
 
               return (
-                <View key={track.key} style={[styles.trackCard, { backgroundColor: themeColors.card, borderColor: selected ? '#6B46FF' : themeColors.border }]}>
+                <View key={track.key} style={[styles.trackCard, { backgroundColor: selected ? '#6B46FF22' : themeColors.card, borderColor: selected ? '#6B46FF' : themeColors.border }]}>
                   <Pressable onPress={() => setSelectedTrack(track.key)} style={styles.trackMainArea}>
                     <Text style={[styles.trackTitle, { color: themeColors.textPrimary }]}>{track.label}</Text>
                     <Text style={[styles.trackInfo, { color: themeColors.textSecondary }]}>{track.description}</Text>
