@@ -20,13 +20,13 @@ type SessionSummary = {
 };
 
 const RAP_MODES: { key: RapMode; label: string; description: string; icon: keyof typeof MaterialIcons.glyphMap; accent: string }[] = [
-  { key: 'easy', label: 'Easy', description: 'Palabras cada 10s', icon: 'security', accent: '#22C55E' },
-  { key: 'hard', label: 'Hard', description: 'Palabras cada 5s', icon: 'flash-on', accent: '#F97316' },
-  { key: 'incremental', label: 'Incremental', description: 'Palabras cada 10s - 5s - 2s', icon: 'local-fire-department', accent: '#EF4444' },
-  { key: 'history', label: 'Historia', description: 'Crea historia con palabras', icon: 'history-edu', accent: '#38BDF8' },
-  { key: 'ending', label: 'Terminación', description: 'Rapea con terminaciones', icon: 'text-fields', accent: '#FACC15' },
-  { key: 'images', label: 'Imágenes', description: 'Rapea con imágenes', icon: 'image', accent: '#A855F7' },
-  { key: 'free', label: 'Libre', description: 'Rapea libremente y sin estímulos.', icon: 'graphic-eq', accent: '#14B8A6' },
+  { key: 'free', label: 'Libre', description: 'Rapea libremente y sin estímulos.', icon: 'graphic-eq', accent: '#0EA5E9' },
+  { key: 'easy', label: 'Easy', description: 'Palabras cada 10s', icon: 'security', accent: '#16A34A' },
+  { key: 'hard', label: 'Hard', description: 'Palabras cada 5s', icon: 'flash-on', accent: '#EA580C' },
+  { key: 'incremental', label: 'Incremental', description: 'Palabras cada 10s - 5s - 2s', icon: 'local-fire-department', accent: '#DC2626' },
+  { key: 'history', label: 'Historia', description: 'Crea historia con palabras', icon: 'history-edu', accent: '#DB2777' },
+  { key: 'ending', label: 'Terminación', description: 'Rapea con terminaciones', icon: 'text-fields', accent: '#EAB308' },
+  { key: 'images', label: 'Imágenes', description: 'Rapea con imágenes', icon: 'image', accent: '#9333EA' },
 ];
 
 const TRACKS: { key: Track; label: string; description: string; bpm: string }[] = [
@@ -71,11 +71,12 @@ export default function RapearScreen() {
     [isDark]
   );
 
-  const [selectedMode, setSelectedMode] = useState<RapMode | null>('easy');
+  const [selectedMode, setSelectedMode] = useState<RapMode | null>('free');
   const [selectedTrack, setSelectedTrack] = useState<Track | null>('base-1');
   const [selectedSessionTime, setSelectedSessionTime] = useState<SessionTime | null>('1-min');
   const [selectedSessionType, setSelectedSessionType] = useState<SessionType>('record');
   const [setupStep, setSetupStep] = useState<SetupStep>('mode');
+  const [pressedMode, setPressedMode] = useState<RapMode | null>(null);
   const [previewTrack, setPreviewTrack] = useState<Track | null>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [sessionVisible, setSessionVisible] = useState(false);
@@ -413,23 +414,27 @@ export default function RapearScreen() {
           <View style={styles.modeRail}>
             {RAP_MODES.map((mode) => {
               const selected = selectedMode === mode.key;
+              const isActiveMode = selected || pressedMode === mode.key;
               const selectedCardTextColor = themeColors.textPrimary;
+              const selectedModeBackground = isDark ? `${mode.accent}2B` : `${mode.accent}14`;
               return (
                 <Pressable
                   key={mode.key}
+                  onPressIn={() => setPressedMode(mode.key)}
+                  onPressOut={() => setPressedMode((currentMode) => (currentMode === mode.key ? null : currentMode))}
                   onPress={() => setSelectedMode(mode.key)}
                   style={[
                     styles.modeCard,
-                    { borderColor: selected ? mode.accent : themeColors.border, backgroundColor: themeColors.card },
+                    { borderColor: selected ? mode.accent : themeColors.border, backgroundColor: selected ? selectedModeBackground : themeColors.card },
                     selected && styles.modeCardSelected,
                   ]}>
                   <View style={styles.modeCardInner}>
                     <View>
                       <Text style={[styles.modeTitle, { color: selectedCardTextColor }]}>{mode.label}</Text>
-                      <Text style={[styles.modeDescription, { color: themeColors.textSecondary }]}>{mode.description}</Text>
+                      <Text style={[styles.modeDescription, { color: selected ? themeColors.textPrimary : themeColors.textSecondary }]}>{mode.description}</Text>
                     </View>
                     <View style={[styles.modeIconBubble, { borderColor: selected ? mode.accent : themeColors.border, backgroundColor: selected ? `${mode.accent}22` : 'transparent' }]}>
-                      <MaterialIcons name={mode.icon} size={24} color={selected ? mode.accent : themeColors.textSecondary} />
+                      <MaterialIcons name={mode.icon} size={24} color={isActiveMode ? mode.accent : themeColors.textSecondary} />
                     </View>
                   </View>
                 </Pressable>
@@ -586,19 +591,26 @@ export default function RapearScreen() {
               </>
             ) : (
               <>
-                <View style={[styles.cameraHudTop, { paddingTop: insets.top + 8 }]}>
-                  <View style={styles.sessionHeaderActions}>
+                <View style={[styles.trainingHeader, { paddingTop: insets.top + 8 }]}>
+                  <View>
+                    <Text style={styles.trainingAppName}>FreestyleZone</Text>
                     <Text style={[styles.timer, { color: timerColor }]}>{displayTimer}</Text>
+                    <View style={styles.trainingModeTag}>
+                      <MaterialIcons name="mic" size={11} color="#FFD9D9" />
+                      <Text style={styles.recordingModeTagText}>{hasSessionStarted ? 'Grabando' : 'Listo para grabar'}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.sessionHeaderActions}>
                     {shouldShowExtendAction ? (
                       <Pressable style={styles.extendButton} onPress={extendSession}>
                         <MaterialIcons name="add-circle" size={14} color="#FFFFFF" />
                         <Text style={styles.extendButtonText}>Ampliar</Text>
                       </Pressable>
                     ) : null}
+                    <Pressable style={styles.finishButton} onPress={finishSession}>
+                      <Text style={styles.finishButtonText}>Finalizar</Text>
+                    </Pressable>
                   </View>
-                  <Pressable style={styles.finishButton} onPress={finishSession}>
-                    <Text style={styles.finishButtonText}>Finalizar</Text>
-                  </Pressable>
                 </View>
 
                 <View style={[styles.sessionBottomActions, { paddingBottom: insets.bottom + 26 }]}>
@@ -794,11 +806,11 @@ const styles = StyleSheet.create({
   sessionModalCard: { marginHorizontal: 12, borderRadius: 18, overflow: 'hidden' },
   recordingBackground: { backgroundColor: '#1A1A1A' },
   trainingBackground: { backgroundColor: '#14122A' },
-  cameraHudTop: { paddingHorizontal: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   trainingHeader: { paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   trainingAppName: { color: '#D4CCFF', fontSize: 12, letterSpacing: 1.6, textTransform: 'uppercase', fontWeight: '700', marginBottom: 6 },
   trainingModeTag: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
   trainingModeTagText: { color: '#CFC5FF', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6 },
+  recordingModeTagText: { color: '#FFD9D9', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6 },
   trainingCenterClearSpace: { flex: 1 },
   trainingBottomArea: { gap: 12, paddingHorizontal: 12 },
   selectBeatButton: { alignSelf: 'flex-end', borderRadius: 999, paddingVertical: 10, paddingHorizontal: 14, backgroundColor: '#6B46FF', flexDirection: 'row', alignItems: 'center', gap: 8 },
