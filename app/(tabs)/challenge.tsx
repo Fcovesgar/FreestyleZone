@@ -413,4 +413,83 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
+  soonPill: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  soonPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  disabledAction: {
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+  },
+  disabledActionText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  streakPill: {
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  streakText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  modalCard: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 28,
+    gap: 14,
+    minHeight: '60%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+  },
+  modalDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  progressGrid: {
+    marginTop: 8,
+    gap: 10,
+  },
+  dayNode: {
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    gap: 4,
+  },
+  dayLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  dayValue: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
 });
