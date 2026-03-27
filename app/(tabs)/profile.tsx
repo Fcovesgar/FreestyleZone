@@ -33,6 +33,7 @@ type ProfileContentTab = 'videos' | 'lines';
 
 const RAP_STYLES: RapStyle[] = ['Doble punch', 'Metriquero', 'Batallero'];
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const VIEW_TOP_OFFSET = 12;
 
 const AVATAR_OPTIONS = [
   'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=400&h=400&fit=crop',
@@ -67,9 +68,10 @@ export default function ProfileScreen() {
 
   const colors = useMemo(
     () => ({
-      background: isDark ? '#020202' : '#F2F4F7',
+      background: isDark ? '#0D0A1A' : '#F5F2FF',
       card: isDark ? '#0E0E0E' : '#FFFFFF',
       border: isDark ? '#1E1E1E' : '#DFE3E8',
+      sectionBorder: isDark ? '#FFFFFF66' : '#C7A5FF',
       textPrimary: isDark ? '#FFFFFF' : '#141414',
       textSecondary: isDark ? '#AFAFAF' : '#5F646D',
       inputBg: isDark ? '#131313' : '#F4F5F7',
@@ -109,7 +111,7 @@ export default function ProfileScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       <Animated.View style={[styles.mainPanel, { transform: [{ translateX: profileTranslateX }] }]}>
         <ScrollView
-          contentContainerStyle={[styles.content, { paddingTop: 4 }]}
+          contentContainerStyle={[styles.content, { paddingTop: VIEW_TOP_OFFSET }]}
           keyboardShouldPersistTaps="handled"
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#FFFFFF' : '#111111'} />}>
           <View style={styles.topActionsRow}>
@@ -134,7 +136,7 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          <View style={[styles.dataCard, { backgroundColor: colors.card }]}>
+          <View style={[styles.dataCard, { backgroundColor: colors.card, borderColor: colors.sectionBorder }]}>
             <Text style={[styles.bioLabel, { color: colors.textSecondary }]}>Bio</Text>
             <Text style={[styles.bioText, { color: colors.textPrimary }]}>{profile.bio}</Text>
           </View>
@@ -150,7 +152,7 @@ export default function ProfileScreen() {
             </Pressable>
           </View>
 
-          <View style={[styles.emptyState, { backgroundColor: colors.card }]}>
+          <View style={[styles.emptyState, { backgroundColor: colors.card, borderColor: colors.sectionBorder }]}>
             <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
               {activeTab === 'videos' ? 'Aún no hay videos.' : 'Aún no hay líneas privadas.'}
             </Text>
@@ -311,7 +313,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  dataCard: { borderRadius: 14, padding: 14, gap: 4 },
+  dataCard: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 4 },
   bioLabel: { fontSize: 12, fontWeight: '600' },
   bioText: { fontSize: 14, lineHeight: 20 },
   gridHeader: { flexDirection: 'row', justifyContent: 'center', gap: 24, marginTop: 8 },
@@ -319,6 +321,7 @@ const styles = StyleSheet.create({
   profileTabText: { fontSize: 12, fontWeight: '600' },
   emptyState: {
     minHeight: 130,
+    borderWidth: 1,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
