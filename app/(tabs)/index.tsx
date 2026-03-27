@@ -3,6 +3,7 @@ import { Alert, Modal, PermissionsAndroid, Platform, Pressable, RefreshControl, 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { SwipeableTabScreen } from '@/components/swipeable-tab-screen';
 import { useAppTheme } from '@/context/app-theme-context';
 
 type RapMode = 'easy' | 'hard' | 'incremental' | 'history' | 'ending' | 'images' | 'free';
@@ -375,7 +376,8 @@ export default function RapearScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: themeColors.screen }]} edges={['top']}>
+    <SwipeableTabScreen currentTab="index">
+      <SafeAreaView style={[styles.screen, { backgroundColor: themeColors.screen }]} edges={['top']}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={[styles.contentContainer, { paddingTop: insets.top + 4, paddingBottom: setupStep === 'mode' ? insets.bottom + 36 : 0 }]}
@@ -734,6 +736,7 @@ export default function RapearScreen() {
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
+    </SwipeableTabScreen>
   );
 }
 
