@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Modal, PermissionsAndroid, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
+import { Alert, Linking, Modal, PermissionsAndroid, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getInstrumentals } from '../../data/get_instrumentals';
@@ -7,11 +7,7 @@ import { getInstrumentals } from '../../data/get_instrumentals';
 import { useAppThemeColors } from '@/hooks/use-app-theme-colors';
 
 type RapMode = 'easy' | 'hard' | 'incremental' | 'history' | 'ending' | 'images' | 'free';
-<<<<<<< HEAD
-type Track = string;
-=======
 type InstrumentalId = string;
->>>>>>> 8e8ce11e2aaafc7ce042a5bf916e133b7e449600
 type SessionTime = '1-min' | '2-min' | '5-min' | 'infinite';
 type SessionType = 'record' | 'train';
 type CameraFacing = 'front' | 'back';
@@ -34,7 +30,6 @@ const RAP_MODES: { key: RapMode; label: string; description: string; icon: keyof
   { key: 'images', label: 'Imágenes', description: 'Rapea con imágenes', icon: 'image', accent: '#9333EA' },
 ];
 
-<<<<<<< HEAD
 type Instrumental = {
   id: string;
   Name: string;
@@ -43,27 +38,7 @@ type Instrumental = {
   Bpm: string;
   Active: boolean;
 };
-
-const [instrumentals, setInstrumentals] = useState<Instrumental[]>([]);
-const [loadingInstrumentals, setLoadingInstrumentals] = useState(false);
-
-const TRACKS = instrumentals
-  .filter((item) => item.Active)
-  .map((item) => ({
-    key: item.id,
-    label: item.Name,
-    description: item.Genre,
-    bpm: `${item.Bpm} BPM`,
-    url: item.Url,
-    active: item.Active,
-  }));
-=======
-const INSTRUMENTALS: { key: InstrumentalId; label: string; description: string; bpm: string }[] = [
-  { key: 'base-1', label: 'Base Boom Bap', description: 'Clásico noventero, bombo y caja al frente.', bpm: '92 BPM' },
-  { key: 'base-2', label: 'Base Trap', description: '808 profundo y hi-hat para romper.', bpm: '140 BPM' },
-  { key: 'base-3', label: 'Base Lo-Fi', description: 'Atmósfera relajada para barras melódicas.', bpm: '78 BPM' },
-];
->>>>>>> 8e8ce11e2aaafc7ce042a5bf916e133b7e449600
+type TrackItem = { key: InstrumentalId; label: string; description: string; bpm: string; url: string };
 
 const SESSION_TIMES: { key: SessionTime; label: string; description: string; icon?: keyof typeof MaterialIcons.glyphMap }[] = [
   { key: '1-min', label: '1 min', description: 'Ronda rápida' },
@@ -99,8 +74,10 @@ export default function RapearScreen() {
     activeBg: appColors.purple,
   };
 
+  const [instrumentals, setInstrumentals] = useState<Instrumental[]>([]);
+  const [loadingInstrumentals, setLoadingInstrumentals] = useState(false);
   const [selectedMode, setSelectedMode] = useState<RapMode | null>('free');
-  const [selectedTrack, setSelectedTrack] = useState<InstrumentalId | null>(INSTRUMENTALS[0]?.key ?? null);
+  const [selectedTrack, setSelectedTrack] = useState<InstrumentalId | null>(null);
   const [selectedSessionTime, setSelectedSessionTime] = useState<SessionTime | null>('1-min');
   const [selectedSessionType, setSelectedSessionType] = useState<SessionType>('record');
   const [setupStep, setSetupStep] = useState<SetupStep>('mode');
@@ -120,21 +97,41 @@ export default function RapearScreen() {
   const [isTrainingBeatPlaying, setIsTrainingBeatPlaying] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const tracks: TrackItem[] = instrumentals
+    .filter((item) => item.Active)
+    .map((item) => ({
+      key: item.id,
+      label: item.Name,
+      description: item.Genre,
+      bpm: `${item.Bpm} BPM`,
+      url: item.Url,
+    }));
+
+  const loadInstrumentals = useCallback(async () => {
+    setLoadingInstrumentals(true);
+    const data = await getInstrumentals();
+    setInstrumentals(data);
+    setLoadingInstrumentals(false);
+  }, []);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     setPreviewTrack(null);
     setPressedMode(null);
     setBaseSelectorVisible(false);
-    await new Promise((resolve) => setTimeout(resolve, 700));
+    await loadInstrumentals();
+    await new Promise((resolve) => setTimeout(resolve, 300));
     setRefreshing(false);
-  }, []);
+  }, [loadInstrumentals]);
 
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const webPreviewAudioRef = useRef<any>(null);
+  const webTrainingAudioRef = useRef<any>(null);
 
   const initialSessionSeconds = getSessionDuration(selectedSessionTime);
   const availableSessionTimes = selectedSessionType === 'train' ? TRAINING_TIME : SESSION_TIMES;
-  const selectedTrackLabel = INSTRUMENTALS.find((track) => track.key === selectedTrack)?.label ?? '-';
+  const selectedTrackLabel = tracks.find((track) => track.key === selectedTrack)?.label ?? '-';
   const summaryModeInfo = RAP_MODES.find((mode) => mode.key === sessionSummary?.mode);
 
   const canAdvance =
@@ -159,21 +156,75 @@ export default function RapearScreen() {
   }, [remainingSeconds, isUnlimitedSession]);
 
   useEffect(() => {
-  const loadInstrumentals = async () => {
-    setLoadingInstrumentals(true);
-    const data = await getInstrumentals();
-    setInstrumentals(data);
-    setLoadingInstrumentals(false);
-  };
+    loadInstrumentals();
+  }, [loadInstrumentals]);
 
-  loadInstrumentals();
-}, []);
+  useEffect(() => {
+    if (!tracks.length) {
+      setSelectedTrack(null);
+      return;
+    }
+
+    if (!selectedTrack || !tracks.some((track) => track.key === selectedTrack)) {
+      setSelectedTrack(tracks[0].key);
+    }
+  }, [tracks, selectedTrack]);
 
   useEffect(() => {
     if (setupStep !== 'track') {
       setPreviewTrack(null);
+      if (Platform.OS === 'web' && webPreviewAudioRef.current) {
+        webPreviewAudioRef.current.pause();
+        webPreviewAudioRef.current.currentTime = 0;
+        webPreviewAudioRef.current = null;
+      }
     }
   }, [setupStep]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+
+    if (!sessionVisible || selectedSessionType !== 'train' || !selectedTrack || !isTrainingBeatPlaying) {
+      if (webTrainingAudioRef.current) {
+        webTrainingAudioRef.current.pause();
+      }
+      return;
+    }
+
+    const currentTrack = tracks.find((track) => track.key === selectedTrack);
+    if (!currentTrack?.url) return;
+
+    if (webTrainingAudioRef.current?.src !== currentTrack.url) {
+      if (webTrainingAudioRef.current) {
+        webTrainingAudioRef.current.pause();
+      }
+
+      const audio = new Audio(currentTrack.url);
+      audio.loop = true;
+      audio.volume = 1;
+      webTrainingAudioRef.current = audio;
+    }
+
+    webTrainingAudioRef.current.play().catch(() => {
+      setIsTrainingBeatPlaying(false);
+    });
+  }, [isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, tracks]);
+
+  useEffect(() => {
+    return () => {
+      if (Platform.OS === 'web') {
+        if (webPreviewAudioRef.current) {
+          webPreviewAudioRef.current.pause();
+          webPreviewAudioRef.current = null;
+        }
+
+        if (webTrainingAudioRef.current) {
+          webTrainingAudioRef.current.pause();
+          webTrainingAudioRef.current = null;
+        }
+      }
+    };
+  }, []);
 
   const onSelectSessionType = (sessionType: SessionType) => {
     setSelectedSessionType(sessionType);
@@ -209,8 +260,59 @@ export default function RapearScreen() {
     }
   };
 
-  const onToggleTrackPreview = (track: InstrumentalId) => {
-    setPreviewTrack((prev) => (prev === track ? null : track));
+  const onToggleTrackPreview = async (trackId: InstrumentalId) => {
+    setSelectedTrack(trackId);
+
+    const currentTrack = tracks.find((track) => track.key === trackId);
+    if (!currentTrack?.url) {
+      Alert.alert('Sin audio', 'Esta base no tiene URL de audio válida.');
+      return;
+    }
+
+    if (Platform.OS !== 'web') {
+      const isSameTrack = previewTrack === trackId;
+      setPreviewTrack((prev) => (prev === trackId ? null : trackId));
+      if (isSameTrack) return;
+
+      const supported = await Linking.canOpenURL(currentTrack.url);
+      if (!supported) {
+        Alert.alert('No se pudo abrir el audio', 'Tu dispositivo no puede abrir esta URL de instrumental.');
+        return;
+      }
+
+      await Linking.openURL(currentTrack.url);
+      return;
+    }
+
+    const isSameTrackPlaying = previewTrack === trackId && webPreviewAudioRef.current;
+    if (isSameTrackPlaying) {
+      webPreviewAudioRef.current.pause();
+      webPreviewAudioRef.current.currentTime = 0;
+      webPreviewAudioRef.current = null;
+      setPreviewTrack(null);
+      return;
+    }
+
+    if (webPreviewAudioRef.current) {
+      webPreviewAudioRef.current.pause();
+      webPreviewAudioRef.current.currentTime = 0;
+      webPreviewAudioRef.current = null;
+    }
+
+    const audio = new Audio(currentTrack.url);
+    audio.volume = 1;
+    audio.onended = () => {
+      setPreviewTrack(null);
+      webPreviewAudioRef.current = null;
+    };
+
+    try {
+      await audio.play();
+      webPreviewAudioRef.current = audio;
+      setPreviewTrack(trackId);
+    } catch {
+      Alert.alert('No se pudo reproducir', 'No se pudo iniciar la reproducción de la base.');
+    }
   };
 
   const requestCameraPermission = async () => {
@@ -318,6 +420,10 @@ export default function RapearScreen() {
     if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current);
 
     setSessionVisible(false);
+    if (Platform.OS === 'web' && webTrainingAudioRef.current) {
+      webTrainingAudioRef.current.pause();
+      webTrainingAudioRef.current.currentTime = 0;
+    }
     setCountdown(null);
     setRemainingSeconds(initialSessionSeconds);
     setIsUnlimitedSession(initialSessionSeconds === null);
@@ -348,6 +454,10 @@ export default function RapearScreen() {
     if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current);
 
     setSessionVisible(false);
+    if (Platform.OS === 'web' && webTrainingAudioRef.current) {
+      webTrainingAudioRef.current.pause();
+      webTrainingAudioRef.current.currentTime = 0;
+    }
     setCountdown(null);
     setRemainingSeconds(initialSessionSeconds);
     setElapsedSeconds(0);
@@ -383,47 +493,31 @@ export default function RapearScreen() {
     setSelectedTrack(track);
     setBaseSelectorVisible(false);
     setIsTrainingBeatPlaying(true);
+
+    if (Platform.OS !== 'web') {
+      const currentTrack = tracks.find((item) => item.key === track);
+      if (currentTrack?.url) {
+        Linking.openURL(currentTrack.url).catch(() => {
+          Alert.alert('No se pudo abrir el audio', 'No se pudo abrir esta instrumental en tu dispositivo.');
+        });
+      }
+    }
   };
 
   const onTrainingPreviousTrack = () => {
-    if (!selectedTrack) return;
-<<<<<<< HEAD
-
-    const currentTrackIndex = TRACKS.findIndex(
-      (track) => track.key === selectedTrack
-    );
-
+    if (!selectedTrack || !tracks.length) return;
+    const currentTrackIndex = tracks.findIndex((track) => track.key === selectedTrack);
     if (currentTrackIndex === -1) return;
-
-    const previousTrack =
-      TRACKS[(currentTrackIndex - 1 + TRACKS.length) % TRACKS.length];
-
-=======
-    const currentTrackIndex = INSTRUMENTALS.findIndex((track) => track.key === selectedTrack);
-    if (currentTrackIndex === -1) return;
-    const previousTrack = INSTRUMENTALS[(currentTrackIndex - 1 + INSTRUMENTALS.length) % INSTRUMENTALS.length];
->>>>>>> 8e8ce11e2aaafc7ce042a5bf916e133b7e449600
+    const previousTrack = tracks[(currentTrackIndex - 1 + tracks.length) % tracks.length];
     setSelectedTrack(previousTrack.key);
     setIsTrainingBeatPlaying(true);
   };
 
   const onTrainingNextTrack = () => {
-    if (!selectedTrack) return;
-<<<<<<< HEAD
-
-    const currentTrackIndex = TRACKS.findIndex(
-      (track) => track.key === selectedTrack
-    );
-
+    if (!selectedTrack || !tracks.length) return;
+    const currentTrackIndex = tracks.findIndex((track) => track.key === selectedTrack);
     if (currentTrackIndex === -1) return;
-
-    const nextTrack = TRACKS[(currentTrackIndex + 1) % TRACKS.length];
-
-=======
-    const currentTrackIndex = INSTRUMENTALS.findIndex((track) => track.key === selectedTrack);
-    if (currentTrackIndex === -1) return;
-    const nextTrack = INSTRUMENTALS[(currentTrackIndex + 1) % INSTRUMENTALS.length];
->>>>>>> 8e8ce11e2aaafc7ce042a5bf916e133b7e449600
+    const nextTrack = tracks[(currentTrackIndex + 1) % tracks.length];
     setSelectedTrack(nextTrack.key);
     setIsTrainingBeatPlaying(true);
   };
@@ -527,7 +621,13 @@ export default function RapearScreen() {
 
         {setupStep === 'track' ? (
           <View style={styles.optionsColumn}>
-            {INSTRUMENTALS.map((track) => {
+            {loadingInstrumentals ? (
+              <Text style={[styles.trackInfo, { color: themeColors.textSecondary }]}>Cargando instrumentales...</Text>
+            ) : null}
+            {!loadingInstrumentals && !tracks.length ? (
+              <Text style={[styles.trackInfo, { color: themeColors.textSecondary }]}>No hay instrumentales activas en la base de datos.</Text>
+            ) : null}
+            {tracks.map((track) => {
               const selected = selectedTrack === track.key;
               const isPlaying = previewTrack === track.key;
 
@@ -633,7 +733,24 @@ export default function RapearScreen() {
                       <Pressable style={styles.trainingControlButton} onPress={onTrainingPreviousTrack}>
                         <MaterialIcons name="skip-previous" size={22} color="#FFFFFF" />
                       </Pressable>
-                      <Pressable style={styles.trainingControlButton} onPress={() => setIsTrainingBeatPlaying((previous) => !previous)}>
+                      <Pressable
+                        style={styles.trainingControlButton}
+                        onPress={() => {
+                          setIsTrainingBeatPlaying((previous) => {
+                            const nextState = !previous;
+
+                            if (Platform.OS !== 'web' && nextState && selectedTrack) {
+                              const currentTrack = tracks.find((item) => item.key === selectedTrack);
+                              if (currentTrack?.url) {
+                                Linking.openURL(currentTrack.url).catch(() => {
+                                  Alert.alert('No se pudo abrir el audio', 'No se pudo abrir esta instrumental en tu dispositivo.');
+                                });
+                              }
+                            }
+
+                            return nextState;
+                          });
+                        }}>
                         <MaterialIcons name={isTrainingBeatPlaying ? 'pause' : 'play-arrow'} size={22} color="#FFFFFF" />
                       </Pressable>
                       <Pressable style={styles.trainingControlButton} onPress={onTrainingNextTrack}>
@@ -654,7 +771,7 @@ export default function RapearScreen() {
                       </View>
 
                       <View style={styles.baseOptionsColumn}>
-                        {INSTRUMENTALS.map((track) => {
+                        {tracks.map((track) => {
                           const isSelected = selectedTrack === track.key;
                           return (
                             <Pressable key={track.key} style={[styles.baseOptionItem, isSelected && styles.baseOptionSelected]} onPress={() => onSelectTrainingTrack(track.key)}>
@@ -741,7 +858,7 @@ export default function RapearScreen() {
             </View>
 
             <View style={styles.baseOptionsColumn}>
-              {INSTRUMENTALS.map((track) => {
+              {tracks.map((track) => {
                 const isSelected = selectedTrack === track.key;
                 return (
                   <Pressable key={track.key} style={[styles.baseOptionItem, isSelected && styles.baseOptionSelected]} onPress={() => onSelectTrainingTrack(track.key)}>
