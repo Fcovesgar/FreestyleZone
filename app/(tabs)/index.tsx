@@ -824,10 +824,8 @@ export default function RapearScreen() {
         onResponderTerminationRequest={() => false}
         onResponderGrant={(event) => updateVolumeFromPosition(event.nativeEvent.locationY)}
         onResponderMove={(event) => updateVolumeFromPosition(event.nativeEvent.locationY)}>
-        <View style={styles.volumeControlTrack}>
-          <View style={[styles.volumeProgressFill, { height: `${instrumentalVolumePercent}%` }]} />
-          <View style={[styles.volumeThumb, { bottom: `${instrumentalVolumePercent}%` }]} />
-        </View>
+        <View pointerEvents="none" style={[styles.volumeProgressFill, { height: `${instrumentalVolumePercent}%` }]} />
+        <View pointerEvents="none" style={[styles.volumeThumb, { bottom: `${instrumentalVolumePercent}%` }]} />
       </View>
     </View>
   );
