@@ -38,6 +38,7 @@ type Instrumental = {
   Bpm: string;
   Active: boolean;
 };
+type TrackItem = { key: InstrumentalId; label: string; description: string; bpm: string; url: string };
 
 const SESSION_TIMES: { key: SessionTime; label: string; description: string; icon?: keyof typeof MaterialIcons.glyphMap }[] = [
   { key: '1-min', label: '1 min', description: 'Ronda rápida' },
@@ -96,7 +97,7 @@ export default function RapearScreen() {
   const [isTrainingBeatPlaying, setIsTrainingBeatPlaying] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const tracks = instrumentals
+  const tracks: TrackItem[] = instrumentals
     .filter((item) => item.Active)
     .map((item) => ({
       key: item.id,
@@ -125,6 +126,8 @@ export default function RapearScreen() {
 
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const webPreviewAudioRef = useRef<any>(null);
+  const webTrainingAudioRef = useRef<any>(null);
 
   const initialSessionSeconds = getSessionDuration(selectedSessionTime);
   const availableSessionTimes = selectedSessionType === 'train' ? TRAINING_TIME : SESSION_TIMES;
@@ -170,8 +173,58 @@ export default function RapearScreen() {
   useEffect(() => {
     if (setupStep !== 'track') {
       setPreviewTrack(null);
+      if (Platform.OS === 'web' && webPreviewAudioRef.current) {
+        webPreviewAudioRef.current.pause();
+        webPreviewAudioRef.current.currentTime = 0;
+        webPreviewAudioRef.current = null;
+      }
     }
   }, [setupStep]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+
+    if (!sessionVisible || selectedSessionType !== 'train' || !selectedTrack || !isTrainingBeatPlaying) {
+      if (webTrainingAudioRef.current) {
+        webTrainingAudioRef.current.pause();
+      }
+      return;
+    }
+
+    const currentTrack = tracks.find((track) => track.key === selectedTrack);
+    if (!currentTrack?.url) return;
+
+    if (webTrainingAudioRef.current?.src !== currentTrack.url) {
+      if (webTrainingAudioRef.current) {
+        webTrainingAudioRef.current.pause();
+      }
+
+      const audio = new Audio(currentTrack.url);
+      audio.loop = true;
+      audio.volume = 1;
+      webTrainingAudioRef.current = audio;
+    }
+
+    webTrainingAudioRef.current.play().catch(() => {
+      setIsTrainingBeatPlaying(false);
+    });
+  }, [isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, tracks]);
+
+  useEffect(() => {
+    return () => {
+      if (Platform.OS === 'web') {
+        if (webPreviewAudioRef.current) {
+          webPreviewAudioRef.current.pause();
+          webPreviewAudioRef.current = null;
+        }
+
+        if (webTrainingAudioRef.current) {
+          webTrainingAudioRef.current.pause();
+          webTrainingAudioRef.current = null;
+        }
+      }
+    };
+  }, []);
 
   const onSelectSessionType = (sessionType: SessionType) => {
     setSelectedSessionType(sessionType);
@@ -207,8 +260,47 @@ export default function RapearScreen() {
     }
   };
 
-  const onToggleTrackPreview = (track: InstrumentalId) => {
-    setPreviewTrack((prev) => (prev === track ? null : track));
+  const onToggleTrackPreview = async (trackId: InstrumentalId) => {
+    if (Platform.OS !== 'web') {
+      setPreviewTrack((prev) => (prev === trackId ? null : trackId));
+      return;
+    }
+
+    const currentTrack = tracks.find((track) => track.key === trackId);
+    if (!currentTrack?.url) {
+      Alert.alert('Sin audio', 'Esta base no tiene URL de audio válida.');
+      return;
+    }
+
+    const isSameTrackPlaying = previewTrack === trackId && webPreviewAudioRef.current;
+    if (isSameTrackPlaying) {
+      webPreviewAudioRef.current.pause();
+      webPreviewAudioRef.current.currentTime = 0;
+      webPreviewAudioRef.current = null;
+      setPreviewTrack(null);
+      return;
+    }
+
+    if (webPreviewAudioRef.current) {
+      webPreviewAudioRef.current.pause();
+      webPreviewAudioRef.current.currentTime = 0;
+      webPreviewAudioRef.current = null;
+    }
+
+    const audio = new Audio(currentTrack.url);
+    audio.volume = 1;
+    audio.onended = () => {
+      setPreviewTrack(null);
+      webPreviewAudioRef.current = null;
+    };
+
+    try {
+      await audio.play();
+      webPreviewAudioRef.current = audio;
+      setPreviewTrack(trackId);
+    } catch {
+      Alert.alert('No se pudo reproducir', 'No se pudo iniciar la reproducción de la base.');
+    }
   };
 
   const requestCameraPermission = async () => {
@@ -316,6 +408,10 @@ export default function RapearScreen() {
     if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current);
 
     setSessionVisible(false);
+    if (Platform.OS === 'web' && webTrainingAudioRef.current) {
+      webTrainingAudioRef.current.pause();
+      webTrainingAudioRef.current.currentTime = 0;
+    }
     setCountdown(null);
     setRemainingSeconds(initialSessionSeconds);
     setIsUnlimitedSession(initialSessionSeconds === null);
@@ -346,6 +442,10 @@ export default function RapearScreen() {
     if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current);
 
     setSessionVisible(false);
+    if (Platform.OS === 'web' && webTrainingAudioRef.current) {
+      webTrainingAudioRef.current.pause();
+      webTrainingAudioRef.current.currentTime = 0;
+    }
     setCountdown(null);
     setRemainingSeconds(initialSessionSeconds);
     setElapsedSeconds(0);
