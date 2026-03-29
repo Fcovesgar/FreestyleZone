@@ -817,15 +817,17 @@ export default function RapearScreen() {
   const renderVolumeControl = (side: 'left' | 'right' = 'right') => (
     <View style={[styles.volumeControlCard, side === 'left' ? styles.volumeControlLeft : styles.volumeControlRight]}>
       <View
-        style={styles.volumeControlTrack}
+        style={styles.volumeControlTouchArea}
         onLayout={onVolumeTrackLayout}
         onStartShouldSetResponder={() => true}
         onMoveShouldSetResponder={() => true}
         onResponderTerminationRequest={() => false}
         onResponderGrant={(event) => updateVolumeFromPosition(event.nativeEvent.locationY)}
         onResponderMove={(event) => updateVolumeFromPosition(event.nativeEvent.locationY)}>
-        <View style={[styles.volumeProgressFill, { height: `${instrumentalVolumePercent}%` }]} />
-        <View style={[styles.volumeThumb, { bottom: `${instrumentalVolumePercent}%` }]} />
+        <View style={styles.volumeControlTrack}>
+          <View style={[styles.volumeProgressFill, { height: `${instrumentalVolumePercent}%` }]} />
+          <View style={[styles.volumeThumb, { bottom: `${instrumentalVolumePercent}%` }]} />
+        </View>
       </View>
     </View>
   );
