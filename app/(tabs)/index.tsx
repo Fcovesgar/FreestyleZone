@@ -137,6 +137,8 @@ export default function RapearScreen() {
   const nativePreviewSoundRef = useRef<any>(null);
   const nativeTrainingSoundRef = useRef<any>(null);
   const nativeAudioUnavailableRef = useRef(false);
+  const previewRequestRef = useRef(0);
+  const trainingRequestRef = useRef(0);
 
   const initialSessionSeconds = getSessionDuration(selectedSessionTime);
   const availableSessionTimes = selectedSessionType === 'train' ? TRAINING_TIME : SESSION_TIMES;
@@ -270,6 +272,8 @@ export default function RapearScreen() {
     if (Platform.OS === 'web') return;
 
     const playTrainingNative = async () => {
+      const requestId = ++trainingRequestRef.current;
+
       if (!sessionVisible || selectedSessionType !== 'train' || !selectedTrack || !isTrainingBeatPlaying) {
         await stopTrainingPlayback();
         return;
@@ -281,11 +285,18 @@ export default function RapearScreen() {
       const avModule = resolveNativeAudioModule();
       if (!avModule?.Audio?.Sound) return;
 
-      await stopTrainingPlayback();
+      if (nativeTrainingSoundRef.current) {
+        await stopNativeSound(nativeTrainingSoundRef);
+      }
+      if (requestId !== trainingRequestRef.current) return;
 
       try {
         const sound = new avModule.Audio.Sound();
         await sound.loadAsync({ uri: currentTrack.url }, { shouldPlay: true, isLooping: true });
+        if (requestId !== trainingRequestRef.current) {
+          await sound.unloadAsync();
+          return;
+        }
         nativeTrainingSoundRef.current = sound;
       } catch {
         Alert.alert('No se pudo reproducir', 'No se pudo iniciar la reproducción de la base.');
@@ -294,7 +305,7 @@ export default function RapearScreen() {
     };
 
     playTrainingNative();
-  }, [resolveNativeAudioModule, isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, stopTrainingPlayback, tracks, trainingRestartKey]);
+  }, [resolveNativeAudioModule, isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, stopNativeSound, stopTrainingPlayback, tracks, trainingRestartKey]);
 
   useEffect(() => {
     return () => {
@@ -350,6 +361,7 @@ export default function RapearScreen() {
   };
 
   const onToggleTrackPreview = async (trackId: InstrumentalId) => {
+    const requestId = ++previewRequestRef.current;
     setSelectedTrack(trackId);
 
     const currentTrack = tracks.find((track) => track.key === trackId);
@@ -368,12 +380,20 @@ export default function RapearScreen() {
       const avModule = resolveNativeAudioModule();
       if (!avModule?.Audio?.Sound) return;
 
-      await stopPreviewPlayback();
+      if (nativePreviewSoundRef.current) {
+        await stopNativeSound(nativePreviewSoundRef);
+      }
+      if (requestId !== previewRequestRef.current) return;
       await stopTrainingPlayback();
+      if (requestId !== previewRequestRef.current) return;
 
       try {
         const sound = new avModule.Audio.Sound();
         await sound.loadAsync({ uri: currentTrack.url }, { shouldPlay: true, isLooping: false });
+        if (requestId !== previewRequestRef.current) {
+          await sound.unloadAsync();
+          return;
+        }
         sound.setOnPlaybackStatusUpdate((status: any) => {
           if (status?.didJustFinish) {
             setPreviewTrack(null);
@@ -395,7 +415,9 @@ export default function RapearScreen() {
     }
 
     await stopPreviewPlayback();
+    if (requestId !== previewRequestRef.current) return;
     await stopTrainingPlayback();
+    if (requestId !== previewRequestRef.current) return;
 
     const audio = new Audio(currentTrack.url);
     audio.volume = 1;
@@ -406,6 +428,10 @@ export default function RapearScreen() {
 
     try {
       await audio.play();
+      if (requestId !== previewRequestRef.current) {
+        audio.pause();
+        return;
+      }
       webPreviewAudioRef.current = audio;
       setPreviewTrack(trackId);
     } catch {
