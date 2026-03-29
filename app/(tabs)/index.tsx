@@ -266,7 +266,9 @@ export default function RapearScreen() {
 
     const shouldRestart = trainingRestartKey !== webRestartKeyAppliedRef.current;
 
-    if (shouldRestart || webTrainingAudioRef.current?.src !== currentTrack.url) {
+    const shouldLoadNewTrack = webTrainingTrackRef.current !== selectedTrack;
+
+    if (shouldRestart || shouldLoadNewTrack) {
       stopWebTrainingSound();
 
       const audio = new Audio(currentTrack.url);
@@ -289,8 +291,16 @@ export default function RapearScreen() {
       const requestId = ++trainingRequestRef.current;
 
       if (!sessionVisible || selectedSessionType !== 'train' || !selectedTrack || !isTrainingBeatPlaying) {
-        if (nativeTrainingSoundRef.current) {
-          await nativeTrainingSoundRef.current.pauseAsync?.();
+        const currentTrainingSound = nativeTrainingSoundRef.current;
+        if (currentTrainingSound) {
+          try {
+            const status = await currentTrainingSound.getStatusAsync?.();
+            if (status?.isLoaded) {
+              await currentTrainingSound.pauseAsync?.();
+            }
+          } catch {
+            // sound may have been unloaded by another effect; ignore
+          }
         }
         return;
       }
