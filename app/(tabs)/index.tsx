@@ -1017,6 +1017,7 @@ export default function RapearScreen() {
                 {renderVolumeControl('right')}
 
                 <View style={[styles.trainingBottomArea, { paddingBottom: insets.bottom + 18 }]}>
+                  {renderVolumeControl()}
                   <Pressable style={styles.selectBeatButton} onPress={() => setBaseSelectorVisible(true)}>
                     <MaterialIcons name="library-music" size={18} color="#FFFFFF" />
                     <Text style={styles.selectBeatButtonText}>Seleccionar base</Text>
