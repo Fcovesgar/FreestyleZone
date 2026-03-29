@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, type LayoutChangeEvent, Modal, PermissionsAndroid, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
+import { Alert, type LayoutChangeEvent, Linking, Modal, PermissionsAndroid, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getInstrumentals } from '../../data/get_instrumentals';
@@ -93,7 +93,7 @@ export default function RapearScreen() {
   const [trainingRestartKey, setTrainingRestartKey] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [instrumentalVolume, setInstrumentalVolume] = useState(0.8);
-  const [volumeTrackWidth, setVolumeTrackWidth] = useState(1);
+  const [volumeTrackHeight, setVolumeTrackHeight] = useState(1);
 
   const rapModes: RapModeOption[] = useMemo(
     () =>
@@ -179,17 +179,18 @@ export default function RapearScreen() {
   }, []);
 
   const updateVolumeFromPosition = useCallback(
-    (positionX: number) => {
-      if (volumeTrackWidth <= 0) return;
-      updateInstrumentalVolume(positionX / volumeTrackWidth);
+    (positionY: number) => {
+      if (volumeTrackHeight <= 0) return;
+      const nextValue = 1 - positionY / volumeTrackHeight;
+      updateInstrumentalVolume(nextValue);
     },
-    [updateInstrumentalVolume, volumeTrackWidth]
+    [updateInstrumentalVolume, volumeTrackHeight]
   );
 
   const onVolumeTrackLayout = useCallback((event: LayoutChangeEvent) => {
-    const nextWidth = event.nativeEvent.layout.width;
-    if (nextWidth > 0) {
-      setVolumeTrackWidth(nextWidth);
+    const nextHeight = event.nativeEvent.layout.height;
+    if (nextHeight > 0) {
+      setVolumeTrackHeight(nextHeight);
     }
   }, []);
 
@@ -600,6 +601,16 @@ export default function RapearScreen() {
     const permission = await cameraModule.Camera.requestCameraPermissionsAsync();
     const accepted = permission.status === 'granted';
     setHasCameraPermission(accepted);
+    if (!accepted) {
+      Alert.alert(
+        'Permiso de cámara denegado',
+        'Si rechazaste el permiso en iPhone, debes activarlo desde Ajustes para volver a usar la cámara.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Abrir ajustes', onPress: () => Linking.openSettings() },
+        ]
+      );
+    }
     return accepted;
   };
 
@@ -796,17 +807,18 @@ export default function RapearScreen() {
   };
   const CameraPreviewComponent = resolveCameraModule()?.CameraView ?? null;
 
-  const renderVolumeControl = () => (
-    <View style={styles.volumeControlCard}>
+  const renderVolumeControl = (side: 'left' | 'right' = 'right') => (
+    <View style={[styles.volumeControlCard, side === 'left' ? styles.volumeControlLeft : styles.volumeControlRight]}>
       <View
         style={styles.volumeControlTrack}
         onLayout={onVolumeTrackLayout}
         onStartShouldSetResponder={() => true}
         onMoveShouldSetResponder={() => true}
-        onResponderGrant={(event) => updateVolumeFromPosition(event.nativeEvent.locationX)}
-        onResponderMove={(event) => updateVolumeFromPosition(event.nativeEvent.locationX)}>
-        <View style={[styles.volumeProgressFill, { width: `${instrumentalVolumePercent}%` }]} />
-        <View style={[styles.volumeThumb, { left: `${instrumentalVolumePercent}%` }]} />
+        onResponderTerminationRequest={() => false}
+        onResponderGrant={(event) => updateVolumeFromPosition(event.nativeEvent.locationY)}
+        onResponderMove={(event) => updateVolumeFromPosition(event.nativeEvent.locationY)}>
+        <View style={[styles.volumeProgressFill, { height: `${instrumentalVolumePercent}%` }]} />
+        <View style={[styles.volumeThumb, { bottom: `${instrumentalVolumePercent}%` }]} />
       </View>
     </View>
   );
@@ -1002,6 +1014,8 @@ export default function RapearScreen() {
 
                 <View style={styles.trainingCenterClearSpace} />
 
+                {renderVolumeControl('right')}
+
                 <View style={[styles.trainingBottomArea, { paddingBottom: insets.bottom + 18 }]}>
                   {renderVolumeControl()}
                   <Pressable style={styles.selectBeatButton} onPress={() => setBaseSelectorVisible(true)}>
@@ -1095,13 +1109,13 @@ export default function RapearScreen() {
                 </View>
 
                 <View style={[styles.sessionBottomActions, { paddingBottom: insets.bottom + 26 }]}>
+                  {renderVolumeControl('left')}
                   {countdown !== null ? <Text style={[styles.countdownNumber, { color: getCountdownColor(countdown) }]}>{countdown}</Text> : null}
 
                   {!hasSessionStarted && countdown === null ? (
                     <View style={styles.preSessionActionsRow}>
                       <View style={styles.recordingConfigCard}>
                         <Text style={styles.recordingConfigTitle}>Configura la sesión antes de grabar</Text>
-                        {renderVolumeControl()}
                         <View style={styles.recordingConfigActions}>
                           <Pressable style={styles.recordingConfigActionButton} onPress={requestCameraPermission}>
                             <MaterialIcons name="videocam" size={17} color="#FFFFFF" />
@@ -1339,10 +1353,12 @@ const styles = StyleSheet.create({
   recordButton: { width: 86, height: 86, borderRadius: 43, borderWidth: 4, borderColor: '#FFFFFFAA', justifyContent: 'center', alignItems: 'center' },
   recordButtonInner: { width: 58, height: 58, borderRadius: 29, backgroundColor: '#EF4444' },
   countdownNumber: { fontSize: 82, fontWeight: '800' },
-  volumeControlCard: { borderRadius: 12, borderWidth: 1, borderColor: '#FFFFFF24', backgroundColor: '#00000066', paddingVertical: 12, paddingHorizontal: 10 },
-  volumeControlTrack: { height: 18, borderRadius: 999, backgroundColor: '#FFFFFF30', overflow: 'visible', justifyContent: 'center' },
-  volumeProgressFill: { height: '100%', backgroundColor: '#8B5CF6' },
-  volumeThumb: { position: 'absolute', width: 20, height: 20, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#8B5CF6', marginLeft: -10, top: -1 },
+  volumeControlCard: { position: 'absolute', top: '38%', zIndex: 25, borderRadius: 999, borderWidth: 1, borderColor: '#FFFFFF24', backgroundColor: '#0000007A', paddingVertical: 8, paddingHorizontal: 7 },
+  volumeControlLeft: { left: 10 },
+  volumeControlRight: { right: 10 },
+  volumeControlTrack: { width: 18, height: 180, borderRadius: 999, backgroundColor: '#FFFFFF30', overflow: 'hidden', justifyContent: 'flex-end' },
+  volumeProgressFill: { width: '100%', backgroundColor: '#8B5CF6' },
+  volumeThumb: { position: 'absolute', left: -1, width: 20, height: 20, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#8B5CF6', marginBottom: -10 },
   baseModalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: '#000000A6', justifyContent: 'center', paddingHorizontal: 18, zIndex: 20 },
   baseModalCard: { borderRadius: 20, borderWidth: 1, borderColor: '#FFFFFF1F', backgroundColor: '#121022', padding: 14, gap: 12, maxHeight: '70%' },
   baseModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
