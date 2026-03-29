@@ -35,17 +35,17 @@ export default function TabLayout() {
         },
       }}>
       <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Rapear',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="mic.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="challenge"
         options={{
           title: 'Inicio',
           tabBarIcon: ({ color }) => <IconSymbol size={24} name="house.fill" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Rapear',
+          tabBarIcon: ({ color }) => <IconSymbol size={24} name="mic.fill" color={color} />,
         }}
       />
       <Tabs.Screen
