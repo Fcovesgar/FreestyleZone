@@ -285,10 +285,10 @@ export default function RapearScreen() {
       const avModule = resolveNativeAudioModule();
       if (!avModule?.Audio?.Sound) return;
 
-      if (nativeTrainingSoundRef.current) {
-        await stopNativeSound(nativeTrainingSoundRef);
+      const previousTrainingSound = nativeTrainingSoundRef.current;
+      if (previousTrainingSound) {
+        previousTrainingSound.stopAsync?.().catch(() => undefined);
       }
-      if (requestId !== trainingRequestRef.current) return;
 
       try {
         const sound = new avModule.Audio.Sound();
@@ -298,6 +298,9 @@ export default function RapearScreen() {
           return;
         }
         nativeTrainingSoundRef.current = sound;
+        if (previousTrainingSound && previousTrainingSound !== sound) {
+          previousTrainingSound.unloadAsync?.().catch(() => undefined);
+        }
       } catch {
         Alert.alert('No se pudo reproducir', 'No se pudo iniciar la reproducción de la base.');
         setIsTrainingBeatPlaying(false);
@@ -380,11 +383,12 @@ export default function RapearScreen() {
       const avModule = resolveNativeAudioModule();
       if (!avModule?.Audio?.Sound) return;
 
-      if (nativePreviewSoundRef.current) {
-        await stopNativeSound(nativePreviewSoundRef);
+      const previousPreviewSound = nativePreviewSoundRef.current;
+      if (previousPreviewSound) {
+        previousPreviewSound.stopAsync?.().catch(() => undefined);
       }
       if (requestId !== previewRequestRef.current) return;
-      await stopTrainingPlayback();
+      stopTrainingPlayback();
       if (requestId !== previewRequestRef.current) return;
 
       try {
@@ -402,6 +406,9 @@ export default function RapearScreen() {
         });
         nativePreviewSoundRef.current = sound;
         setPreviewTrack(trackId);
+        if (previousPreviewSound && previousPreviewSound !== sound) {
+          previousPreviewSound.unloadAsync?.().catch(() => undefined);
+        }
       } catch {
         Alert.alert('No se pudo reproducir', 'No se pudo iniciar la reproducción de la base.');
       }
@@ -416,7 +423,7 @@ export default function RapearScreen() {
 
     await stopPreviewPlayback();
     if (requestId !== previewRequestRef.current) return;
-    await stopTrainingPlayback();
+    stopTrainingPlayback();
     if (requestId !== previewRequestRef.current) return;
 
     const audio = new Audio(currentTrack.url);
@@ -610,7 +617,6 @@ export default function RapearScreen() {
   const onSelectTrainingTrack = (track: InstrumentalId) => {
     stopPreviewPlayback();
     setSelectedTrack(track);
-    setIsTrainingBeatPlaying(false);
     setTrainingRestartKey((previous) => previous + 1);
     setIsTrainingBeatPlaying(true);
   };
