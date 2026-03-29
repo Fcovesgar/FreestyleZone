@@ -178,19 +178,6 @@ export default function RapearScreen() {
     }
   }, [tracks, selectedTrack]);
 
-  useEffect(() => {
-    if (setupStep !== 'track') {
-      setPreviewTrack(null);
-      if (Platform.OS === 'web' && webPreviewAudioRef.current) {
-        webPreviewAudioRef.current.pause();
-        webPreviewAudioRef.current.currentTime = 0;
-        webPreviewAudioRef.current = null;
-      }
-      stopNativeSound(nativePreviewSoundRef);
-      setIsTrainingBeatPlaying(false);
-    }
-  }, [setupStep, stopNativeSound]);
-
   const resolveNativeAudioModule = useCallback(() => {
     if (Platform.OS === 'web') return null;
     try {
@@ -219,6 +206,19 @@ export default function RapearScreen() {
       ref.current = null;
     }
   }, []);
+
+  useEffect(() => {
+    if (setupStep !== 'track') {
+      setPreviewTrack(null);
+      if (Platform.OS === 'web' && webPreviewAudioRef.current) {
+        webPreviewAudioRef.current.pause();
+        webPreviewAudioRef.current.currentTime = 0;
+        webPreviewAudioRef.current = null;
+      }
+      stopNativeSound(nativePreviewSoundRef);
+      setIsTrainingBeatPlaying(false);
+    }
+  }, [setupStep, stopNativeSound]);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -579,8 +579,10 @@ export default function RapearScreen() {
 
   const onSelectTrainingTrack = (track: InstrumentalId) => {
     setSelectedTrack(track);
-    setBaseSelectorVisible(false);
     setIsTrainingBeatPlaying(false);
+    setTimeout(() => {
+      setIsTrainingBeatPlaying(true);
+    }, 0);
   };
 
   const onSeekTrainingTrack = async (secondsDelta: number) => {
