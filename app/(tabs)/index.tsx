@@ -1343,6 +1343,7 @@ const styles = StyleSheet.create({
   volumeControlCard: { position: 'absolute', top: '38%', zIndex: 25 },
   volumeControlLeft: { left: 10 },
   volumeControlRight: { right: 10 },
+  volumeControlTouchArea: { width: 20, height: 180, borderRadius: 999, backgroundColor: '#FFFFFF30', overflow: 'hidden', justifyContent: 'flex-end' },
   volumeControlTrack: { width: 20, height: 180, borderRadius: 999, backgroundColor: '#FFFFFF30', overflow: 'hidden', justifyContent: 'flex-end' },
   volumeProgressFill: { width: '100%', backgroundColor: '#8B5CF6' },
   volumeThumb: { position: 'absolute', left: -1, width: 22, height: 22, borderRadius: 11, backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#8B5CF6', marginBottom: -11 },
