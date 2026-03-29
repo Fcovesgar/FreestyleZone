@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Modal, PermissionsAndroid, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
+import { Alert, Linking, Modal, PermissionsAndroid, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getInstrumentals } from '../../data/get_instrumentals';
@@ -263,14 +263,24 @@ export default function RapearScreen() {
   const onToggleTrackPreview = async (trackId: InstrumentalId) => {
     setSelectedTrack(trackId);
 
-    if (Platform.OS !== 'web') {
-      setPreviewTrack((prev) => (prev === trackId ? null : trackId));
-      return;
-    }
-
     const currentTrack = tracks.find((track) => track.key === trackId);
     if (!currentTrack?.url) {
       Alert.alert('Sin audio', 'Esta base no tiene URL de audio válida.');
+      return;
+    }
+
+    if (Platform.OS !== 'web') {
+      const isSameTrack = previewTrack === trackId;
+      setPreviewTrack((prev) => (prev === trackId ? null : trackId));
+      if (isSameTrack) return;
+
+      const supported = await Linking.canOpenURL(currentTrack.url);
+      if (!supported) {
+        Alert.alert('No se pudo abrir el audio', 'Tu dispositivo no puede abrir esta URL de instrumental.');
+        return;
+      }
+
+      await Linking.openURL(currentTrack.url);
       return;
     }
 
@@ -483,6 +493,15 @@ export default function RapearScreen() {
     setSelectedTrack(track);
     setBaseSelectorVisible(false);
     setIsTrainingBeatPlaying(true);
+
+    if (Platform.OS !== 'web') {
+      const currentTrack = tracks.find((item) => item.key === track);
+      if (currentTrack?.url) {
+        Linking.openURL(currentTrack.url).catch(() => {
+          Alert.alert('No se pudo abrir el audio', 'No se pudo abrir esta instrumental en tu dispositivo.');
+        });
+      }
+    }
   };
 
   const onTrainingPreviousTrack = () => {
@@ -714,7 +733,24 @@ export default function RapearScreen() {
                       <Pressable style={styles.trainingControlButton} onPress={onTrainingPreviousTrack}>
                         <MaterialIcons name="skip-previous" size={22} color="#FFFFFF" />
                       </Pressable>
-                      <Pressable style={styles.trainingControlButton} onPress={() => setIsTrainingBeatPlaying((previous) => !previous)}>
+                      <Pressable
+                        style={styles.trainingControlButton}
+                        onPress={() => {
+                          setIsTrainingBeatPlaying((previous) => {
+                            const nextState = !previous;
+
+                            if (Platform.OS !== 'web' && nextState && selectedTrack) {
+                              const currentTrack = tracks.find((item) => item.key === selectedTrack);
+                              if (currentTrack?.url) {
+                                Linking.openURL(currentTrack.url).catch(() => {
+                                  Alert.alert('No se pudo abrir el audio', 'No se pudo abrir esta instrumental en tu dispositivo.');
+                                });
+                              }
+                            }
+
+                            return nextState;
+                          });
+                        }}>
                         <MaterialIcons name={isTrainingBeatPlaying ? 'pause' : 'play-arrow'} size={22} color="#FFFFFF" />
                       </Pressable>
                       <Pressable style={styles.trainingControlButton} onPress={onTrainingNextTrack}>
