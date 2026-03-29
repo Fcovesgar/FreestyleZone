@@ -817,7 +817,7 @@ export default function RapearScreen() {
   const renderVolumeControl = (side: 'left' | 'right' = 'right') => (
     <View style={[styles.volumeControlCard, side === 'left' ? styles.volumeControlLeft : styles.volumeControlRight]}>
       <View
-        style={styles.volumeControlTrack}
+        style={styles.volumeControlTouchArea}
         onLayout={onVolumeTrackLayout}
         onStartShouldSetResponder={() => true}
         onMoveShouldSetResponder={() => true}
