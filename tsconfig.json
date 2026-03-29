@@ -13,5 +13,5 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
-  ]
+, "data/get_instrumentals.ts", "firebase/firebaseConfig.js"  ]
 }

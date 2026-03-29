@@ -1,0 +1,12 @@
+{
+  "auth": {
+    "providers": {
+      "anonymous": true,
+      "emailPassword": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "FreestyleZone",
+        "supportEmail": "freestylezonesupport@gmail.com"
+      }
+    }
+  }
+}

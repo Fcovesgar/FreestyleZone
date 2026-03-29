@@ -2,11 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Modal, PermissionsAndroid, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getInstrumentals } from '../../data/get_instrumentals';
 
 import { useAppThemeColors } from '@/hooks/use-app-theme-colors';
 
 type RapMode = 'easy' | 'hard' | 'incremental' | 'history' | 'ending' | 'images' | 'free';
-type Track = 'base-1' | 'base-2' | 'base-3';
+type Track = string;
 type SessionTime = '1-min' | '2-min' | '5-min' | 'infinite';
 type SessionType = 'record' | 'train';
 type CameraFacing = 'front' | 'back';
@@ -29,11 +30,28 @@ const RAP_MODES: { key: RapMode; label: string; description: string; icon: keyof
   { key: 'images', label: 'Imágenes', description: 'Rapea con imágenes', icon: 'image', accent: '#9333EA' },
 ];
 
-const TRACKS: { key: Track; label: string; description: string; bpm: string }[] = [
-  { key: 'base-1', label: 'Base Boom Bap', description: 'Clásico noventero, bombo y caja al frente.', bpm: '92 BPM' },
-  { key: 'base-2', label: 'Base Trap', description: '808 profundo y hi-hat para romper.', bpm: '140 BPM' },
-  { key: 'base-3', label: 'Base Lo-Fi', description: 'Atmósfera relajada para barras melódicas.', bpm: '78 BPM' },
-];
+type Instrumental = {
+  id: string;
+  Name: string;
+  Url: string;
+  Genre: string;
+  Bpm: string;
+  Active: boolean;
+};
+
+const [instrumentals, setInstrumentals] = useState<Instrumental[]>([]);
+const [loadingInstrumentals, setLoadingInstrumentals] = useState(false);
+
+const TRACKS = instrumentals
+  .filter((item) => item.Active)
+  .map((item) => ({
+    key: item.id,
+    label: item.Name,
+    description: item.Genre,
+    bpm: `${item.Bpm} BPM`,
+    url: item.Url,
+    active: item.Active,
+  }));
 
 const SESSION_TIMES: { key: SessionTime; label: string; description: string; icon?: keyof typeof MaterialIcons.glyphMap }[] = [
   { key: '1-min', label: '1 min', description: 'Ronda rápida' },
@@ -127,6 +145,17 @@ export default function RapearScreen() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remainingSeconds, isUnlimitedSession]);
+
+  useEffect(() => {
+  const loadInstrumentals = async () => {
+    setLoadingInstrumentals(true);
+    const data = await getInstrumentals();
+    setInstrumentals(data);
+    setLoadingInstrumentals(false);
+  };
+
+  loadInstrumentals();
+}, []);
 
   useEffect(() => {
     if (setupStep !== 'track') {
@@ -346,18 +375,31 @@ export default function RapearScreen() {
 
   const onTrainingPreviousTrack = () => {
     if (!selectedTrack) return;
-    const currentTrackIndex = TRACKS.findIndex((track) => track.key === selectedTrack);
+
+    const currentTrackIndex = TRACKS.findIndex(
+      (track) => track.key === selectedTrack
+    );
+
     if (currentTrackIndex === -1) return;
-    const previousTrack = TRACKS[(currentTrackIndex - 1 + TRACKS.length) % TRACKS.length];
+
+    const previousTrack =
+      TRACKS[(currentTrackIndex - 1 + TRACKS.length) % TRACKS.length];
+
     setSelectedTrack(previousTrack.key);
     setIsTrainingBeatPlaying(true);
   };
 
   const onTrainingNextTrack = () => {
     if (!selectedTrack) return;
-    const currentTrackIndex = TRACKS.findIndex((track) => track.key === selectedTrack);
+
+    const currentTrackIndex = TRACKS.findIndex(
+      (track) => track.key === selectedTrack
+    );
+
     if (currentTrackIndex === -1) return;
+
     const nextTrack = TRACKS[(currentTrackIndex + 1) % TRACKS.length];
+
     setSelectedTrack(nextTrack.key);
     setIsTrainingBeatPlaying(true);
   };
