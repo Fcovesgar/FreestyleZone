@@ -80,7 +80,7 @@ export default function RapearScreen() {
   const [previewTrack, setPreviewTrack] = useState<InstrumentalId | null>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [sessionVisible, setSessionVisible] = useState(false);
-  const cameraFacing: CameraFacing = 'front';
+  const [cameraFacing, setCameraFacing] = useState<CameraFacing>('front');
   const [countdown, setCountdown] = useState<number | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -657,6 +657,15 @@ export default function RapearScreen() {
     }, 1000);
   };
 
+  const onToggleCameraFacing = () => {
+    if (!hasCameraPermission) {
+      requestCameraPermission();
+      return;
+    }
+
+    setCameraFacing((previousFacing) => (previousFacing === 'front' ? 'back' : 'front'));
+  };
+
   const onStartRecordingPress = async () => {
     const granted = await requestCameraPermission();
     if (!granted) {
@@ -1141,8 +1150,8 @@ export default function RapearScreen() {
 
                         <Pressable
                           style={[styles.preRecordSideButton, !hasCameraPermission && styles.bottomSwitchCameraDisabled]}
-                          onPress={hasCameraPermission ? undefined : requestCameraPermission}
-                          disabled={hasCameraPermission}>
+                          onPress={onToggleCameraFacing}
+                          disabled={!hasCameraPermission}>
                           <MaterialIcons name="flip-camera-ios" size={22} color="#FFFFFF" />
                         </Pressable>
                       </View>
@@ -1341,7 +1350,7 @@ const styles = StyleSheet.create({
   recordingConfigActions: { flexDirection: 'row', gap: 8 },
   recordingConfigActionButton: { flex: 1, borderRadius: 10, borderWidth: 1, borderColor: '#FFFFFF20', backgroundColor: '#FFFFFF12', paddingVertical: 8, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   recordingConfigActionText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
-  recordPreControlsRow: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 14 },
+  recordPreControlsRow: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 24 },
   preRecordSideButton: { width: 54, height: 54, borderRadius: 27, borderWidth: 1, borderColor: '#FFFFFF3A', backgroundColor: '#0000007A', alignItems: 'center', justifyContent: 'center' },
   bottomSwitchCameraButton: { alignItems: 'center', gap: 2, padding: 8 },
   bottomSwitchCameraButtonBeforeStart: { position: 'absolute', left: '50%', marginLeft: 58 },
