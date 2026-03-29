@@ -3,11 +3,11 @@ import { Alert, Modal, PermissionsAndroid, Platform, Pressable, RefreshControl, 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getInstrumentals } from '../../data/get_instrumentals';
-import * as WebBrowser from 'expo-web-browser';
+import { getModes, type Mode } from '../../data/get_modes';
 
 import { useAppThemeColors } from '@/hooks/use-app-theme-colors';
 
-type RapMode = 'easy' | 'hard' | 'incremental' | 'history' | 'ending' | 'images' | 'free';
+type RapMode = string;
 type InstrumentalId = string;
 type SessionTime = '1-min' | '2-min' | '5-min' | 'infinite';
 type SessionType = 'record' | 'train';
@@ -21,15 +21,7 @@ type SessionSummary = {
   elapsedSeconds: number;
 };
 
-const RAP_MODES: { key: RapMode; label: string; description: string; icon: keyof typeof MaterialIcons.glyphMap; accent: string }[] = [
-  { key: 'free', label: 'Libre', description: 'Rapea libremente y sin estímulos.', icon: 'graphic-eq', accent: '#0EA5E9' },
-  { key: 'easy', label: 'Easy', description: 'Palabras cada 10s', icon: 'security', accent: '#16A34A' },
-  { key: 'hard', label: 'Hard', description: 'Palabras cada 5s', icon: 'flash-on', accent: '#EA580C' },
-  { key: 'incremental', label: 'Incremental', description: 'Palabras cada 10s - 5s - 2s', icon: 'local-fire-department', accent: '#DC2626' },
-  { key: 'history', label: 'Historia', description: 'Crea historia con palabras', icon: 'history-edu', accent: '#DB2777' },
-  { key: 'ending', label: 'Terminación', description: 'Rapea con terminaciones', icon: 'text-fields', accent: '#EAB308' },
-  { key: 'images', label: 'Imágenes', description: 'Rapea con imágenes', icon: 'image', accent: '#9333EA' },
-];
+type RapModeOption = { key: RapMode; label: string; description: string; icon: string; accent: string };
 
 type Instrumental = {
   id: string;
@@ -76,8 +68,10 @@ export default function RapearScreen() {
   };
 
   const [instrumentals, setInstrumentals] = useState<Instrumental[]>([]);
+  const [modes, setModes] = useState<Mode[]>([]);
   const [loadingInstrumentals, setLoadingInstrumentals] = useState(false);
-  const [selectedMode, setSelectedMode] = useState<RapMode | null>('free');
+  const [loadingModes, setLoadingModes] = useState(false);
+  const [selectedMode, setSelectedMode] = useState<RapMode | null>(null);
   const [selectedTrack, setSelectedTrack] = useState<InstrumentalId | null>(null);
   const [selectedSessionTime, setSelectedSessionTime] = useState<SessionTime | null>('1-min');
   const [selectedSessionType, setSelectedSessionType] = useState<SessionType>('record');
@@ -98,6 +92,18 @@ export default function RapearScreen() {
   const [isTrainingBeatPlaying, setIsTrainingBeatPlaying] = useState(true);
   const [trainingRestartKey, setTrainingRestartKey] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+
+  const rapModes: RapModeOption[] = useMemo(
+    () =>
+      modes.map((mode) => ({
+        key: mode.Key,
+        label: mode.Name,
+        description: mode.Description,
+        icon: mode.Icon,
+        accent: mode.Accent,
+      })),
+    [modes]
+  );
 
   const tracks: TrackItem[] = useMemo(
     () =>
@@ -120,15 +126,23 @@ export default function RapearScreen() {
     setLoadingInstrumentals(false);
   }, []);
 
+  const loadModes = useCallback(async () => {
+    setLoadingModes(true);
+    const data = await getModes();
+    setModes(data);
+    setLoadingModes(false);
+  }, []);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     setPreviewTrack(null);
     setPressedMode(null);
     setBaseSelectorVisible(false);
+    await loadModes();
     await loadInstrumentals();
     await new Promise((resolve) => setTimeout(resolve, 300));
     setRefreshing(false);
-  }, [loadInstrumentals]);
+  }, [loadInstrumentals, loadModes]);
 
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -147,7 +161,7 @@ export default function RapearScreen() {
   const initialSessionSeconds = getSessionDuration(selectedSessionTime);
   const availableSessionTimes = selectedSessionType === 'train' ? TRAINING_TIME : SESSION_TIMES;
   const selectedTrackLabel = tracks.find((track) => track.key === selectedTrack)?.label ?? '-';
-  const summaryModeInfo = RAP_MODES.find((mode) => mode.key === sessionSummary?.mode);
+  const summaryModeInfo = rapModes.find((mode) => mode.key === sessionSummary?.mode);
 
   const canAdvance =
     (setupStep === 'mode' && selectedMode !== null) ||
@@ -171,8 +185,23 @@ export default function RapearScreen() {
   }, [remainingSeconds, isUnlimitedSession]);
 
   useEffect(() => {
+    loadModes();
+  }, [loadModes]);
+
+  useEffect(() => {
     loadInstrumentals();
   }, [loadInstrumentals]);
+
+  useEffect(() => {
+    if (!rapModes.length) {
+      setSelectedMode(null);
+      return;
+    }
+
+    if (!selectedMode || !rapModes.some((mode) => mode.key === selectedMode)) {
+      setSelectedMode(rapModes[0].key);
+    }
+  }, [rapModes, selectedMode]);
 
   useEffect(() => {
     if (!tracks.length) {
@@ -770,11 +799,18 @@ export default function RapearScreen() {
 
         {setupStep === 'mode' ? (
           <View style={styles.modeRail}>
-            {RAP_MODES.map((mode) => {
+            {loadingModes ? (
+              <Text style={[styles.trackInfo, { color: themeColors.textSecondary }]}>Cargando modos...</Text>
+            ) : null}
+            {!loadingModes && !rapModes.length ? (
+              <Text style={[styles.trackInfo, { color: themeColors.textSecondary }]}>No hay modos configurados en la base de datos.</Text>
+            ) : null}
+            {rapModes.map((mode) => {
               const selected = selectedMode === mode.key;
               const isActiveMode = selected || pressedMode === mode.key;
               const selectedCardTextColor = themeColors.textPrimary;
               const selectedModeBackground = isDark ? `${mode.accent}2B` : `${mode.accent}14`;
+              const modeIcon = (mode.icon in MaterialIcons.glyphMap ? mode.icon : 'help-outline') as keyof typeof MaterialIcons.glyphMap;
               return (
                 <Pressable
                   key={mode.key}
@@ -799,7 +835,7 @@ export default function RapearScreen() {
                           backgroundColor: selected ? (isDark ? `${mode.accent}26` : `${mode.accent}12`) : 'transparent',
                         },
                       ]}>
-                      <MaterialIcons name={mode.icon} size={24} color={isActiveMode ? mode.accent : themeColors.textSecondary} />
+                      <MaterialIcons name={modeIcon} size={24} color={isActiveMode ? mode.accent : themeColors.textSecondary} />
                     </View>
                   </View>
                 </Pressable>
