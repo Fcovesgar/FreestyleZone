@@ -11,9 +11,6 @@ import 'react-native-reanimated';
 
 import { AppThemeProvider, useAppTheme } from '@/context/app-theme-context';
 
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
 
 void SplashScreen.preventAutoHideAsync();
 
