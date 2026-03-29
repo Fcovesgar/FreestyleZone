@@ -567,6 +567,40 @@ export default function RapearScreen() {
     }
   };
 
+  const syncCameraPermissionStatus = async () => {
+    if (Platform.OS === 'android') {
+      const granted = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.CAMERA);
+      setHasCameraPermission(granted);
+      return granted;
+    }
+
+    if (Platform.OS === 'web') {
+      try {
+        if ('permissions' in navigator && navigator.permissions?.query) {
+          const result = await navigator.permissions.query({ name: 'camera' as PermissionName });
+          const granted = result.state === 'granted';
+          setHasCameraPermission(granted);
+          return granted;
+        }
+      } catch {
+        // ignore permission API errors on unsupported browsers
+      }
+
+      return hasCameraPermission === true;
+    }
+
+    const cameraModule = resolveCameraModule();
+    if (!cameraModule?.Camera) {
+      setHasCameraPermission(false);
+      return false;
+    }
+
+    const permission = await cameraModule.Camera.getCameraPermissionsAsync();
+    const granted = permission.status === 'granted';
+    setHasCameraPermission(granted);
+    return granted;
+  };
+
   const requestCameraPermission = async () => {
     if (Platform.OS === 'android') {
       const granted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CAMERA, {
@@ -620,6 +654,7 @@ export default function RapearScreen() {
   const openSession = async () => {
     if (!isReadyToStart) return;
 
+    await syncCameraPermissionStatus();
     setSessionVisible(true);
     setCountdown(null);
     setElapsedSeconds(0);
@@ -1129,7 +1164,7 @@ export default function RapearScreen() {
                     <View style={styles.preSessionActionsRow}>
                       {!hasCameraPermission ? (
                         <View style={styles.recordingConfigCard}>
-                          <Text style={styles.recordingConfigTitle}>Activa cámara para grabar</Text>
+                          <Text style={styles.recordingConfigTitle}>Activa cámara</Text>
                           <View style={styles.recordingConfigActions}>
                             <Pressable style={styles.recordingConfigActionButton} onPress={requestCameraPermission}>
                               <MaterialIcons name="videocam" size={17} color="#FFFFFF" />
@@ -1345,10 +1380,10 @@ const styles = StyleSheet.create({
   finishButton: { borderRadius: 999, backgroundColor: '#0000007A', paddingHorizontal: 16, paddingVertical: 10 },
   finishButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
   preSessionActionsRow: { width: '100%', alignItems: 'center', justifyContent: 'center', position: 'relative', gap: 10 },
-  recordingConfigCard: { position: 'absolute', top: -176, width: '92%', borderRadius: 14, borderWidth: 1, borderColor: '#FFFFFF24', backgroundColor: '#050505AB', padding: 10, gap: 8 },
-  recordingConfigTitle: { color: '#FFFFFF', fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6 },
-  recordingConfigActions: { flexDirection: 'row', gap: 8 },
-  recordingConfigActionButton: { flex: 1, borderRadius: 10, borderWidth: 1, borderColor: '#FFFFFF20', backgroundColor: '#FFFFFF12', paddingVertical: 8, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  recordingConfigCard: { position: 'absolute', top: -112, width: '66%', alignSelf: 'center', borderRadius: 12, borderWidth: 1, borderColor: '#FFFFFF24', backgroundColor: '#050505AB', paddingVertical: 8, paddingHorizontal: 10, gap: 6 },
+  recordingConfigTitle: { color: '#FFFFFF', fontSize: 11, fontWeight: '700', textAlign: 'center' },
+  recordingConfigActions: { flexDirection: 'row', justifyContent: 'center' },
+  recordingConfigActionButton: { borderRadius: 10, borderWidth: 1, borderColor: '#FFFFFF20', backgroundColor: '#FFFFFF12', paddingVertical: 7, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   recordingConfigActionText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
   recordPreControlsRow: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 52 },
   preRecordSideButton: { width: 54, height: 54, borderRadius: 27, borderWidth: 1, borderColor: '#FFFFFF3A', backgroundColor: '#0000007A', alignItems: 'center', justifyContent: 'center' },
