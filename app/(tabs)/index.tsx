@@ -3,6 +3,7 @@ import { Alert, Modal, PermissionsAndroid, Platform, Pressable, RefreshControl, 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getInstrumentals } from '../../data/get_instrumentals';
+import * as WebBrowser from 'expo-web-browser';
 
 import { useAppThemeColors } from '@/hooks/use-app-theme-colors';
 
@@ -580,6 +581,15 @@ export default function RapearScreen() {
     setSelectedTrack(track);
     setBaseSelectorVisible(false);
     setIsTrainingBeatPlaying(true);
+
+    if (Platform.OS !== 'web') {
+      const currentTrack = tracks.find((item) => item.key === track);
+      if (currentTrack?.url) {
+        WebBrowser.openBrowserAsync(currentTrack.url).catch(() => {
+          Alert.alert('No se pudo abrir el audio', 'No se pudo abrir esta instrumental en tu dispositivo.');
+        });
+      }
+    }
   };
 
   const onSeekTrainingTrack = async (secondsDelta: number) => {
