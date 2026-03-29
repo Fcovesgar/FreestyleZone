@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Modal, PermissionsAndroid, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
+import { Alert, type LayoutChangeEvent, Modal, PermissionsAndroid, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getInstrumentals } from '../../data/get_instrumentals';
@@ -93,6 +93,7 @@ export default function RapearScreen() {
   const [trainingRestartKey, setTrainingRestartKey] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [instrumentalVolume, setInstrumentalVolume] = useState(0.8);
+  const [volumeTrackWidth, setVolumeTrackWidth] = useState(1);
 
   const rapModes: RapModeOption[] = useMemo(
     () =>
@@ -175,6 +176,21 @@ export default function RapearScreen() {
   const updateInstrumentalVolume = useCallback((nextVolume: number) => {
     const clampedVolume = Math.max(0, Math.min(1, nextVolume));
     setInstrumentalVolume(clampedVolume);
+  }, []);
+
+  const updateVolumeFromPosition = useCallback(
+    (positionX: number) => {
+      if (volumeTrackWidth <= 0) return;
+      updateInstrumentalVolume(positionX / volumeTrackWidth);
+    },
+    [updateInstrumentalVolume, volumeTrackWidth]
+  );
+
+  const onVolumeTrackLayout = useCallback((event: LayoutChangeEvent) => {
+    const nextWidth = event.nativeEvent.layout.width;
+    if (nextWidth > 0) {
+      setVolumeTrackWidth(nextWidth);
+    }
   }, []);
 
   useEffect(() => {
@@ -780,24 +796,18 @@ export default function RapearScreen() {
   };
   const CameraPreviewComponent = resolveCameraModule()?.CameraView ?? null;
 
-  const renderVolumeControl = (label = 'Volumen instrumental') => (
+  const renderVolumeControl = () => (
     <View style={styles.volumeControlCard}>
-      <View style={styles.volumeControlHeader}>
-        <MaterialIcons name="volume-up" size={16} color="#FFFFFF" />
-        <Text style={styles.volumeControlLabel}>{label}</Text>
+      <View
+        style={styles.volumeControlTrack}
+        onLayout={onVolumeTrackLayout}
+        onStartShouldSetResponder={() => true}
+        onMoveShouldSetResponder={() => true}
+        onResponderGrant={(event) => updateVolumeFromPosition(event.nativeEvent.locationX)}
+        onResponderMove={(event) => updateVolumeFromPosition(event.nativeEvent.locationX)}>
+        <View style={[styles.volumeProgressFill, { width: `${instrumentalVolumePercent}%` }]} />
+        <View style={[styles.volumeThumb, { left: `${instrumentalVolumePercent}%` }]} />
       </View>
-      <View style={styles.volumeControlRow}>
-        <Pressable style={styles.volumeButton} onPress={() => updateInstrumentalVolume(instrumentalVolume - 0.1)}>
-          <MaterialIcons name="remove" size={18} color="#FFFFFF" />
-        </Pressable>
-        <View style={styles.volumeProgressTrack}>
-          <View style={[styles.volumeProgressFill, { width: `${instrumentalVolumePercent}%` }]} />
-        </View>
-        <Pressable style={styles.volumeButton} onPress={() => updateInstrumentalVolume(instrumentalVolume + 0.1)}>
-          <MaterialIcons name="add" size={18} color="#FFFFFF" />
-        </Pressable>
-      </View>
-      <Text style={styles.volumePercentText}>{instrumentalVolumePercent}%</Text>
     </View>
   );
 
@@ -1091,7 +1101,7 @@ export default function RapearScreen() {
                     <View style={styles.preSessionActionsRow}>
                       <View style={styles.recordingConfigCard}>
                         <Text style={styles.recordingConfigTitle}>Configura la sesión antes de grabar</Text>
-                        {renderVolumeControl('Volumen de la base')}
+                        {renderVolumeControl()}
                         <View style={styles.recordingConfigActions}>
                           <Pressable style={styles.recordingConfigActionButton} onPress={requestCameraPermission}>
                             <MaterialIcons name="videocam" size={17} color="#FFFFFF" />
@@ -1329,14 +1339,10 @@ const styles = StyleSheet.create({
   recordButton: { width: 86, height: 86, borderRadius: 43, borderWidth: 4, borderColor: '#FFFFFFAA', justifyContent: 'center', alignItems: 'center' },
   recordButtonInner: { width: 58, height: 58, borderRadius: 29, backgroundColor: '#EF4444' },
   countdownNumber: { fontSize: 82, fontWeight: '800' },
-  volumeControlCard: { borderRadius: 12, borderWidth: 1, borderColor: '#FFFFFF24', backgroundColor: '#00000066', paddingVertical: 10, paddingHorizontal: 10, gap: 8 },
-  volumeControlHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  volumeControlLabel: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
-  volumeControlRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  volumeButton: { width: 30, height: 30, borderRadius: 15, borderWidth: 1, borderColor: '#FFFFFF26', backgroundColor: '#FFFFFF12', alignItems: 'center', justifyContent: 'center' },
-  volumeProgressTrack: { flex: 1, height: 7, borderRadius: 999, backgroundColor: '#FFFFFF30', overflow: 'hidden' },
+  volumeControlCard: { borderRadius: 12, borderWidth: 1, borderColor: '#FFFFFF24', backgroundColor: '#00000066', paddingVertical: 12, paddingHorizontal: 10 },
+  volumeControlTrack: { height: 18, borderRadius: 999, backgroundColor: '#FFFFFF30', overflow: 'visible', justifyContent: 'center' },
   volumeProgressFill: { height: '100%', backgroundColor: '#8B5CF6' },
-  volumePercentText: { color: '#D1C5FF', fontSize: 12, fontWeight: '700', alignSelf: 'flex-end' },
+  volumeThumb: { position: 'absolute', width: 20, height: 20, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#8B5CF6', marginLeft: -10, top: -1 },
   baseModalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: '#000000A6', justifyContent: 'center', paddingHorizontal: 18, zIndex: 20 },
   baseModalCard: { borderRadius: 20, borderWidth: 1, borderColor: '#FFFFFF1F', backgroundColor: '#121022', padding: 14, gap: 12, maxHeight: '70%' },
   baseModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
