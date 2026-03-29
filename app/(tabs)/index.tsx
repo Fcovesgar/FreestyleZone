@@ -134,6 +134,12 @@ export default function RapearScreen() {
     }
   }, [setupStep]);
 
+  useEffect(() => {
+    if (selectedInstrumental === null && INSTRUMENTALS.length > 0) {
+      setSelectedInstrumental(INSTRUMENTALS[0].key);
+    }
+  }, [selectedInstrumental]);
+
   const onSelectSessionType = (sessionType: SessionType) => {
     setSelectedSessionType(sessionType);
 
@@ -148,6 +154,11 @@ export default function RapearScreen() {
   };
 
   const onContinueStep = () => {
+    if (setupStep === 'track' && selectedInstrumental === null && INSTRUMENTALS.length > 0) {
+      setSelectedInstrumental(INSTRUMENTALS[0].key);
+      setSetupStep('time');
+      return;
+    }
     if (!canAdvance) return;
     if (setupStep === 'mode') {
       setSetupStep('track');
