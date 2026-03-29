@@ -360,7 +360,6 @@ export default function RapearScreen() {
 
     if (Platform.OS !== 'web') {
       const isSameTrack = previewTrack === trackId;
-      setPreviewTrack((prev) => (prev === trackId ? null : trackId));
       if (isSameTrack) {
         await stopPreviewPlayback();
         return;
@@ -382,6 +381,7 @@ export default function RapearScreen() {
           }
         });
         nativePreviewSoundRef.current = sound;
+        setPreviewTrack(trackId);
       } catch {
         Alert.alert('No se pudo reproducir', 'No se pudo iniciar la reproducción de la base.');
       }
