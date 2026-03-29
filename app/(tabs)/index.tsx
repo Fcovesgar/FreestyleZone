@@ -6,7 +6,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAppThemeColors } from '@/hooks/use-app-theme-colors';
 
 type RapMode = 'easy' | 'hard' | 'incremental' | 'history' | 'ending' | 'images' | 'free';
-type Track = 'base-1' | 'base-2' | 'base-3';
+type InstrumentalId = string;
 type SessionTime = '1-min' | '2-min' | '5-min' | 'infinite';
 type SessionType = 'record' | 'train';
 type CameraFacing = 'front' | 'back';
@@ -15,7 +15,7 @@ type SetupStep = 'mode' | 'track' | 'time';
 type SessionSummary = {
   mode: RapMode | null;
   sessionType: SessionType;
-  track: Track | null;
+  instrumental: InstrumentalId | null;
   elapsedSeconds: number;
 };
 
@@ -29,7 +29,7 @@ const RAP_MODES: { key: RapMode; label: string; description: string; icon: keyof
   { key: 'images', label: 'Imágenes', description: 'Rapea con imágenes', icon: 'image', accent: '#9333EA' },
 ];
 
-const TRACKS: { key: Track; label: string; description: string; bpm: string }[] = [
+const INSTRUMENTALS: { key: InstrumentalId; label: string; description: string; bpm: string }[] = [
   { key: 'base-1', label: 'Base Boom Bap', description: 'Clásico noventero, bombo y caja al frente.', bpm: '92 BPM' },
   { key: 'base-2', label: 'Base Trap', description: '808 profundo y hi-hat para romper.', bpm: '140 BPM' },
   { key: 'base-3', label: 'Base Lo-Fi', description: 'Atmósfera relajada para barras melódicas.', bpm: '78 BPM' },
@@ -70,12 +70,12 @@ export default function RapearScreen() {
   };
 
   const [selectedMode, setSelectedMode] = useState<RapMode | null>('free');
-  const [selectedTrack, setSelectedTrack] = useState<Track | null>('base-1');
+  const [selectedTrack, setSelectedTrack] = useState<InstrumentalId | null>(INSTRUMENTALS[0]?.key ?? null);
   const [selectedSessionTime, setSelectedSessionTime] = useState<SessionTime | null>('1-min');
   const [selectedSessionType, setSelectedSessionType] = useState<SessionType>('record');
   const [setupStep, setSetupStep] = useState<SetupStep>('mode');
   const [pressedMode, setPressedMode] = useState<RapMode | null>(null);
-  const [previewTrack, setPreviewTrack] = useState<Track | null>(null);
+  const [previewTrack, setPreviewTrack] = useState<InstrumentalId | null>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [sessionVisible, setSessionVisible] = useState(false);
   const [cameraFacing, setCameraFacing] = useState<CameraFacing>('front');
@@ -104,7 +104,7 @@ export default function RapearScreen() {
 
   const initialSessionSeconds = getSessionDuration(selectedSessionTime);
   const availableSessionTimes = selectedSessionType === 'train' ? TRAINING_TIME : SESSION_TIMES;
-  const selectedTrackLabel = TRACKS.find((track) => track.key === selectedTrack)?.label ?? '-';
+  const selectedTrackLabel = INSTRUMENTALS.find((track) => track.key === selectedTrack)?.label ?? '-';
   const summaryModeInfo = RAP_MODES.find((mode) => mode.key === sessionSummary?.mode);
 
   const canAdvance =
@@ -168,7 +168,7 @@ export default function RapearScreen() {
     }
   };
 
-  const onToggleTrackPreview = (track: Track) => {
+  const onToggleTrackPreview = (track: InstrumentalId) => {
     setPreviewTrack((prev) => (prev === track ? null : track));
   };
 
@@ -286,7 +286,7 @@ export default function RapearScreen() {
     const nextSummary: SessionSummary = {
       mode: selectedMode,
       sessionType: selectedSessionType,
-      track: selectedTrack,
+      instrumental: selectedTrack,
       elapsedSeconds,
     };
 
@@ -338,7 +338,7 @@ export default function RapearScreen() {
     setSetupStep('mode');
   };
 
-  const onSelectTrainingTrack = (track: Track) => {
+  const onSelectTrainingTrack = (track: InstrumentalId) => {
     setSelectedTrack(track);
     setBaseSelectorVisible(false);
     setIsTrainingBeatPlaying(true);
@@ -346,18 +346,18 @@ export default function RapearScreen() {
 
   const onTrainingPreviousTrack = () => {
     if (!selectedTrack) return;
-    const currentTrackIndex = TRACKS.findIndex((track) => track.key === selectedTrack);
+    const currentTrackIndex = INSTRUMENTALS.findIndex((track) => track.key === selectedTrack);
     if (currentTrackIndex === -1) return;
-    const previousTrack = TRACKS[(currentTrackIndex - 1 + TRACKS.length) % TRACKS.length];
+    const previousTrack = INSTRUMENTALS[(currentTrackIndex - 1 + INSTRUMENTALS.length) % INSTRUMENTALS.length];
     setSelectedTrack(previousTrack.key);
     setIsTrainingBeatPlaying(true);
   };
 
   const onTrainingNextTrack = () => {
     if (!selectedTrack) return;
-    const currentTrackIndex = TRACKS.findIndex((track) => track.key === selectedTrack);
+    const currentTrackIndex = INSTRUMENTALS.findIndex((track) => track.key === selectedTrack);
     if (currentTrackIndex === -1) return;
-    const nextTrack = TRACKS[(currentTrackIndex + 1) % TRACKS.length];
+    const nextTrack = INSTRUMENTALS[(currentTrackIndex + 1) % INSTRUMENTALS.length];
     setSelectedTrack(nextTrack.key);
     setIsTrainingBeatPlaying(true);
   };
@@ -461,7 +461,7 @@ export default function RapearScreen() {
 
         {setupStep === 'track' ? (
           <View style={styles.optionsColumn}>
-            {TRACKS.map((track) => {
+            {INSTRUMENTALS.map((track) => {
               const selected = selectedTrack === track.key;
               const isPlaying = previewTrack === track.key;
 
@@ -588,7 +588,7 @@ export default function RapearScreen() {
                       </View>
 
                       <View style={styles.baseOptionsColumn}>
-                        {TRACKS.map((track) => {
+                        {INSTRUMENTALS.map((track) => {
                           const isSelected = selectedTrack === track.key;
                           return (
                             <Pressable key={track.key} style={[styles.baseOptionItem, isSelected && styles.baseOptionSelected]} onPress={() => onSelectTrainingTrack(track.key)}>
@@ -675,7 +675,7 @@ export default function RapearScreen() {
             </View>
 
             <View style={styles.baseOptionsColumn}>
-              {TRACKS.map((track) => {
+              {INSTRUMENTALS.map((track) => {
                 const isSelected = selectedTrack === track.key;
                 return (
                   <Pressable key={track.key} style={[styles.baseOptionItem, isSelected && styles.baseOptionSelected]} onPress={() => onSelectTrainingTrack(track.key)}>
@@ -712,7 +712,7 @@ export default function RapearScreen() {
             <Text style={[styles.summaryMetaText, { color: summaryTheme.secondaryText }]}>Modo: {summaryModeInfo?.label ?? '-'}</Text>
             <Text style={[styles.summaryMetaDescription, { color: summaryTheme.tertiaryText }]}>Descripción: {summaryModeInfo?.description ?? '-'}</Text>
             <Text style={[styles.summaryMetaText, { color: summaryTheme.secondaryText }]}>Sesión: {sessionSummary?.sessionType === 'record' ? 'Grabar' : 'Entrenar'}</Text>
-            <Text style={[styles.summaryMetaText, { color: summaryTheme.secondaryText }]}>Base: {sessionSummary?.track ? selectedTrackLabel : '-'}</Text>
+            <Text style={[styles.summaryMetaText, { color: summaryTheme.secondaryText }]}>Base: {sessionSummary?.instrumental ? selectedTrackLabel : '-'}</Text>
             <Text style={[styles.summaryMetaText, { color: summaryTheme.secondaryText }]}>Tiempo: {formatTime(sessionSummary?.elapsedSeconds ?? 0)}</Text>
           </View>
 
