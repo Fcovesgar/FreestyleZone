@@ -3,6 +3,7 @@ import { Alert, Modal, PermissionsAndroid, Platform, Pressable, RefreshControl, 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getInstrumentals } from '../../data/get_instrumentals';
+import * as WebBrowser from 'expo-web-browser';
 
 import { useAppThemeColors } from '@/hooks/use-app-theme-colors';
 
@@ -579,7 +580,7 @@ export default function RapearScreen() {
   const onSelectTrainingTrack = (track: InstrumentalId) => {
     setSelectedTrack(track);
     setBaseSelectorVisible(false);
-    setIsTrainingBeatPlaying(true);
+    setIsTrainingBeatPlaying(false);
   };
 
   const onSeekTrainingTrack = async (secondsDelta: number) => {
