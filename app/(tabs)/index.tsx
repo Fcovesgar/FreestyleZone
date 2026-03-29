@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Linking, Modal, PermissionsAndroid, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Modal, PermissionsAndroid, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getInstrumentals } from '../../data/get_instrumentals';
@@ -98,15 +98,19 @@ export default function RapearScreen() {
   const [isTrainingBeatPlaying, setIsTrainingBeatPlaying] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const tracks: TrackItem[] = instrumentals
-    .filter((item) => item.Active)
-    .map((item) => ({
-      key: item.id,
-      label: item.Name,
-      description: item.Genre,
-      bpm: `${item.Bpm} BPM`,
-      url: item.Url,
-    }));
+  const tracks: TrackItem[] = useMemo(
+    () =>
+      instrumentals
+        .filter((item) => item.Active)
+        .map((item) => ({
+          key: item.id,
+          label: item.Name,
+          description: item.Genre,
+          bpm: `${item.Bpm} BPM`,
+          url: item.Url,
+        })),
+    [instrumentals]
+  );
 
   const loadInstrumentals = useCallback(async () => {
     setLoadingInstrumentals(true);
@@ -182,8 +186,117 @@ export default function RapearScreen() {
         webPreviewAudioRef.current.currentTime = 0;
         webPreviewAudioRef.current = null;
       }
+      stopNativeSound(nativePreviewSoundRef);
+      setIsTrainingBeatPlaying(false);
     }
-  }, [setupStep]);
+  }, [setupStep, stopNativeSound]);
+
+  const getNativeAudioModule = useCallback(() => {
+    if (Platform.OS === 'web') return null;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      return require('expo-av');
+    } catch {
+      if (!nativeAudioUnavailableRef.current) {
+        nativeAudioUnavailableRef.current = true;
+        Alert.alert(
+          'Audio nativo no disponible',
+          'Para reproducir dentro de la app en iOS/Android necesitas instalar expo-av.'
+        );
+      }
+      return null;
+    }
+  }, []);
+
+  const stopNativeSound = useCallback(async (ref: React.MutableRefObject<any>) => {
+    if (Platform.OS === 'web' || !ref.current) return;
+    try {
+      await ref.current.stopAsync?.();
+      await ref.current.unloadAsync?.();
+    } catch {
+      // ignore cleanup errors
+    } finally {
+      ref.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+
+    if (!sessionVisible || selectedSessionType !== 'train' || !selectedTrack || !isTrainingBeatPlaying) {
+      if (webTrainingAudioRef.current) {
+        webTrainingAudioRef.current.pause();
+      }
+      return;
+    }
+
+    const currentTrack = tracks.find((track) => track.key === selectedTrack);
+    if (!currentTrack?.url) return;
+
+    if (webTrainingAudioRef.current?.src !== currentTrack.url) {
+      if (webTrainingAudioRef.current) {
+        webTrainingAudioRef.current.pause();
+      }
+
+      const audio = new Audio(currentTrack.url);
+      audio.loop = true;
+      audio.volume = 1;
+      webTrainingAudioRef.current = audio;
+    }
+
+    webTrainingAudioRef.current.play().catch(() => {
+      setIsTrainingBeatPlaying(false);
+    });
+  }, [isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, tracks]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+
+    const playTrainingNative = async () => {
+      if (!sessionVisible || selectedSessionType !== 'train' || !selectedTrack || !isTrainingBeatPlaying) {
+        await stopNativeSound(nativeTrainingSoundRef);
+        return;
+      }
+
+      const currentTrack = tracks.find((track) => track.key === selectedTrack);
+      if (!currentTrack?.url) return;
+
+      const avModule = getNativeAudioModule();
+      if (!avModule?.Audio?.Sound) return;
+
+      await stopNativeSound(nativeTrainingSoundRef);
+
+      try {
+        const sound = new avModule.Audio.Sound();
+        await sound.loadAsync({ uri: currentTrack.url }, { shouldPlay: true, isLooping: true });
+        nativeTrainingSoundRef.current = sound;
+      } catch {
+        Alert.alert('No se pudo reproducir', 'No se pudo iniciar la reproducción de la base.');
+        setIsTrainingBeatPlaying(false);
+      }
+    };
+
+    playTrainingNative();
+  }, [getNativeAudioModule, isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, stopNativeSound, tracks]);
+
+  useEffect(() => {
+    return () => {
+      if (Platform.OS === 'web') {
+        if (webPreviewAudioRef.current) {
+          webPreviewAudioRef.current.pause();
+          webPreviewAudioRef.current = null;
+        }
+
+        if (webTrainingAudioRef.current) {
+          webTrainingAudioRef.current.pause();
+          webTrainingAudioRef.current = null;
+        }
+      }
+
+      stopNativeSound(nativePreviewSoundRef);
+      stopNativeSound(nativeTrainingSoundRef);
+    };
+  }, [stopNativeSound]);
 
   const getNativeAudioModule = useCallback(() => {
     if (Platform.OS === 'web') return null;
@@ -586,6 +699,30 @@ export default function RapearScreen() {
     }
   };
 
+  const onSeekTrainingTrack = async (secondsDelta: number) => {
+    if (Platform.OS === 'web') {
+      const audio = webTrainingAudioRef.current;
+      if (!audio) return;
+      const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
+      const nextPosition = Math.max(0, Math.min(duration || Number.MAX_SAFE_INTEGER, audio.currentTime + secondsDelta));
+      audio.currentTime = nextPosition;
+      return;
+    }
+
+    if (!nativeTrainingSoundRef.current) return;
+
+    try {
+      const status = await nativeTrainingSoundRef.current.getStatusAsync();
+      if (!status?.isLoaded) return;
+
+      const duration = status.durationMillis ?? Number.MAX_SAFE_INTEGER;
+      const nextPosition = Math.max(0, Math.min(duration, status.positionMillis + secondsDelta * 1000));
+      await nativeTrainingSoundRef.current.setPositionAsync(nextPosition);
+    } catch {
+      Alert.alert('No se pudo adelantar/retroceder', 'No se pudo ajustar la posición de la instrumental.');
+    }
+  };
+
   const onTrainingPreviousTrack = () => {
     if (!selectedTrack || !tracks.length) return;
     const currentTrackIndex = tracks.findIndex((track) => track.key === selectedTrack);
@@ -815,6 +952,9 @@ export default function RapearScreen() {
                       <Pressable style={styles.trainingControlButton} onPress={onTrainingPreviousTrack}>
                         <MaterialIcons name="skip-previous" size={22} color="#FFFFFF" />
                       </Pressable>
+                      <Pressable style={styles.trainingControlButton} onPress={() => onSeekTrainingTrack(-10)}>
+                        <MaterialIcons name="replay-10" size={22} color="#FFFFFF" />
+                      </Pressable>
                       <Pressable
                         style={styles.trainingControlButton}
                         onPress={() => {
@@ -824,6 +964,9 @@ export default function RapearScreen() {
                           });
                         }}>
                         <MaterialIcons name={isTrainingBeatPlaying ? 'pause' : 'play-arrow'} size={22} color="#FFFFFF" />
+                      </Pressable>
+                      <Pressable style={styles.trainingControlButton} onPress={() => onSeekTrainingTrack(10)}>
+                        <MaterialIcons name="forward-10" size={22} color="#FFFFFF" />
                       </Pressable>
                       <Pressable style={styles.trainingControlButton} onPress={onTrainingNextTrack}>
                         <MaterialIcons name="skip-next" size={22} color="#FFFFFF" />
