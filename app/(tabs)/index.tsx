@@ -191,7 +191,7 @@ export default function RapearScreen() {
     }
   }, [setupStep, stopNativeSound]);
 
-  const getNativeAudioModule = useCallback(() => {
+  const resolveNativeAudioModule = useCallback(() => {
     if (Platform.OS === 'web') return null;
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -261,7 +261,7 @@ export default function RapearScreen() {
       const currentTrack = tracks.find((track) => track.key === selectedTrack);
       if (!currentTrack?.url) return;
 
-      const avModule = getNativeAudioModule();
+      const avModule = resolveNativeAudioModule();
       if (!avModule?.Audio?.Sound) return;
 
       await stopNativeSound(nativeTrainingSoundRef);
@@ -277,114 +277,7 @@ export default function RapearScreen() {
     };
 
     playTrainingNative();
-  }, [getNativeAudioModule, isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, stopNativeSound, tracks]);
-
-  useEffect(() => {
-    return () => {
-      if (Platform.OS === 'web') {
-        if (webPreviewAudioRef.current) {
-          webPreviewAudioRef.current.pause();
-          webPreviewAudioRef.current = null;
-        }
-
-        if (webTrainingAudioRef.current) {
-          webTrainingAudioRef.current.pause();
-          webTrainingAudioRef.current = null;
-        }
-      }
-
-      stopNativeSound(nativePreviewSoundRef);
-      stopNativeSound(nativeTrainingSoundRef);
-    };
-  }, [stopNativeSound]);
-
-  const getNativeAudioModule = useCallback(() => {
-    if (Platform.OS === 'web') return null;
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      return require('expo-av');
-    } catch {
-      if (!nativeAudioUnavailableRef.current) {
-        nativeAudioUnavailableRef.current = true;
-        Alert.alert(
-          'Audio nativo no disponible',
-          'Para reproducir dentro de la app en iOS/Android necesitas instalar expo-av.'
-        );
-      }
-      return null;
-    }
-  }, []);
-
-  const stopNativeSound = useCallback(async (ref: React.MutableRefObject<any>) => {
-    if (Platform.OS === 'web' || !ref.current) return;
-    try {
-      await ref.current.stopAsync?.();
-      await ref.current.unloadAsync?.();
-    } catch {
-      // ignore cleanup errors
-    } finally {
-      ref.current = null;
-    }
-  }, []);
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-
-    if (!sessionVisible || selectedSessionType !== 'train' || !selectedTrack || !isTrainingBeatPlaying) {
-      if (webTrainingAudioRef.current) {
-        webTrainingAudioRef.current.pause();
-      }
-      return;
-    }
-
-    const currentTrack = tracks.find((track) => track.key === selectedTrack);
-    if (!currentTrack?.url) return;
-
-    if (webTrainingAudioRef.current?.src !== currentTrack.url) {
-      if (webTrainingAudioRef.current) {
-        webTrainingAudioRef.current.pause();
-      }
-
-      const audio = new Audio(currentTrack.url);
-      audio.loop = true;
-      audio.volume = 1;
-      webTrainingAudioRef.current = audio;
-    }
-
-    webTrainingAudioRef.current.play().catch(() => {
-      setIsTrainingBeatPlaying(false);
-    });
-  }, [isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, tracks]);
-
-  useEffect(() => {
-    if (Platform.OS === 'web') return;
-
-    const playTrainingNative = async () => {
-      if (!sessionVisible || selectedSessionType !== 'train' || !selectedTrack || !isTrainingBeatPlaying) {
-        await stopNativeSound(nativeTrainingSoundRef);
-        return;
-      }
-
-      const currentTrack = tracks.find((track) => track.key === selectedTrack);
-      if (!currentTrack?.url) return;
-
-      const avModule = getNativeAudioModule();
-      if (!avModule?.Audio?.Sound) return;
-
-      await stopNativeSound(nativeTrainingSoundRef);
-
-      try {
-        const sound = new avModule.Audio.Sound();
-        await sound.loadAsync({ uri: currentTrack.url }, { shouldPlay: true, isLooping: true });
-        nativeTrainingSoundRef.current = sound;
-      } catch {
-        Alert.alert('No se pudo reproducir', 'No se pudo iniciar la reproducción de la base.');
-        setIsTrainingBeatPlaying(false);
-      }
-    };
-
-    playTrainingNative();
-  }, [getNativeAudioModule, isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, stopNativeSound, tracks]);
+  }, [resolveNativeAudioModule, isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, stopNativeSound, tracks]);
 
   useEffect(() => {
     return () => {
@@ -456,7 +349,7 @@ export default function RapearScreen() {
         return;
       }
 
-      const avModule = getNativeAudioModule();
+      const avModule = resolveNativeAudioModule();
       if (!avModule?.Audio?.Sound) return;
 
       await stopNativeSound(nativePreviewSoundRef);
