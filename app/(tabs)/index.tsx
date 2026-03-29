@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Modal, PermissionsAndroid, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
+import { Alert, type LayoutChangeEvent, Linking, Modal, PermissionsAndroid, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getInstrumentals } from '../../data/get_instrumentals';
@@ -80,7 +80,7 @@ export default function RapearScreen() {
   const [previewTrack, setPreviewTrack] = useState<InstrumentalId | null>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [sessionVisible, setSessionVisible] = useState(false);
-  const [cameraFacing, setCameraFacing] = useState<CameraFacing>('front');
+  const cameraFacing: CameraFacing = 'front';
   const [countdown, setCountdown] = useState<number | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -92,6 +92,8 @@ export default function RapearScreen() {
   const [isTrainingBeatPlaying, setIsTrainingBeatPlaying] = useState(true);
   const [trainingRestartKey, setTrainingRestartKey] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [instrumentalVolume, setInstrumentalVolume] = useState(0.8);
+  const [volumeTrackHeight, setVolumeTrackHeight] = useState(1);
 
   const rapModes: RapModeOption[] = useMemo(
     () =>
@@ -162,6 +164,7 @@ export default function RapearScreen() {
   const availableSessionTimes = selectedSessionType === 'train' ? TRAINING_TIME : SESSION_TIMES;
   const selectedTrackLabel = tracks.find((track) => track.key === selectedTrack)?.label ?? '-';
   const summaryModeInfo = rapModes.find((mode) => mode.key === sessionSummary?.mode);
+  const instrumentalVolumePercent = Math.round(instrumentalVolume * 100);
 
   const canAdvance =
     (setupStep === 'mode' && selectedMode !== null) ||
@@ -169,6 +172,27 @@ export default function RapearScreen() {
     (setupStep === 'time' && selectedSessionTime !== null);
 
   const isReadyToStart = selectedMode !== null && selectedTrack !== null && selectedSessionTime !== null;
+
+  const updateInstrumentalVolume = useCallback((nextVolume: number) => {
+    const clampedVolume = Math.max(0, Math.min(1, nextVolume));
+    setInstrumentalVolume(clampedVolume);
+  }, []);
+
+  const updateVolumeFromPosition = useCallback(
+    (positionY: number) => {
+      if (volumeTrackHeight <= 0) return;
+      const nextValue = 1 - positionY / volumeTrackHeight;
+      updateInstrumentalVolume(nextValue);
+    },
+    [updateInstrumentalVolume, volumeTrackHeight]
+  );
+
+  const onVolumeTrackLayout = useCallback((event: LayoutChangeEvent) => {
+    const nextHeight = event.nativeEvent.layout.height;
+    if (nextHeight > 0) {
+      setVolumeTrackHeight(nextHeight);
+    }
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -220,6 +244,15 @@ export default function RapearScreen() {
           'Para reproducir dentro de la app en iOS/Android necesitas instalar expo-av.'
         );
       }
+      return null;
+    }
+  }, []);
+
+  const resolveCameraModule = useCallback(() => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      return require('expo-camera');
+    } catch {
       return null;
     }
   }, []);
@@ -297,7 +330,7 @@ export default function RapearScreen() {
 
       const audio = new Audio(currentTrack.url);
       audio.loop = true;
-      audio.volume = 1;
+      audio.volume = instrumentalVolume;
       webTrainingAudioRef.current = audio;
       webTrainingTrackRef.current = selectedTrack;
       webRestartKeyAppliedRef.current = trainingRestartKey;
@@ -306,7 +339,7 @@ export default function RapearScreen() {
     webTrainingAudioRef.current.play().catch(() => {
       setIsTrainingBeatPlaying(false);
     });
-  }, [hasSessionStarted, isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, stopWebTrainingSound, tracks, trainingRestartKey]);
+  }, [hasSessionStarted, instrumentalVolume, isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, stopWebTrainingSound, tracks, trainingRestartKey]);
 
   useEffect(() => {
     if (Platform.OS === 'web') return;
@@ -360,7 +393,7 @@ export default function RapearScreen() {
 
       try {
         const sound = new avModule.Audio.Sound();
-        await sound.loadAsync({ uri: currentTrack.url }, { shouldPlay: true, isLooping: true });
+        await sound.loadAsync({ uri: currentTrack.url }, { shouldPlay: true, isLooping: true, volume: instrumentalVolume });
         if (requestId !== trainingRequestRef.current) {
           await sound.unloadAsync();
           return;
@@ -378,7 +411,7 @@ export default function RapearScreen() {
     };
 
     playTrainingNative();
-  }, [hasSessionStarted, resolveNativeAudioModule, isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, stopNativeSound, stopTrainingPlayback, tracks, trainingRestartKey]);
+  }, [hasSessionStarted, instrumentalVolume, resolveNativeAudioModule, isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, stopNativeSound, stopTrainingPlayback, tracks, trainingRestartKey]);
 
   useEffect(() => {
     return () => {
@@ -398,6 +431,17 @@ export default function RapearScreen() {
       stopTrainingPlayback();
     };
   }, [stopPreviewPlayback, stopTrainingPlayback]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      if (webPreviewAudioRef.current) webPreviewAudioRef.current.volume = instrumentalVolume;
+      if (webTrainingAudioRef.current) webTrainingAudioRef.current.volume = instrumentalVolume;
+      return;
+    }
+
+    nativePreviewSoundRef.current?.setVolumeAsync?.(instrumentalVolume).catch(() => undefined);
+    nativeTrainingSoundRef.current?.setVolumeAsync?.(instrumentalVolume).catch(() => undefined);
+  }, [instrumentalVolume]);
 
   const onSelectSessionType = (sessionType: SessionType) => {
     setSelectedSessionType(sessionType);
@@ -501,7 +545,7 @@ export default function RapearScreen() {
     if (requestId !== previewRequestRef.current) return;
 
     const audio = new Audio(currentTrack.url);
-    audio.volume = 1;
+    audio.volume = instrumentalVolume;
     audio.onended = () => {
       setPreviewTrack(null);
       webPreviewAudioRef.current = null;
@@ -547,8 +591,27 @@ export default function RapearScreen() {
       }
     }
 
-    setHasCameraPermission(true);
-    return true;
+    const cameraModule = resolveCameraModule();
+    if (!cameraModule?.Camera) {
+      setHasCameraPermission(false);
+      Alert.alert('Cámara no disponible', 'Instala expo-camera para activar permisos y vista previa en iOS.');
+      return false;
+    }
+
+    const permission = await cameraModule.Camera.requestCameraPermissionsAsync();
+    const accepted = permission.status === 'granted';
+    setHasCameraPermission(accepted);
+    if (!accepted) {
+      Alert.alert(
+        'Permiso de cámara denegado',
+        'Si rechazaste el permiso en iPhone, debes activarlo desde Ajustes para volver a usar la cámara.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Abrir ajustes', onPress: () => Linking.openSettings() },
+        ]
+      );
+    }
+    return accepted;
   };
 
   const openSession = async () => {
@@ -742,6 +805,23 @@ export default function RapearScreen() {
     buttonBg: appColors.purple,
     closeBg: isDark ? '#222222' : '#E4E7EC',
   };
+  const CameraPreviewComponent = resolveCameraModule()?.CameraView ?? null;
+
+  const renderVolumeControl = (side: 'left' | 'right' = 'right') => (
+    <View style={[styles.volumeControlCard, side === 'left' ? styles.volumeControlLeft : styles.volumeControlRight]}>
+      <View
+        style={styles.volumeControlTrack}
+        onLayout={onVolumeTrackLayout}
+        onStartShouldSetResponder={() => true}
+        onMoveShouldSetResponder={() => true}
+        onResponderTerminationRequest={() => false}
+        onResponderGrant={(event) => updateVolumeFromPosition(event.nativeEvent.locationY)}
+        onResponderMove={(event) => updateVolumeFromPosition(event.nativeEvent.locationY)}>
+        <View style={[styles.volumeProgressFill, { height: `${instrumentalVolumePercent}%` }]} />
+        <View style={[styles.volumeThumb, { bottom: `${instrumentalVolumePercent}%` }]} />
+      </View>
+    </View>
+  );
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: themeColors.screen }]} edges={['top']}>
@@ -916,6 +996,7 @@ export default function RapearScreen() {
       <Modal visible={sessionVisible} animationType="slide" onRequestClose={stopSession}>
         <View style={styles.sessionFullscreen}>
           <View style={[styles.cameraPlaceholder, styles.sessionModalCard, selectedSessionType === 'train' ? styles.trainingBackground : styles.recordingBackground, { marginTop: insets.top + 8, marginBottom: insets.bottom + 8 }]}>
+            {renderVolumeControl(selectedSessionType === 'train' ? 'right' : 'left')}
             {selectedSessionType === 'train' ? (
               <>
                 <View style={[styles.trainingHeader, { paddingTop: insets.top + 8 }]}>
@@ -1001,6 +1082,14 @@ export default function RapearScreen() {
               </>
             ) : (
               <>
+                {hasCameraPermission && CameraPreviewComponent ? (
+                  <CameraPreviewComponent style={styles.cameraPreviewLayer} facing={cameraFacing} />
+                ) : (
+                  <View style={styles.cameraPermissionEmptyState}>
+                    <MaterialIcons name="videocam-off" size={28} color="#FFFFFFCC" />
+                    <Text style={styles.cameraPermissionEmptyStateText}>Activa permiso de cámara para previsualizarte antes de grabar.</Text>
+                  </View>
+                )}
                 <View style={[styles.trainingHeader, { paddingTop: insets.top + 8 }]}>
                   <View>
                     <Text style={styles.trainingAppName}>FreestyleZone</Text>
@@ -1022,28 +1111,19 @@ export default function RapearScreen() {
 
                   {!hasSessionStarted && countdown === null ? (
                     <View style={styles.preSessionActionsRow}>
+                      <View style={styles.recordingConfigCard}>
+                        <Text style={styles.recordingConfigTitle}>Configura la sesión antes de grabar</Text>
+                        <View style={styles.recordingConfigActions}>
+                          <Pressable style={styles.recordingConfigActionButton} onPress={requestCameraPermission}>
+                            <MaterialIcons name="videocam" size={17} color="#FFFFFF" />
+                            <Text style={styles.recordingConfigActionText}>{hasCameraPermission ? 'Permiso concedido' : 'Solicitar permiso'}</Text>
+                          </Pressable>
+                        </View>
+                      </View>
                       <Pressable style={styles.recordButton} onPress={onStartRecordingPress}>
                         <View style={styles.recordButtonInner} />
                       </Pressable>
-
-                      <Pressable
-                        style={[styles.bottomSwitchCameraButton, styles.bottomSwitchCameraButtonBeforeStart, hasCameraPermission === false && styles.bottomSwitchCameraDisabled]}
-                        accessibilityLabel={`alternar cámara ${cameraFacing === 'front' ? 'frontal' : 'trasera'}`}
-                        disabled={hasCameraPermission === false}
-                        onPress={() => setCameraFacing((previous) => (previous === 'front' ? 'back' : 'front'))}>
-                        <MaterialIcons name="sync-alt" size={20} color="#FFFFFF" />
-                      </Pressable>
                     </View>
-                  ) : null}
-
-                  {hasSessionStarted ? (
-                    <Pressable
-                      style={[styles.bottomSwitchCameraButton, hasCameraPermission === false && styles.bottomSwitchCameraDisabled]}
-                      accessibilityLabel={`alternar cámara ${cameraFacing === 'front' ? 'frontal' : 'trasera'}`}
-                      disabled={hasCameraPermission === false}
-                      onPress={() => setCameraFacing((previous) => (previous === 'front' ? 'back' : 'front'))}>
-                      <MaterialIcons name="sync-alt" size={22} color="#FFFFFF" />
-                    </Pressable>
                   ) : null}
                 </View>
               </>
@@ -1208,6 +1288,9 @@ const styles = StyleSheet.create({
   sessionFullscreen: { flex: 1, backgroundColor: '#000000' },
   cameraPlaceholder: { flex: 1, justifyContent: 'space-between' },
   sessionModalCard: { marginHorizontal: 12, borderRadius: 18, overflow: 'hidden' },
+  cameraPreviewLayer: { ...StyleSheet.absoluteFillObject, zIndex: 0 },
+  cameraPermissionEmptyState: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 26 },
+  cameraPermissionEmptyStateText: { color: '#FFFFFFCC', marginTop: 8, textAlign: 'center', fontSize: 13, fontWeight: '600' },
   recordingBackground: { backgroundColor: '#1A1A1A' },
   trainingBackground: { backgroundColor: '#14122A' },
   trainingHeader: { paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
@@ -1230,6 +1313,11 @@ const styles = StyleSheet.create({
   finishButton: { borderRadius: 999, backgroundColor: '#0000007A', paddingHorizontal: 16, paddingVertical: 10 },
   finishButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
   preSessionActionsRow: { width: '100%', alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  recordingConfigCard: { position: 'absolute', top: -176, width: '92%', borderRadius: 14, borderWidth: 1, borderColor: '#FFFFFF24', backgroundColor: '#050505AB', padding: 10, gap: 8 },
+  recordingConfigTitle: { color: '#FFFFFF', fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6 },
+  recordingConfigActions: { flexDirection: 'row', gap: 8 },
+  recordingConfigActionButton: { flex: 1, borderRadius: 10, borderWidth: 1, borderColor: '#FFFFFF20', backgroundColor: '#FFFFFF12', paddingVertical: 8, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  recordingConfigActionText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
   bottomSwitchCameraButton: { alignItems: 'center', gap: 2, padding: 8 },
   bottomSwitchCameraButtonBeforeStart: { position: 'absolute', left: '50%', marginLeft: 58 },
   bottomSwitchCameraDisabled: { opacity: 0.4 },
@@ -1237,6 +1325,12 @@ const styles = StyleSheet.create({
   recordButton: { width: 86, height: 86, borderRadius: 43, borderWidth: 4, borderColor: '#FFFFFFAA', justifyContent: 'center', alignItems: 'center' },
   recordButtonInner: { width: 58, height: 58, borderRadius: 29, backgroundColor: '#EF4444' },
   countdownNumber: { fontSize: 82, fontWeight: '800' },
+  volumeControlCard: { position: 'absolute', top: '38%', zIndex: 25, borderRadius: 999, borderWidth: 1, borderColor: '#FFFFFF24', backgroundColor: '#0000007A', paddingVertical: 8, paddingHorizontal: 7 },
+  volumeControlLeft: { left: 10 },
+  volumeControlRight: { right: 10 },
+  volumeControlTrack: { width: 18, height: 180, borderRadius: 999, backgroundColor: '#FFFFFF30', overflow: 'hidden', justifyContent: 'flex-end' },
+  volumeProgressFill: { width: '100%', backgroundColor: '#8B5CF6' },
+  volumeThumb: { position: 'absolute', left: -1, width: 20, height: 20, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#8B5CF6', marginBottom: -10 },
   baseModalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: '#000000A6', justifyContent: 'center', paddingHorizontal: 18, zIndex: 20 },
   baseModalCard: { borderRadius: 20, borderWidth: 1, borderColor: '#FFFFFF1F', backgroundColor: '#121022', padding: 14, gap: 12, maxHeight: '70%' },
   baseModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

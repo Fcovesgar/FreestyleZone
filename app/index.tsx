@@ -1,5 +1,5 @@
 import { Redirect } from 'expo-router';
 
 export default function AppEntry() {
-  return <Redirect href='/(tabs)/challenge' />;
+  return <Redirect href='/(tabs)' />;
 }
