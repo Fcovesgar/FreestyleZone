@@ -380,6 +380,8 @@ export default function RapearScreen() {
         return;
       }
 
+      setPreviewTrack(trackId);
+
       const avModule = resolveNativeAudioModule();
       if (!avModule?.Audio?.Sound) return;
 
@@ -405,11 +407,11 @@ export default function RapearScreen() {
           }
         });
         nativePreviewSoundRef.current = sound;
-        setPreviewTrack(trackId);
         if (previousPreviewSound && previousPreviewSound !== sound) {
           previousPreviewSound.unloadAsync?.().catch(() => undefined);
         }
       } catch {
+        setPreviewTrack(null);
         Alert.alert('No se pudo reproducir', 'No se pudo iniciar la reproducción de la base.');
       }
       return;
@@ -421,7 +423,9 @@ export default function RapearScreen() {
       return;
     }
 
-    await stopPreviewPlayback();
+    setPreviewTrack(trackId);
+
+    stopWebPreviewSound();
     if (requestId !== previewRequestRef.current) return;
     stopTrainingPlayback();
     if (requestId !== previewRequestRef.current) return;
@@ -440,8 +444,8 @@ export default function RapearScreen() {
         return;
       }
       webPreviewAudioRef.current = audio;
-      setPreviewTrack(trackId);
     } catch {
+      setPreviewTrack(null);
       Alert.alert('No se pudo reproducir', 'No se pudo iniciar la reproducción de la base.');
     }
   };
