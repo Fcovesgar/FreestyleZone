@@ -467,7 +467,7 @@ export default function RapearScreen() {
 
               return (
                 <View key={track.key} style={[styles.trackCard, { backgroundColor: selected ? '#6B46FF22' : themeColors.card, borderColor: selected ? '#6B46FF' : themeColors.optionBorder }]}>
-                  <Pressable onPress={() => setSelectedInstrumental(track.key)} style={styles.trackMainArea}>
+                  <Pressable onPress={() => setSelectedInstrumental(track.key)} style={styles.trackContentArea}>
                     <Text style={[styles.trackTitle, { color: themeColors.textPrimary }]}>{track.label}</Text>
                     <Text style={[styles.trackInfo, { color: themeColors.textSecondary }]}>{track.description}</Text>
                     <Text style={[styles.trackMeta, { color: themeColors.textSecondary }]}>{track.bpm}</Text>
@@ -804,7 +804,7 @@ const styles = StyleSheet.create({
 
   optionsColumn: { gap: 10 },
   trackCard: { borderWidth: 1, borderRadius: 14, padding: 12, flexDirection: 'row', justifyContent: 'space-between', gap: 12, alignItems: 'center' },
-  trackMainArea: { flex: 1, gap: 4 },
+  trackContentArea: { flex: 1, gap: 4 },
   trackTitle: { fontSize: 17, fontWeight: '700' },
   trackInfo: { fontSize: 13 },
   trackMeta: { fontSize: 12, fontWeight: '700', letterSpacing: 0.8 },
