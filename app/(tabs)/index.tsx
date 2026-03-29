@@ -266,7 +266,9 @@ export default function RapearScreen() {
 
     const shouldRestart = trainingRestartKey !== webRestartKeyAppliedRef.current;
 
-    if (shouldRestart || webTrainingAudioRef.current?.src !== currentTrack.url) {
+    const shouldLoadNewTrack = webTrainingTrackRef.current !== selectedTrack;
+
+    if (shouldRestart || shouldLoadNewTrack) {
       stopWebTrainingSound();
 
       const audio = new Audio(currentTrack.url);
