@@ -90,6 +90,7 @@ export default function RapearScreen() {
   const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null);
   const [baseSelectorVisible, setBaseSelectorVisible] = useState(false);
   const [isTrainingBeatPlaying, setIsTrainingBeatPlaying] = useState(true);
+  const [isRecordingBeatPlaying, setIsRecordingBeatPlaying] = useState(true);
   const [trainingRestartKey, setTrainingRestartKey] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [instrumentalVolume, setInstrumentalVolume] = useState(0.8);
@@ -309,7 +310,7 @@ export default function RapearScreen() {
   useEffect(() => {
     if (Platform.OS !== 'web') return;
 
-    const shouldPlayBeat = selectedSessionType === 'train' ? isTrainingBeatPlaying : hasSessionStarted;
+    const shouldPlayBeat = selectedSessionType === 'train' ? isTrainingBeatPlaying : isRecordingBeatPlaying || hasSessionStarted;
 
     if (!sessionVisible || !selectedTrack || !shouldPlayBeat) {
       if (webTrainingAudioRef.current) {
@@ -339,7 +340,7 @@ export default function RapearScreen() {
     webTrainingAudioRef.current.play().catch(() => {
       setIsTrainingBeatPlaying(false);
     });
-  }, [hasSessionStarted, instrumentalVolume, isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, stopWebTrainingSound, tracks, trainingRestartKey]);
+  }, [hasSessionStarted, instrumentalVolume, isRecordingBeatPlaying, isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, stopWebTrainingSound, tracks, trainingRestartKey]);
 
   useEffect(() => {
     if (Platform.OS === 'web') return;
@@ -347,7 +348,7 @@ export default function RapearScreen() {
     const playTrainingNative = async () => {
       const requestId = ++trainingRequestRef.current;
 
-      const shouldPlayBeat = selectedSessionType === 'train' ? isTrainingBeatPlaying : hasSessionStarted;
+      const shouldPlayBeat = selectedSessionType === 'train' ? isTrainingBeatPlaying : isRecordingBeatPlaying || hasSessionStarted;
 
       if (!sessionVisible || !selectedTrack || !shouldPlayBeat) {
         const currentTrainingSound = nativeTrainingSoundRef.current;
@@ -411,7 +412,7 @@ export default function RapearScreen() {
     };
 
     playTrainingNative();
-  }, [hasSessionStarted, instrumentalVolume, resolveNativeAudioModule, isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, stopNativeSound, stopTrainingPlayback, tracks, trainingRestartKey]);
+  }, [hasSessionStarted, instrumentalVolume, isRecordingBeatPlaying, resolveNativeAudioModule, isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, stopNativeSound, stopTrainingPlayback, tracks, trainingRestartKey]);
 
   useEffect(() => {
     return () => {
@@ -445,6 +446,8 @@ export default function RapearScreen() {
 
   const onSelectSessionType = (sessionType: SessionType) => {
     setSelectedSessionType(sessionType);
+    setIsRecordingBeatPlaying(sessionType === 'record');
+    setIsTrainingBeatPlaying(sessionType === 'train');
 
     if (sessionType === 'train') {
       setSelectedSessionTime('infinite');
@@ -623,7 +626,8 @@ export default function RapearScreen() {
     setIsUnlimitedSession(initialSessionSeconds === null);
     setRemainingSeconds(initialSessionSeconds);
     setHasSessionStarted(false);
-    setIsTrainingBeatPlaying(true);
+    setIsTrainingBeatPlaying(selectedSessionType === 'train');
+    setIsRecordingBeatPlaying(selectedSessionType === 'record');
 
     if (selectedSessionType === 'train') {
       startSessionTimer();
@@ -633,6 +637,7 @@ export default function RapearScreen() {
   const startSessionTimer = () => {
     if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current);
     setHasSessionStarted(true);
+    setIsRecordingBeatPlaying(true);
 
     sessionIntervalRef.current = setInterval(() => {
       setElapsedSeconds((previousElapsed) => previousElapsed + 1);
@@ -694,6 +699,7 @@ export default function RapearScreen() {
     setIsUnlimitedSession(initialSessionSeconds === null);
     setHasSessionStarted(false);
     setBaseSelectorVisible(false);
+    setIsRecordingBeatPlaying(false);
 
     const nextSummary: SessionSummary = {
       mode: selectedMode,
@@ -726,6 +732,7 @@ export default function RapearScreen() {
     setIsUnlimitedSession(initialSessionSeconds === null);
     setHasSessionStarted(false);
     setBaseSelectorVisible(false);
+    setIsRecordingBeatPlaying(false);
   };
 
   const displayTimer = isUnlimitedSession || remainingSeconds === null ? formatTime(elapsedSeconds) : formatTime(remainingSeconds);
@@ -810,15 +817,17 @@ export default function RapearScreen() {
   const renderVolumeControl = (side: 'left' | 'right' = 'right') => (
     <View style={[styles.volumeControlCard, side === 'left' ? styles.volumeControlLeft : styles.volumeControlRight]}>
       <View
-        style={styles.volumeControlTrack}
+        style={styles.volumeControlTouchArea}
         onLayout={onVolumeTrackLayout}
         onStartShouldSetResponder={() => true}
         onMoveShouldSetResponder={() => true}
         onResponderTerminationRequest={() => false}
         onResponderGrant={(event) => updateVolumeFromPosition(event.nativeEvent.locationY)}
         onResponderMove={(event) => updateVolumeFromPosition(event.nativeEvent.locationY)}>
-        <View style={[styles.volumeProgressFill, { height: `${instrumentalVolumePercent}%` }]} />
-        <View style={[styles.volumeThumb, { bottom: `${instrumentalVolumePercent}%` }]} />
+        <View style={styles.volumeControlTrack}>
+          <View style={[styles.volumeProgressFill, { height: `${instrumentalVolumePercent}%` }]} />
+          <View style={[styles.volumeThumb, { bottom: `${instrumentalVolumePercent}%` }]} />
+        </View>
       </View>
     </View>
   );
@@ -1015,10 +1024,7 @@ export default function RapearScreen() {
 
                 <View style={styles.trainingCenterClearSpace} />
 
-                {renderVolumeControl('right')}
-
                 <View style={[styles.trainingBottomArea, { paddingBottom: insets.bottom + 18 }]}>
-                  {renderVolumeControl()}
                   <Pressable style={styles.selectBeatButton} onPress={() => setBaseSelectorVisible(true)}>
                     <MaterialIcons name="library-music" size={18} color="#FFFFFF" />
                     <Text style={styles.selectBeatButtonText}>Seleccionar base</Text>
@@ -1110,7 +1116,6 @@ export default function RapearScreen() {
                 </View>
 
                 <View style={[styles.sessionBottomActions, { paddingBottom: insets.bottom + 26 }]}>
-                  {renderVolumeControl('left')}
                   {countdown !== null ? <Text style={[styles.countdownNumber, { color: getCountdownColor(countdown) }]}>{countdown}</Text> : null}
 
                   {!hasSessionStarted && countdown === null ? (
@@ -1121,6 +1126,12 @@ export default function RapearScreen() {
                           <Pressable style={styles.recordingConfigActionButton} onPress={requestCameraPermission}>
                             <MaterialIcons name="videocam" size={17} color="#FFFFFF" />
                             <Text style={styles.recordingConfigActionText}>{hasCameraPermission ? 'Permiso concedido' : 'Solicitar permiso'}</Text>
+                          </Pressable>
+                          <Pressable
+                            style={styles.recordingConfigActionButton}
+                            onPress={() => setIsRecordingBeatPlaying((previousState) => !previousState)}>
+                            <MaterialIcons name={isRecordingBeatPlaying ? 'pause-circle-filled' : 'play-circle-filled'} size={17} color="#FFFFFF" />
+                            <Text style={styles.recordingConfigActionText}>{isRecordingBeatPlaying ? 'Pausar base' : 'Reproducir base'}</Text>
                           </Pressable>
                         </View>
                       </View>
@@ -1332,9 +1343,10 @@ const styles = StyleSheet.create({
   volumeControlCard: { position: 'absolute', top: '38%', zIndex: 25, borderRadius: 999, borderWidth: 1, borderColor: '#FFFFFF24', backgroundColor: '#0000007A', paddingVertical: 8, paddingHorizontal: 7 },
   volumeControlLeft: { left: 10 },
   volumeControlRight: { right: 10 },
-  volumeControlTrack: { width: 18, height: 180, borderRadius: 999, backgroundColor: '#FFFFFF30', overflow: 'hidden', justifyContent: 'flex-end' },
+  volumeControlTouchArea: { width: 42, height: 180, alignItems: 'center', justifyContent: 'center' },
+  volumeControlTrack: { width: 24, height: 180, borderRadius: 999, backgroundColor: '#FFFFFF30', overflow: 'hidden', justifyContent: 'flex-end' },
   volumeProgressFill: { width: '100%', backgroundColor: '#8B5CF6' },
-  volumeThumb: { position: 'absolute', left: -1, width: 20, height: 20, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#8B5CF6', marginBottom: -10 },
+  volumeThumb: { position: 'absolute', left: 0, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#8B5CF6', marginBottom: -12 },
   baseModalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: '#000000A6', justifyContent: 'center', paddingHorizontal: 18, zIndex: 20 },
   baseModalCard: { borderRadius: 20, borderWidth: 1, borderColor: '#FFFFFF1F', backgroundColor: '#121022', padding: 14, gap: 12, maxHeight: '70%' },
   baseModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
