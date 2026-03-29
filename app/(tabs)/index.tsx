@@ -178,13 +178,6 @@ export default function RapearScreen() {
   }, []);
 
   useEffect(() => {
-    if (!isUnlimitedSession && remainingSeconds === 0) {
-      finishSession();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [remainingSeconds, isUnlimitedSession]);
-
-  useEffect(() => {
     loadModes();
   }, [loadModes]);
 
@@ -283,7 +276,9 @@ export default function RapearScreen() {
   useEffect(() => {
     if (Platform.OS !== 'web') return;
 
-    if (!sessionVisible || selectedSessionType !== 'train' || !selectedTrack || !isTrainingBeatPlaying) {
+    const shouldPlayBeat = selectedSessionType === 'train' ? isTrainingBeatPlaying : hasSessionStarted;
+
+    if (!sessionVisible || !selectedTrack || !shouldPlayBeat) {
       if (webTrainingAudioRef.current) {
         webTrainingAudioRef.current.pause();
       }
@@ -311,7 +306,7 @@ export default function RapearScreen() {
     webTrainingAudioRef.current.play().catch(() => {
       setIsTrainingBeatPlaying(false);
     });
-  }, [isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, stopWebTrainingSound, tracks, trainingRestartKey]);
+  }, [hasSessionStarted, isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, stopWebTrainingSound, tracks, trainingRestartKey]);
 
   useEffect(() => {
     if (Platform.OS === 'web') return;
@@ -319,7 +314,9 @@ export default function RapearScreen() {
     const playTrainingNative = async () => {
       const requestId = ++trainingRequestRef.current;
 
-      if (!sessionVisible || selectedSessionType !== 'train' || !selectedTrack || !isTrainingBeatPlaying) {
+      const shouldPlayBeat = selectedSessionType === 'train' ? isTrainingBeatPlaying : hasSessionStarted;
+
+      if (!sessionVisible || !selectedTrack || !shouldPlayBeat) {
         const currentTrainingSound = nativeTrainingSoundRef.current;
         if (currentTrainingSound) {
           try {
@@ -381,7 +378,7 @@ export default function RapearScreen() {
     };
 
     playTrainingNative();
-  }, [resolveNativeAudioModule, isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, stopNativeSound, stopTrainingPlayback, tracks, trainingRestartKey]);
+  }, [hasSessionStarted, resolveNativeAudioModule, isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, stopNativeSound, stopTrainingPlayback, tracks, trainingRestartKey]);
 
   useEffect(() => {
     return () => {
@@ -557,13 +554,6 @@ export default function RapearScreen() {
   const openSession = async () => {
     if (!isReadyToStart) return;
 
-    if (selectedSessionType === 'record') {
-      const granted = await requestCameraPermission();
-      if (!granted) {
-        return;
-      }
-    }
-
     setSessionVisible(true);
     setCountdown(null);
     setElapsedSeconds(0);
@@ -590,7 +580,8 @@ export default function RapearScreen() {
         }
 
         if (previousRemaining <= 1) {
-          return 0;
+          setIsUnlimitedSession(true);
+          return null;
         }
 
         return previousRemaining - 1;
@@ -598,7 +589,13 @@ export default function RapearScreen() {
     }, 1000);
   };
 
-  const onStartRecordingPress = () => {
+  const onStartRecordingPress = async () => {
+    const granted = await requestCameraPermission();
+    if (!granted) {
+      Alert.alert('Permiso requerido', 'Necesitas aceptar la cámara para iniciar la cuenta atrás de grabación.');
+      return;
+    }
+
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
 
     setCountdown(PRE_RECORD_COUNTDOWN_SECONDS);
@@ -668,12 +665,6 @@ export default function RapearScreen() {
     setBaseSelectorVisible(false);
   };
 
-  const extendSession = () => {
-    setIsUnlimitedSession(true);
-    setRemainingSeconds(null);
-  };
-
-  const shouldShowExtendAction = !isUnlimitedSession && remainingSeconds !== null && remainingSeconds <= 10;
   const displayTimer = isUnlimitedSession || remainingSeconds === null ? formatTime(elapsedSeconds) : formatTime(remainingSeconds);
   const timerColor = getSessionTimerColor(remainingSeconds, initialSessionSeconds, isUnlimitedSession);
 
@@ -1020,12 +1011,6 @@ export default function RapearScreen() {
                     </View>
                   </View>
                   <View style={styles.sessionHeaderActions}>
-                    {shouldShowExtendAction ? (
-                      <Pressable style={styles.extendButton} onPress={extendSession}>
-                        <MaterialIcons name="add-circle" size={14} color="#FFFFFF" />
-                        <Text style={styles.extendButtonText}>Ampliar</Text>
-                      </Pressable>
-                    ) : null}
                     <Pressable style={styles.finishButton} onPress={finishSession}>
                       <Text style={styles.finishButtonText}>Finalizar</Text>
                     </Pressable>
@@ -1244,8 +1229,6 @@ const styles = StyleSheet.create({
   timer: { fontSize: 20, fontWeight: '800', color: '#FFFFFF' },
   finishButton: { borderRadius: 999, backgroundColor: '#0000007A', paddingHorizontal: 16, paddingVertical: 10 },
   finishButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
-  extendButton: { borderRadius: 999, borderWidth: 1, borderColor: '#FFFFFF66', backgroundColor: '#00000066', paddingHorizontal: 10, paddingVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  extendButtonText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
   preSessionActionsRow: { width: '100%', alignItems: 'center', justifyContent: 'center', position: 'relative' },
   bottomSwitchCameraButton: { alignItems: 'center', gap: 2, padding: 8 },
   bottomSwitchCameraButtonBeforeStart: { position: 'absolute', left: '50%', marginLeft: 58 },
