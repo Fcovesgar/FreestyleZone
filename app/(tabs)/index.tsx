@@ -665,12 +665,6 @@ export default function RapearScreen() {
     setBaseSelectorVisible(false);
   };
 
-  const extendSession = () => {
-    setIsUnlimitedSession(true);
-    setRemainingSeconds(null);
-  };
-
-  const shouldShowExtendAction = !isUnlimitedSession && remainingSeconds !== null && remainingSeconds <= 10;
   const displayTimer = isUnlimitedSession || remainingSeconds === null ? formatTime(elapsedSeconds) : formatTime(remainingSeconds);
   const timerColor = getSessionTimerColor(remainingSeconds, initialSessionSeconds, isUnlimitedSession);
 
@@ -1017,12 +1011,6 @@ export default function RapearScreen() {
                     </View>
                   </View>
                   <View style={styles.sessionHeaderActions}>
-                    {shouldShowExtendAction ? (
-                      <Pressable style={styles.extendButton} onPress={extendSession}>
-                        <MaterialIcons name="add-circle" size={14} color="#FFFFFF" />
-                        <Text style={styles.extendButtonText}>Ampliar</Text>
-                      </Pressable>
-                    ) : null}
                     <Pressable style={styles.finishButton} onPress={finishSession}>
                       <Text style={styles.finishButtonText}>Finalizar</Text>
                     </Pressable>
@@ -1241,8 +1229,6 @@ const styles = StyleSheet.create({
   timer: { fontSize: 20, fontWeight: '800', color: '#FFFFFF' },
   finishButton: { borderRadius: 999, backgroundColor: '#0000007A', paddingHorizontal: 16, paddingVertical: 10 },
   finishButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
-  extendButton: { borderRadius: 999, borderWidth: 1, borderColor: '#FFFFFF66', backgroundColor: '#00000066', paddingHorizontal: 10, paddingVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  extendButtonText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
   preSessionActionsRow: { width: '100%', alignItems: 'center', justifyContent: 'center', position: 'relative' },
   bottomSwitchCameraButton: { alignItems: 'center', gap: 2, padding: 8 },
   bottomSwitchCameraButtonBeforeStart: { position: 'absolute', left: '50%', marginLeft: 58 },
