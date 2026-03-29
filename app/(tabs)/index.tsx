@@ -96,6 +96,7 @@ export default function RapearScreen() {
   const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null);
   const [baseSelectorVisible, setBaseSelectorVisible] = useState(false);
   const [isTrainingBeatPlaying, setIsTrainingBeatPlaying] = useState(true);
+  const [trainingRestartKey, setTrainingRestartKey] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
   const tracks: TrackItem[] = useMemo(
@@ -207,26 +208,44 @@ export default function RapearScreen() {
     }
   }, []);
 
+  const stopWebPreviewSound = useCallback(() => {
+    if (Platform.OS !== 'web' || !webPreviewAudioRef.current) return;
+    webPreviewAudioRef.current.pause();
+    webPreviewAudioRef.current.currentTime = 0;
+    webPreviewAudioRef.current = null;
+  }, []);
+
+  const stopWebTrainingSound = useCallback(() => {
+    if (Platform.OS !== 'web' || !webTrainingAudioRef.current) return;
+    webTrainingAudioRef.current.pause();
+    webTrainingAudioRef.current.currentTime = 0;
+    webTrainingAudioRef.current = null;
+  }, []);
+
+  const stopPreviewPlayback = useCallback(async () => {
+    setPreviewTrack(null);
+    stopWebPreviewSound();
+    await stopNativeSound(nativePreviewSoundRef);
+  }, [stopNativeSound, stopWebPreviewSound]);
+
+  const stopTrainingPlayback = useCallback(async () => {
+    stopWebTrainingSound();
+    await stopNativeSound(nativeTrainingSoundRef);
+  }, [stopNativeSound, stopWebTrainingSound]);
+
   useEffect(() => {
     if (setupStep !== 'track') {
       setPreviewTrack(null);
-      if (Platform.OS === 'web' && webPreviewAudioRef.current) {
-        webPreviewAudioRef.current.pause();
-        webPreviewAudioRef.current.currentTime = 0;
-        webPreviewAudioRef.current = null;
-      }
-      stopNativeSound(nativePreviewSoundRef);
+      stopPreviewPlayback();
       setIsTrainingBeatPlaying(false);
     }
-  }, [setupStep, stopNativeSound]);
+  }, [setupStep, stopPreviewPlayback]);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
 
     if (!sessionVisible || selectedSessionType !== 'train' || !selectedTrack || !isTrainingBeatPlaying) {
-      if (webTrainingAudioRef.current) {
-        webTrainingAudioRef.current.pause();
-      }
+      stopWebTrainingSound();
       return;
     }
 
@@ -234,9 +253,7 @@ export default function RapearScreen() {
     if (!currentTrack?.url) return;
 
     if (webTrainingAudioRef.current?.src !== currentTrack.url) {
-      if (webTrainingAudioRef.current) {
-        webTrainingAudioRef.current.pause();
-      }
+      stopWebTrainingSound();
 
       const audio = new Audio(currentTrack.url);
       audio.loop = true;
@@ -247,14 +264,14 @@ export default function RapearScreen() {
     webTrainingAudioRef.current.play().catch(() => {
       setIsTrainingBeatPlaying(false);
     });
-  }, [isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, tracks]);
+  }, [isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, stopWebTrainingSound, tracks, trainingRestartKey]);
 
   useEffect(() => {
     if (Platform.OS === 'web') return;
 
     const playTrainingNative = async () => {
       if (!sessionVisible || selectedSessionType !== 'train' || !selectedTrack || !isTrainingBeatPlaying) {
-        await stopNativeSound(nativeTrainingSoundRef);
+        await stopTrainingPlayback();
         return;
       }
 
@@ -264,7 +281,7 @@ export default function RapearScreen() {
       const avModule = resolveNativeAudioModule();
       if (!avModule?.Audio?.Sound) return;
 
-      await stopNativeSound(nativeTrainingSoundRef);
+      await stopTrainingPlayback();
 
       try {
         const sound = new avModule.Audio.Sound();
@@ -277,7 +294,7 @@ export default function RapearScreen() {
     };
 
     playTrainingNative();
-  }, [resolveNativeAudioModule, isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, stopNativeSound, tracks]);
+  }, [resolveNativeAudioModule, isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, stopTrainingPlayback, tracks, trainingRestartKey]);
 
   useEffect(() => {
     return () => {
@@ -293,10 +310,10 @@ export default function RapearScreen() {
         }
       }
 
-      stopNativeSound(nativePreviewSoundRef);
-      stopNativeSound(nativeTrainingSoundRef);
+      stopPreviewPlayback();
+      stopTrainingPlayback();
     };
-  }, [stopNativeSound]);
+  }, [stopPreviewPlayback, stopTrainingPlayback]);
 
   const onSelectSessionType = (sessionType: SessionType) => {
     setSelectedSessionType(sessionType);
@@ -345,14 +362,15 @@ export default function RapearScreen() {
       const isSameTrack = previewTrack === trackId;
       setPreviewTrack((prev) => (prev === trackId ? null : trackId));
       if (isSameTrack) {
-        await stopNativeSound(nativePreviewSoundRef);
+        await stopPreviewPlayback();
         return;
       }
 
       const avModule = resolveNativeAudioModule();
       if (!avModule?.Audio?.Sound) return;
 
-      await stopNativeSound(nativePreviewSoundRef);
+      await stopPreviewPlayback();
+      await stopTrainingPlayback();
 
       try {
         const sound = new avModule.Audio.Sound();
@@ -372,18 +390,12 @@ export default function RapearScreen() {
 
     const isSameTrackPlaying = previewTrack === trackId && webPreviewAudioRef.current;
     if (isSameTrackPlaying) {
-      webPreviewAudioRef.current.pause();
-      webPreviewAudioRef.current.currentTime = 0;
-      webPreviewAudioRef.current = null;
-      setPreviewTrack(null);
+      await stopPreviewPlayback();
       return;
     }
 
-    if (webPreviewAudioRef.current) {
-      webPreviewAudioRef.current.pause();
-      webPreviewAudioRef.current.currentTime = 0;
-      webPreviewAudioRef.current = null;
-    }
+    await stopPreviewPlayback();
+    await stopTrainingPlayback();
 
     const audio = new Audio(currentTrack.url);
     audio.volume = 1;
@@ -506,11 +518,7 @@ export default function RapearScreen() {
     if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current);
 
     setSessionVisible(false);
-    if (Platform.OS === 'web' && webTrainingAudioRef.current) {
-      webTrainingAudioRef.current.pause();
-      webTrainingAudioRef.current.currentTime = 0;
-    }
-    stopNativeSound(nativeTrainingSoundRef);
+    stopTrainingPlayback();
     setCountdown(null);
     setRemainingSeconds(initialSessionSeconds);
     setIsUnlimitedSession(initialSessionSeconds === null);
@@ -541,11 +549,7 @@ export default function RapearScreen() {
     if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current);
 
     setSessionVisible(false);
-    if (Platform.OS === 'web' && webTrainingAudioRef.current) {
-      webTrainingAudioRef.current.pause();
-      webTrainingAudioRef.current.currentTime = 0;
-    }
-    stopNativeSound(nativeTrainingSoundRef);
+    stopTrainingPlayback();
     setCountdown(null);
     setRemainingSeconds(initialSessionSeconds);
     setElapsedSeconds(0);
@@ -578,11 +582,11 @@ export default function RapearScreen() {
   };
 
   const onSelectTrainingTrack = (track: InstrumentalId) => {
+    stopPreviewPlayback();
     setSelectedTrack(track);
     setIsTrainingBeatPlaying(false);
-    setTimeout(() => {
-      setIsTrainingBeatPlaying(true);
-    }, 0);
+    setTrainingRestartKey((previous) => previous + 1);
+    setIsTrainingBeatPlaying(true);
   };
 
   const onSeekTrainingTrack = async (secondsDelta: number) => {
