@@ -1015,7 +1015,10 @@ export default function RapearScreen() {
 
                 <View style={styles.trainingCenterClearSpace} />
 
+                {renderVolumeControl('right')}
+
                 <View style={[styles.trainingBottomArea, { paddingBottom: insets.bottom + 18 }]}>
+                  {renderVolumeControl()}
                   <Pressable style={styles.selectBeatButton} onPress={() => setBaseSelectorVisible(true)}>
                     <MaterialIcons name="library-music" size={18} color="#FFFFFF" />
                     <Text style={styles.selectBeatButtonText}>Seleccionar base</Text>
@@ -1107,6 +1110,7 @@ export default function RapearScreen() {
                 </View>
 
                 <View style={[styles.sessionBottomActions, { paddingBottom: insets.bottom + 26 }]}>
+                  {renderVolumeControl('left')}
                   {countdown !== null ? <Text style={[styles.countdownNumber, { color: getCountdownColor(countdown) }]}>{countdown}</Text> : null}
 
                   {!hasSessionStarted && countdown === null ? (
