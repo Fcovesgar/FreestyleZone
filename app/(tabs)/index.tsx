@@ -261,6 +261,8 @@ export default function RapearScreen() {
   };
 
   const onToggleTrackPreview = async (trackId: InstrumentalId) => {
+    setSelectedTrack(trackId);
+
     if (Platform.OS !== 'web') {
       setPreviewTrack((prev) => (prev === trackId ? null : trackId));
       return;
