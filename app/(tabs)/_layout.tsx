@@ -13,7 +13,7 @@ export default function TabLayout() {
 
   return (
     <Tabs
-      initialRouteName="challenge"
+      initialRouteName="index"
       screenOptions={{
         headerShown: false,
         animation: 'none',

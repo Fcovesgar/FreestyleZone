@@ -80,7 +80,7 @@ export default function RapearScreen() {
   const [previewTrack, setPreviewTrack] = useState<InstrumentalId | null>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [sessionVisible, setSessionVisible] = useState(false);
-  const [cameraFacing, setCameraFacing] = useState<CameraFacing>('front');
+  const cameraFacing: CameraFacing = 'front';
   const [countdown, setCountdown] = useState<number | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -996,6 +996,7 @@ export default function RapearScreen() {
       <Modal visible={sessionVisible} animationType="slide" onRequestClose={stopSession}>
         <View style={styles.sessionFullscreen}>
           <View style={[styles.cameraPlaceholder, styles.sessionModalCard, selectedSessionType === 'train' ? styles.trainingBackground : styles.recordingBackground, { marginTop: insets.top + 8, marginBottom: insets.bottom + 8 }]}>
+            {renderVolumeControl(selectedSessionType === 'train' ? 'right' : 'left')}
             {selectedSessionType === 'train' ? (
               <>
                 <View style={[styles.trainingHeader, { paddingTop: insets.top + 8 }]}>
@@ -1121,37 +1122,12 @@ export default function RapearScreen() {
                             <MaterialIcons name="videocam" size={17} color="#FFFFFF" />
                             <Text style={styles.recordingConfigActionText}>{hasCameraPermission ? 'Permiso concedido' : 'Solicitar permiso'}</Text>
                           </Pressable>
-                          <Pressable
-                            style={[styles.recordingConfigActionButton, hasCameraPermission === false && styles.bottomSwitchCameraDisabled]}
-                            disabled={hasCameraPermission === false}
-                            onPress={() => setCameraFacing((previous) => (previous === 'front' ? 'back' : 'front'))}>
-                            <MaterialIcons name="flip-camera-ios" size={17} color="#FFFFFF" />
-                            <Text style={styles.recordingConfigActionText}>{cameraFacing === 'front' ? 'Cámara frontal' : 'Cámara trasera'}</Text>
-                          </Pressable>
                         </View>
                       </View>
                       <Pressable style={styles.recordButton} onPress={onStartRecordingPress}>
                         <View style={styles.recordButtonInner} />
                       </Pressable>
-
-                      <Pressable
-                        style={[styles.bottomSwitchCameraButton, styles.bottomSwitchCameraButtonBeforeStart, hasCameraPermission === false && styles.bottomSwitchCameraDisabled]}
-                        accessibilityLabel={`alternar cámara ${cameraFacing === 'front' ? 'frontal' : 'trasera'}`}
-                        disabled={hasCameraPermission === false}
-                        onPress={() => setCameraFacing((previous) => (previous === 'front' ? 'back' : 'front'))}>
-                        <MaterialIcons name="sync-alt" size={20} color="#FFFFFF" />
-                      </Pressable>
                     </View>
-                  ) : null}
-
-                  {hasSessionStarted ? (
-                    <Pressable
-                      style={[styles.bottomSwitchCameraButton, hasCameraPermission === false && styles.bottomSwitchCameraDisabled]}
-                      accessibilityLabel={`alternar cámara ${cameraFacing === 'front' ? 'frontal' : 'trasera'}`}
-                      disabled={hasCameraPermission === false}
-                      onPress={() => setCameraFacing((previous) => (previous === 'front' ? 'back' : 'front'))}>
-                      <MaterialIcons name="sync-alt" size={22} color="#FFFFFF" />
-                    </Pressable>
                   ) : null}
                 </View>
               </>
