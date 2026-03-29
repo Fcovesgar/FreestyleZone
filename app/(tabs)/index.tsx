@@ -178,18 +178,6 @@ export default function RapearScreen() {
     }
   }, [tracks, selectedTrack]);
 
-  const stopNativeSound = useCallback(async (ref: React.MutableRefObject<any>) => {
-    if (Platform.OS === 'web' || !ref.current) return;
-    try {
-      await ref.current.stopAsync?.();
-      await ref.current.unloadAsync?.();
-    } catch {
-      // ignore cleanup errors
-    } finally {
-      ref.current = null;
-    }
-  }, []);
-
   useEffect(() => {
     if (setupStep !== 'track') {
       setPreviewTrack(null);
@@ -220,7 +208,18 @@ export default function RapearScreen() {
     }
   }, []);
 
-  
+  const stopNativeSound = useCallback(async (ref: React.MutableRefObject<any>) => {
+    if (Platform.OS === 'web' || !ref.current) return;
+    try {
+      await ref.current.stopAsync?.();
+      await ref.current.unloadAsync?.();
+    } catch {
+      // ignore cleanup errors
+    } finally {
+      ref.current = null;
+    }
+  }, []);
+
   useEffect(() => {
     if (Platform.OS !== 'web') return;
 
