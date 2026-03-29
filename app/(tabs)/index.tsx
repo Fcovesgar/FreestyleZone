@@ -80,7 +80,7 @@ export default function RapearScreen() {
   const [previewTrack, setPreviewTrack] = useState<InstrumentalId | null>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [sessionVisible, setSessionVisible] = useState(false);
-  const cameraFacing: CameraFacing = 'front';
+  const [cameraFacing, setCameraFacing] = useState<CameraFacing>('front');
   const [countdown, setCountdown] = useState<number | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -657,6 +657,15 @@ export default function RapearScreen() {
     }, 1000);
   };
 
+  const onToggleCameraFacing = () => {
+    if (!hasCameraPermission) {
+      requestCameraPermission();
+      return;
+    }
+
+    setCameraFacing((previousFacing) => (previousFacing === 'front' ? 'back' : 'front'));
+  };
+
   const onStartRecordingPress = async () => {
     const granted = await requestCameraPermission();
     if (!granted) {
@@ -1003,7 +1012,7 @@ export default function RapearScreen() {
       <Modal visible={sessionVisible} animationType="slide" onRequestClose={stopSession}>
         <View style={styles.sessionFullscreen}>
           <View style={[styles.cameraPlaceholder, styles.sessionModalCard, selectedSessionType === 'train' ? styles.trainingBackground : styles.recordingBackground, { marginTop: insets.top + 8, marginBottom: insets.bottom + 8 }]}>
-            {renderVolumeControl(selectedSessionType === 'train' ? 'right' : 'left')}
+            {(selectedSessionType === 'train' || !hasSessionStarted) ? renderVolumeControl(selectedSessionType === 'train' ? 'right' : 'left') : null}
             {selectedSessionType === 'train' ? (
               <>
                 <View style={[styles.trainingHeader, { paddingTop: insets.top + 8 }]}>
@@ -1118,24 +1127,34 @@ export default function RapearScreen() {
 
                   {!hasSessionStarted && countdown === null ? (
                     <View style={styles.preSessionActionsRow}>
-                      <View style={styles.recordingConfigCard}>
-                        <Text style={styles.recordingConfigTitle}>Configura la sesión antes de grabar</Text>
-                        <View style={styles.recordingConfigActions}>
-                          <Pressable style={styles.recordingConfigActionButton} onPress={requestCameraPermission}>
-                            <MaterialIcons name="videocam" size={17} color="#FFFFFF" />
-                            <Text style={styles.recordingConfigActionText}>{hasCameraPermission ? 'Permiso concedido' : 'Solicitar permiso'}</Text>
-                          </Pressable>
-                          <Pressable
-                            style={styles.recordingConfigActionButton}
-                            onPress={() => setIsRecordingBeatPlaying((previousState) => !previousState)}>
-                            <MaterialIcons name={isRecordingBeatPlaying ? 'pause-circle-filled' : 'play-circle-filled'} size={17} color="#FFFFFF" />
-                            <Text style={styles.recordingConfigActionText}>{isRecordingBeatPlaying ? 'Pausar base' : 'Reproducir base'}</Text>
-                          </Pressable>
+                      {!hasCameraPermission ? (
+                        <View style={styles.recordingConfigCard}>
+                          <Text style={styles.recordingConfigTitle}>Activa cámara para grabar</Text>
+                          <View style={styles.recordingConfigActions}>
+                            <Pressable style={styles.recordingConfigActionButton} onPress={requestCameraPermission}>
+                              <MaterialIcons name="videocam" size={17} color="#FFFFFF" />
+                              <Text style={styles.recordingConfigActionText}>Solicitar permiso</Text>
+                            </Pressable>
+                          </View>
                         </View>
+                      ) : null}
+
+                      <View style={styles.recordPreControlsRow}>
+                        <Pressable style={styles.preRecordSideButton} onPress={() => setIsRecordingBeatPlaying((previousState) => !previousState)}>
+                          <MaterialIcons name={isRecordingBeatPlaying ? 'pause' : 'play-arrow'} size={24} color="#FFFFFF" />
+                        </Pressable>
+
+                        <Pressable style={styles.recordButton} onPress={onStartRecordingPress}>
+                          <View style={styles.recordButtonInner} />
+                        </Pressable>
+
+                        <Pressable
+                          style={[styles.preRecordSideButton, !hasCameraPermission && styles.bottomSwitchCameraDisabled]}
+                          onPress={onToggleCameraFacing}
+                          disabled={!hasCameraPermission}>
+                          <MaterialIcons name="flip-camera-ios" size={22} color="#FFFFFF" />
+                        </Pressable>
                       </View>
-                      <Pressable style={styles.recordButton} onPress={onStartRecordingPress}>
-                        <View style={styles.recordButtonInner} />
-                      </Pressable>
                     </View>
                   ) : null}
                 </View>
@@ -1325,12 +1344,14 @@ const styles = StyleSheet.create({
   timer: { fontSize: 20, fontWeight: '800', color: '#FFFFFF' },
   finishButton: { borderRadius: 999, backgroundColor: '#0000007A', paddingHorizontal: 16, paddingVertical: 10 },
   finishButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
-  preSessionActionsRow: { width: '100%', alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  preSessionActionsRow: { width: '100%', alignItems: 'center', justifyContent: 'center', position: 'relative', gap: 10 },
   recordingConfigCard: { position: 'absolute', top: -176, width: '92%', borderRadius: 14, borderWidth: 1, borderColor: '#FFFFFF24', backgroundColor: '#050505AB', padding: 10, gap: 8 },
   recordingConfigTitle: { color: '#FFFFFF', fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6 },
   recordingConfigActions: { flexDirection: 'row', gap: 8 },
   recordingConfigActionButton: { flex: 1, borderRadius: 10, borderWidth: 1, borderColor: '#FFFFFF20', backgroundColor: '#FFFFFF12', paddingVertical: 8, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   recordingConfigActionText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
+  recordPreControlsRow: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 52 },
+  preRecordSideButton: { width: 54, height: 54, borderRadius: 27, borderWidth: 1, borderColor: '#FFFFFF3A', backgroundColor: '#0000007A', alignItems: 'center', justifyContent: 'center' },
   bottomSwitchCameraButton: { alignItems: 'center', gap: 2, padding: 8 },
   bottomSwitchCameraButtonBeforeStart: { position: 'absolute', left: '50%', marginLeft: 58 },
   bottomSwitchCameraDisabled: { opacity: 0.4 },
