@@ -134,8 +134,12 @@ export default function RapearScreen() {
   const sessionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const webPreviewAudioRef = useRef<any>(null);
   const webTrainingAudioRef = useRef<any>(null);
+  const webTrainingTrackRef = useRef<InstrumentalId | null>(null);
+  const webRestartKeyAppliedRef = useRef(0);
   const nativePreviewSoundRef = useRef<any>(null);
   const nativeTrainingSoundRef = useRef<any>(null);
+  const nativeTrainingTrackRef = useRef<InstrumentalId | null>(null);
+  const nativeRestartKeyAppliedRef = useRef(0);
   const nativeAudioUnavailableRef = useRef(false);
   const previewRequestRef = useRef(0);
   const trainingRequestRef = useRef(0);
@@ -222,7 +226,9 @@ export default function RapearScreen() {
     webTrainingAudioRef.current.pause();
     webTrainingAudioRef.current.currentTime = 0;
     webTrainingAudioRef.current = null;
-  }, []);
+    webTrainingTrackRef.current = null;
+    webRestartKeyAppliedRef.current = trainingRestartKey;
+  }, [trainingRestartKey]);
 
   const stopPreviewPlayback = useCallback(async () => {
     setPreviewTrack(null);
@@ -233,7 +239,9 @@ export default function RapearScreen() {
   const stopTrainingPlayback = useCallback(async () => {
     stopWebTrainingSound();
     await stopNativeSound(nativeTrainingSoundRef);
-  }, [stopNativeSound, stopWebTrainingSound]);
+    nativeTrainingTrackRef.current = null;
+    nativeRestartKeyAppliedRef.current = trainingRestartKey;
+  }, [stopNativeSound, stopWebTrainingSound, trainingRestartKey]);
 
   useEffect(() => {
     if (setupStep !== 'track') {
@@ -247,20 +255,26 @@ export default function RapearScreen() {
     if (Platform.OS !== 'web') return;
 
     if (!sessionVisible || selectedSessionType !== 'train' || !selectedTrack || !isTrainingBeatPlaying) {
-      stopWebTrainingSound();
+      if (webTrainingAudioRef.current) {
+        webTrainingAudioRef.current.pause();
+      }
       return;
     }
 
     const currentTrack = tracks.find((track) => track.key === selectedTrack);
     if (!currentTrack?.url) return;
 
-    if (webTrainingAudioRef.current?.src !== currentTrack.url) {
+    const shouldRestart = trainingRestartKey !== webRestartKeyAppliedRef.current;
+
+    if (shouldRestart || webTrainingAudioRef.current?.src !== currentTrack.url) {
       stopWebTrainingSound();
 
       const audio = new Audio(currentTrack.url);
       audio.loop = true;
       audio.volume = 1;
       webTrainingAudioRef.current = audio;
+      webTrainingTrackRef.current = selectedTrack;
+      webRestartKeyAppliedRef.current = trainingRestartKey;
     }
 
     webTrainingAudioRef.current.play().catch(() => {
@@ -275,7 +289,9 @@ export default function RapearScreen() {
       const requestId = ++trainingRequestRef.current;
 
       if (!sessionVisible || selectedSessionType !== 'train' || !selectedTrack || !isTrainingBeatPlaying) {
-        await stopTrainingPlayback();
+        if (nativeTrainingSoundRef.current) {
+          await nativeTrainingSoundRef.current.pauseAsync?.();
+        }
         return;
       }
 
@@ -284,6 +300,22 @@ export default function RapearScreen() {
 
       const avModule = resolveNativeAudioModule();
       if (!avModule?.Audio?.Sound) return;
+
+      const shouldRestart = trainingRestartKey !== nativeRestartKeyAppliedRef.current;
+
+      const canResumeExisting =
+        nativeTrainingSoundRef.current &&
+        nativeTrainingTrackRef.current === selectedTrack &&
+        !shouldRestart;
+
+      if (canResumeExisting) {
+        try {
+          await nativeTrainingSoundRef.current.playAsync?.();
+        } catch {
+          setIsTrainingBeatPlaying(false);
+        }
+        return;
+      }
 
       const previousTrainingSound = nativeTrainingSoundRef.current;
       if (previousTrainingSound) {
@@ -298,6 +330,8 @@ export default function RapearScreen() {
           return;
         }
         nativeTrainingSoundRef.current = sound;
+        nativeTrainingTrackRef.current = selectedTrack;
+        nativeRestartKeyAppliedRef.current = trainingRestartKey;
         if (previousTrainingSound && previousTrainingSound !== sound) {
           previousTrainingSound.unloadAsync?.().catch(() => undefined);
         }
@@ -885,8 +919,7 @@ export default function RapearScreen() {
                         style={styles.trainingControlButton}
                         onPress={() => {
                           setIsTrainingBeatPlaying((previous) => {
-                            const nextState = !previous;
-                            return nextState;
+                            return !previous;
                           });
                         }}>
                         <MaterialIcons name={isTrainingBeatPlaying ? 'pause' : 'play-arrow'} size={22} color="#FFFFFF" />
