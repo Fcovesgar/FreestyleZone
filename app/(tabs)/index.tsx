@@ -1215,6 +1215,12 @@ export default function RapearScreen() {
                       </View>
                     </View>
                   ) : null}
+
+                  {hasSessionStarted ? (
+                    <Pressable style={styles.liveSessionSwitchCameraButton} onPress={onToggleCameraFacing}>
+                      <MaterialIcons name="flip-camera-ios" size={27} color="#FFFFFF" />
+                    </Pressable>
+                  ) : null}
                 </View>
               </>
             )}
@@ -1416,6 +1422,7 @@ const styles = StyleSheet.create({
   sessionBottomActions: { alignItems: 'center', justifyContent: 'center', minHeight: 150 },
   recordButton: { width: 86, height: 86, borderRadius: 43, borderWidth: 4, borderColor: '#FFFFFFAA', justifyContent: 'center', alignItems: 'center' },
   recordButtonInner: { width: 58, height: 58, borderRadius: 29, backgroundColor: '#EF4444' },
+  liveSessionSwitchCameraButton: { width: 86, height: 86, borderRadius: 43, borderWidth: 1, borderColor: '#FFFFFF33', backgroundColor: '#0000007A', alignItems: 'center', justifyContent: 'center' },
   countdownNumber: { fontSize: 82, fontWeight: '800' },
   volumeControlCard: { position: 'absolute', top: '38%', zIndex: 25 },
   volumeControlLeft: { left: 10 },
