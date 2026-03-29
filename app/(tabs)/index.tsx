@@ -3,6 +3,7 @@ import { Alert, Linking, Modal, PermissionsAndroid, Platform, Pressable, Refresh
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getInstrumentals } from '../../data/get_instrumentals';
+import * as WebBrowser from 'expo-web-browser';
 
 import { useAppThemeColors } from '@/hooks/use-app-theme-colors';
 
@@ -273,14 +274,7 @@ export default function RapearScreen() {
       const isSameTrack = previewTrack === trackId;
       setPreviewTrack((prev) => (prev === trackId ? null : trackId));
       if (isSameTrack) return;
-
-      const supported = await Linking.canOpenURL(currentTrack.url);
-      if (!supported) {
-        Alert.alert('No se pudo abrir el audio', 'Tu dispositivo no puede abrir esta URL de instrumental.');
-        return;
-      }
-
-      await Linking.openURL(currentTrack.url);
+      await WebBrowser.openBrowserAsync(currentTrack.url);
       return;
     }
 
@@ -497,7 +491,7 @@ export default function RapearScreen() {
     if (Platform.OS !== 'web') {
       const currentTrack = tracks.find((item) => item.key === track);
       if (currentTrack?.url) {
-        Linking.openURL(currentTrack.url).catch(() => {
+        WebBrowser.openBrowserAsync(currentTrack.url).catch(() => {
           Alert.alert('No se pudo abrir el audio', 'No se pudo abrir esta instrumental en tu dispositivo.');
         });
       }
@@ -742,7 +736,7 @@ export default function RapearScreen() {
                             if (Platform.OS !== 'web' && nextState && selectedTrack) {
                               const currentTrack = tracks.find((item) => item.key === selectedTrack);
                               if (currentTrack?.url) {
-                                Linking.openURL(currentTrack.url).catch(() => {
+                                WebBrowser.openBrowserAsync(currentTrack.url).catch(() => {
                                   Alert.alert('No se pudo abrir el audio', 'No se pudo abrir esta instrumental en tu dispositivo.');
                                 });
                               }
