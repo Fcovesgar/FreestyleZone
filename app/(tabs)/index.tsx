@@ -701,12 +701,35 @@ export default function RapearScreen() {
     setCameraFacing((previousFacing) => (previousFacing === 'front' ? 'back' : 'front'));
   };
 
+  const resetSessionBeatPosition = async () => {
+    if (Platform.OS === 'web') {
+      if (webTrainingAudioRef.current) {
+        webTrainingAudioRef.current.currentTime = 0;
+      }
+      return;
+    }
+
+    if (!nativeTrainingSoundRef.current) return;
+
+    try {
+      const status = await nativeTrainingSoundRef.current.getStatusAsync();
+      if (!status?.isLoaded) return;
+      await nativeTrainingSoundRef.current.setPositionAsync(0);
+    } catch {
+      // ignore seek errors when resetting pre-record beat position
+    }
+  };
+
   const onStartRecordingPress = async () => {
     const granted = await requestCameraPermission();
     if (!granted) {
       Alert.alert('Permiso requerido', 'Necesitas aceptar la cámara para iniciar la cuenta atrás de grabación.');
       return;
     }
+
+    await stopPreviewPlayback();
+    setIsRecordingBeatPlaying(false);
+    await resetSessionBeatPosition();
 
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
 
