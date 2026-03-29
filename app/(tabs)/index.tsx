@@ -178,18 +178,6 @@ export default function RapearScreen() {
     }
   }, [tracks, selectedTrack]);
 
-  const stopNativeSound = useCallback(async (ref: React.MutableRefObject<any>) => {
-    if (Platform.OS === 'web' || !ref.current) return;
-    try {
-      await ref.current.stopAsync?.();
-      await ref.current.unloadAsync?.();
-    } catch {
-      // ignore cleanup errors
-    } finally {
-      ref.current = null;
-    }
-  }, []);
-
   useEffect(() => {
     if (setupStep !== 'track') {
       setPreviewTrack(null);
@@ -220,7 +208,17 @@ export default function RapearScreen() {
     }
   }, []);
 
-  
+  const stopNativeSound = useCallback(async (ref: React.MutableRefObject<any>) => {
+    if (Platform.OS === 'web' || !ref.current) return;
+    try {
+      await ref.current.stopAsync?.();
+      await ref.current.unloadAsync?.();
+    } catch {
+      // ignore cleanup errors
+    } finally {
+      ref.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -582,16 +580,7 @@ export default function RapearScreen() {
   const onSelectTrainingTrack = (track: InstrumentalId) => {
     setSelectedTrack(track);
     setBaseSelectorVisible(false);
-    setIsTrainingBeatPlaying(true);
-
-    if (Platform.OS !== 'web') {
-      const currentTrack = tracks.find((item) => item.key === track);
-      if (currentTrack?.url) {
-        WebBrowser.openBrowserAsync(currentTrack.url).catch(() => {
-          Alert.alert('No se pudo abrir el audio', 'No se pudo abrir esta instrumental en tu dispositivo.');
-        });
-      }
-    }
+    setIsTrainingBeatPlaying(false);
   };
 
   const onSeekTrainingTrack = async (secondsDelta: number) => {
