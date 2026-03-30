@@ -308,12 +308,14 @@ export function AuthEntryModal() {
   } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [name, setName] = useState('');
+  const [registerEmail, setRegisterEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
 
   const resetForm = () => {
     setName('');
+    setRegisterEmail('');
     setPassword('');
     setConfirmPassword('');
     setError('');
@@ -331,7 +333,7 @@ export function AuthEntryModal() {
     }
 
     const result =
-      mode === 'login' ? await signInWithCredentials(name, password) : await registerWithCredentials(name, email, password);
+      mode === 'login' ? await signInWithCredentials(name, password) : await registerWithCredentials(name, registerEmail, password);
 
     if (!result.ok) {
       setError(result.message ?? 'No se pudo completar la acción.');
@@ -406,8 +408,8 @@ export function AuthEntryModal() {
             <>
               <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Email</Text>
               <TextInput
-                value={email}
-                onChangeText={setEmail}
+                value={registerEmail}
+                onChangeText={setRegisterEmail}
                 autoCapitalize="none"
                 keyboardType="email-address"
                 placeholder="correo@ejemplo.com"
