@@ -287,7 +287,7 @@ export function AuthEntryModal() {
       <View style={[styles.backdrop, { backgroundColor: colors.overlay }]}> 
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}> 
           <Text style={[styles.title, { color: colors.textPrimary }]}>Bienvenido a FreestyleZone</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Inicia sesión ahora para acceder a todas las funcionalidades.</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Inicia sesión/regístrate para acceder ahora a todas las funcionalidades.</Text>
 
           <Pressable onPress={closeAuthModal} style={[styles.closeBtn, { borderColor: colors.border }]}>
             <Text style={[styles.closeBtnText, { color: colors.textPrimary }]}>✕</Text>
@@ -380,11 +380,12 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: 16,
     borderWidth: 1,
-    padding: 16,
-    gap: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 22,
+    gap: 14,
   },
   title: { fontSize: 22, fontWeight: '700' },
-  subtitle: { fontSize: 14, lineHeight: 19, paddingRight: 28 },
+  subtitle: { fontSize: 14, lineHeight: 21, paddingRight: 34, marginBottom: 4 },
   closeBtn: {
     position: 'absolute',
     top: 10,
@@ -397,18 +398,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   closeBtnText: { fontWeight: '700', fontSize: 14 },
-  inputLabel: { fontSize: 13, fontWeight: '600', marginTop: 4 },
+  inputLabel: { fontSize: 13, fontWeight: '600', marginTop: 8 },
   input: {
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
+    marginTop: 2,
   },
-  errorText: { color: '#DB2C2C', fontSize: 13, fontWeight: '600' },
+  errorText: { color: '#DB2C2C', fontSize: 13, fontWeight: '600', marginTop: 2 },
   actionRow: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 4,
+    marginTop: 10,
   },
   googleBtn: {
     backgroundColor: '#6B46FF',
@@ -426,7 +428,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   mainBtnText: { fontWeight: '700' },
-  footText: { textAlign: 'center', marginTop: 6 },
-  textButton: { alignItems: 'center', paddingVertical: 4 },
+  footText: { textAlign: 'center', marginTop: 10 },
+  textButton: { alignItems: 'center', paddingVertical: 6, marginBottom: 2 },
   textButtonLabel: { color: '#6B46FF', fontWeight: '700' },
 });
