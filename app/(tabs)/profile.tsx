@@ -32,7 +32,7 @@ type ProfileData = {
 };
 type ProfileContentTab = 'videos' | 'lines';
 
-const RAP_STYLES: RapStyle[] = ['Doble punch', 'Metriquero', 'Batallero'];
+const RAP_STYLES: RapStyle[] = ['', 'Doble punch', 'Metriquero', 'Batallero'];
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const VIEW_TOP_OFFSET = 12;
 
@@ -237,7 +237,7 @@ export default function ProfileScreen() {
                         },
                       ]}>
                       <Text style={{ color: selected ? '#6B46FF' : colors.textPrimary, fontWeight: selected ? '700' : '500' }}>
-                        {style}
+                        {style || 'Sin estilo'}
                       </Text>
                     </Pressable>
                   );
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
   username: { fontSize: 24, fontWeight: '700' },
   iconBtn: { padding: 4 },
   metaText: { fontSize: 13, fontWeight: '500', marginTop: 2 },
-  styleBadgeRow: { marginTop: 8, alignSelf: 'flex-start' },
+  styleBadgeRow: { marginTop: 8, alignSelf: 'center' },
   styleBadge: {
     backgroundColor: '#6B46FF',
     borderRadius: 999,
