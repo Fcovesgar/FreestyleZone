@@ -4,15 +4,20 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Platform, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 import { AppThemeProvider, useAppTheme } from '@/context/app-theme-context';
+import { AuthEntryModal, AuthProvider } from '@/context/auth-context';
 
 
-void SplashScreen.preventAutoHideAsync();
+if (Platform.OS !== 'web') {
+  void SplashScreen.preventAutoHideAsync().catch(() => {
+    // no-op: avoid crash when native splash is not registered in this runtime
+  });
+}
 
 async function loadCoreAssets() {
   await Asset.loadAsync([
@@ -35,6 +40,7 @@ function AppNavigator() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false, gestureEnabled: false }} />
       </Stack>
       <StatusBar style={effectiveColorScheme === 'dark' ? 'light' : 'dark'} />
+      <AuthEntryModal />
     </ThemeProvider>
   );
 }
@@ -53,7 +59,12 @@ export default function RootLayout() {
       }
 
       setAppReady(true);
-      await SplashScreen.hideAsync();
+
+      if (Platform.OS !== 'web') {
+        await SplashScreen.hideAsync().catch(() => {
+          // no-op: avoid crash when splash is already hidden / unavailable
+        });
+      }
     };
 
     void prepare();
@@ -76,7 +87,9 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.gestureRoot}>
       <AppThemeProvider>
-        <AppNavigator />
+        <AuthProvider>
+          <AppNavigator />
+        </AuthProvider>
       </AppThemeProvider>
     </GestureHandlerRootView>
   );
