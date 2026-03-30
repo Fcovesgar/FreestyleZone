@@ -1,56 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, type LayoutChangeEvent, Linking, Modal, PermissionsAndroid, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
+import { Alert, type LayoutChangeEvent, Linking, Modal, PermissionsAndroid, Platform, Pressable, RefreshControl, ScrollView, Text, Vibration, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getInstrumentals } from '../../data/get_instrumentals';
-import { getModes, type Mode } from '../../data/get_modes';
+import { getModes } from '../../data/get_modes';
 
 import { useAppThemeColors } from '@/hooks/use-app-theme-colors';
-
-type RapMode = string;
-type InstrumentalId = string;
-type SessionTime = '1-min' | '2-min' | '5-min' | 'infinite';
-type SessionType = 'record' | 'train';
-type CameraFacing = 'front' | 'back';
-type SetupStep = 'mode' | 'track' | 'time';
-
-type SessionSummary = {
-  mode: RapMode | null;
-  sessionType: SessionType;
-  instrumental: InstrumentalId | null;
-  elapsedSeconds: number;
-};
-
-type RapModeOption = { key: RapMode; label: string; description: string; icon: string; accent: string };
-
-type Instrumental = {
-  id: string;
-  Name: string;
-  Url: string;
-  Genre: string;
-  Bpm: string;
-  Active: boolean;
-};
-type TrackItem = { key: InstrumentalId; label: string; description: string; bpm: string; url: string };
-
-const SESSION_TIMES: { key: SessionTime; label: string; description: string; icon?: keyof typeof MaterialIcons.glyphMap }[] = [
-  { key: '1-min', label: '1 min', description: 'Ronda rápida' },
-  { key: '2-min', label: '2 min', description: 'Formato clásico' },
-  { key: '5-min', label: '5 min', description: 'Sesión extensa' },
-];
-
-const TRAINING_TIME: { key: SessionTime; label: string; description: string; icon?: keyof typeof MaterialIcons.glyphMap }[] = [
-  { key: 'infinite', label: '∞', description: 'Sin límite de tiempo', icon: 'all-inclusive' },
-];
-
-const SESSION_TYPES: { key: SessionType; label: string }[] = [
-  { key: 'record', label: 'Grabar' },
-  { key: 'train', label: 'Entrenar' },
-];
-
-const PRE_RECORD_COUNTDOWN_SECONDS = 5;
-const VIEW_TOP_OFFSET = 12;
+import { ModeStepView } from '../../features/rapear/components/mode-step-view';
+import { TimeStepView } from '../../features/rapear/components/time-step-view';
+import { TrackStepView } from '../../features/rapear/components/track-step-view';
+import { PRE_RECORD_COUNTDOWN_SECONDS, SESSION_TIMES, TRAINING_TIME, VIEW_TOP_OFFSET } from '../../features/rapear/constants';
+import styles from '../../features/rapear/styles';
+import type { CameraFacing, Instrumental, InstrumentalId, ModeEntity, NativeAudioPlayer, RapMode, RapModeOption, SessionSummary, SessionTime, SessionType, SetupStep, TrackItem } from '../../features/rapear/types';
+import { formatTime, getCountdownColor, getSessionDuration, getSessionTimerColor } from '../../features/rapear/utils';
 
 export default function RapearScreen() {
   const insets = useSafeAreaInsets();
@@ -69,7 +32,7 @@ export default function RapearScreen() {
   };
 
   const [instrumentals, setInstrumentals] = useState<Instrumental[]>([]);
-  const [modes, setModes] = useState<Mode[]>([]);
+  const [modes, setModes] = useState<ModeEntity[]>([]);
   const [loadingInstrumentals, setLoadingInstrumentals] = useState(false);
   const [loadingModes, setLoadingModes] = useState(false);
   const [selectedMode, setSelectedMode] = useState<RapMode | null>(null);
@@ -154,13 +117,14 @@ export default function RapearScreen() {
   const webTrainingAudioRef = useRef<any>(null);
   const webTrainingTrackRef = useRef<InstrumentalId | null>(null);
   const webRestartKeyAppliedRef = useRef(0);
-  const nativePreviewSoundRef = useRef<any>(null);
-  const nativeTrainingSoundRef = useRef<any>(null);
+  const nativePreviewSoundRef = useRef<NativeAudioPlayer | null>(null);
+  const nativeTrainingSoundRef = useRef<NativeAudioPlayer | null>(null);
   const nativeTrainingTrackRef = useRef<InstrumentalId | null>(null);
   const nativeRestartKeyAppliedRef = useRef(0);
   const nativeAudioUnavailableRef = useRef(false);
   const previewRequestRef = useRef(0);
   const trainingRequestRef = useRef(0);
+  const nativePreviewStatusListenerRef = useRef<{ remove: () => void } | null>(null);
 
   const initialSessionSeconds = getSessionDuration(selectedSessionTime);
   const availableSessionTimes = selectedSessionType === 'train' ? TRAINING_TIME : SESSION_TIMES;
@@ -237,13 +201,13 @@ export default function RapearScreen() {
     if (Platform.OS === 'web') return null;
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      return require('expo-av');
+      return require('expo-audio');
     } catch {
       if (!nativeAudioUnavailableRef.current) {
         nativeAudioUnavailableRef.current = true;
         Alert.alert(
           'Audio nativo no disponible',
-          'Para reproducir dentro de la app en iOS/Android necesitas instalar expo-av.'
+          'Para reproducir dentro de la app en iOS/Android necesitas instalar expo-audio.'
         );
       }
       return null;
@@ -259,11 +223,11 @@ export default function RapearScreen() {
     }
   }, []);
 
-  const stopNativeSound = useCallback(async (ref: React.MutableRefObject<any>) => {
+  const stopNativeSound = useCallback(async (ref: React.MutableRefObject<NativeAudioPlayer | null>) => {
     if (Platform.OS === 'web' || !ref.current) return;
     try {
-      await ref.current.stopAsync?.();
-      await ref.current.unloadAsync?.();
+      ref.current.pause?.();
+      ref.current.remove?.();
     } catch {
       // ignore cleanup errors
     } finally {
@@ -289,6 +253,8 @@ export default function RapearScreen() {
 
   const stopPreviewPlayback = useCallback(async () => {
     setPreviewTrack(null);
+    nativePreviewStatusListenerRef.current?.remove();
+    nativePreviewStatusListenerRef.current = null;
     stopWebPreviewSound();
     await stopNativeSound(nativePreviewSoundRef);
   }, [stopNativeSound, stopWebPreviewSound]);
@@ -374,10 +340,7 @@ export default function RapearScreen() {
         const currentTrainingSound = nativeTrainingSoundRef.current;
         if (currentTrainingSound) {
           try {
-            const status = await currentTrainingSound.getStatusAsync?.();
-            if (status?.isLoaded) {
-              await currentTrainingSound.pauseAsync?.();
-            }
+            currentTrainingSound.pause?.();
           } catch {
             // sound may have been unloaded by another effect; ignore
           }
@@ -388,8 +351,8 @@ export default function RapearScreen() {
       const currentTrack = tracks.find((track) => track.key === selectedTrack);
       if (!currentTrack?.url) return;
 
-      const avModule = resolveNativeAudioModule();
-      if (!avModule?.Audio?.Sound) return;
+      const audioModule = resolveNativeAudioModule();
+      if (!audioModule?.Audio?.createAudioPlayer) return;
 
       const shouldRestart = trainingRestartKey !== nativeRestartKeyAppliedRef.current;
 
@@ -400,7 +363,8 @@ export default function RapearScreen() {
 
       if (canResumeExisting) {
         try {
-          await nativeTrainingSoundRef.current.playAsync?.();
+          const currentTrainingPlayer = nativeTrainingSoundRef.current;
+          currentTrainingPlayer?.play?.();
         } catch {
           setIsTrainingBeatPlaying(false);
         }
@@ -409,21 +373,23 @@ export default function RapearScreen() {
 
       const previousTrainingSound = nativeTrainingSoundRef.current;
       if (previousTrainingSound) {
-        previousTrainingSound.stopAsync?.().catch(() => undefined);
+        previousTrainingSound.pause?.();
       }
 
       try {
-        const sound = new avModule.Audio.Sound();
-        await sound.loadAsync({ uri: currentTrack.url }, { shouldPlay: true, isLooping: true, volume: instrumentalVolume });
+        const sound = audioModule.Audio.createAudioPlayer(currentTrack.url) as NativeAudioPlayer;
+        sound.loop = true;
+        sound.volume = instrumentalVolume;
+        sound.play();
         if (requestId !== trainingRequestRef.current) {
-          await sound.unloadAsync();
+          sound.remove();
           return;
         }
         nativeTrainingSoundRef.current = sound;
         nativeTrainingTrackRef.current = selectedTrack;
         nativeRestartKeyAppliedRef.current = trainingRestartKey;
         if (previousTrainingSound && previousTrainingSound !== sound) {
-          previousTrainingSound.unloadAsync?.().catch(() => undefined);
+          previousTrainingSound.remove?.();
         }
       } catch {
         Alert.alert('No se pudo reproducir', 'No se pudo iniciar la reproducción de la base.');
@@ -460,8 +426,8 @@ export default function RapearScreen() {
       return;
     }
 
-    nativePreviewSoundRef.current?.setVolumeAsync?.(instrumentalVolume).catch(() => undefined);
-    nativeTrainingSoundRef.current?.setVolumeAsync?.(instrumentalVolume).catch(() => undefined);
+    if (nativePreviewSoundRef.current) nativePreviewSoundRef.current.volume = instrumentalVolume;
+    if (nativeTrainingSoundRef.current) nativeTrainingSoundRef.current.volume = instrumentalVolume;
   }, [instrumentalVolume]);
 
   const onSelectSessionType = (sessionType: SessionType) => {
@@ -519,33 +485,36 @@ export default function RapearScreen() {
 
       setPreviewTrack(trackId);
 
-      const avModule = resolveNativeAudioModule();
-      if (!avModule?.Audio?.Sound) return;
+      const audioModule = resolveNativeAudioModule();
+      if (!audioModule?.Audio?.createAudioPlayer) return;
 
       const previousPreviewSound = nativePreviewSoundRef.current;
       if (previousPreviewSound) {
-        previousPreviewSound.stopAsync?.().catch(() => undefined);
+        previousPreviewSound.pause?.();
       }
       if (requestId !== previewRequestRef.current) return;
       stopTrainingPlayback();
       if (requestId !== previewRequestRef.current) return;
 
       try {
-        const sound = new avModule.Audio.Sound();
-        await sound.loadAsync({ uri: currentTrack.url }, { shouldPlay: true, isLooping: false });
+        const sound = audioModule.Audio.createAudioPlayer(currentTrack.url) as NativeAudioPlayer;
+        sound.loop = false;
+        sound.volume = instrumentalVolume;
+        sound.play();
         if (requestId !== previewRequestRef.current) {
-          await sound.unloadAsync();
+          sound.remove();
           return;
         }
-        sound.setOnPlaybackStatusUpdate((status: any) => {
-          if (status?.didJustFinish) {
+        nativePreviewStatusListenerRef.current?.remove();
+        nativePreviewStatusListenerRef.current = sound.addListener?.('playbackStatusUpdate', (status: any) => {
+          if (!status?.playing && status?.didJustFinish) {
             setPreviewTrack(null);
             stopNativeSound(nativePreviewSoundRef);
           }
-        });
+        }) ?? null;
         nativePreviewSoundRef.current = sound;
         if (previousPreviewSound && previousPreviewSound !== sound) {
-          previousPreviewSound.unloadAsync?.().catch(() => undefined);
+          previousPreviewSound.remove?.();
         }
       } catch {
         setPreviewTrack(null);
@@ -732,9 +701,7 @@ export default function RapearScreen() {
     if (!nativeTrainingSoundRef.current) return;
 
     try {
-      const status = await nativeTrainingSoundRef.current.getStatusAsync();
-      if (!status?.isLoaded) return;
-      await nativeTrainingSoundRef.current.setPositionAsync(0);
+      nativeTrainingSoundRef.current.seekTo?.(0);
     } catch {
       // ignore seek errors when resetting pre-record beat position
     }
@@ -861,12 +828,11 @@ export default function RapearScreen() {
     if (!nativeTrainingSoundRef.current) return;
 
     try {
-      const status = await nativeTrainingSoundRef.current.getStatusAsync();
-      if (!status?.isLoaded) return;
-
-      const duration = status.durationMillis ?? Number.MAX_SAFE_INTEGER;
-      const nextPosition = Math.max(0, Math.min(duration, status.positionMillis + secondsDelta * 1000));
-      await nativeTrainingSoundRef.current.setPositionAsync(nextPosition);
+      const player = nativeTrainingSoundRef.current;
+      const duration = Number.isFinite(player.duration) ? (player.duration as number) : Number.MAX_SAFE_INTEGER;
+      const currentTime = Number.isFinite(player.currentTime) ? (player.currentTime as number) : 0;
+      const nextPositionSeconds = Math.max(0, Math.min(duration, currentTime + secondsDelta));
+      player.seekTo?.(nextPositionSeconds);
     } catch {
       Alert.alert('No se pudo adelantar/retroceder', 'No se pudo ajustar la posición de la instrumental.');
     }
@@ -965,117 +931,40 @@ export default function RapearScreen() {
         </View>
 
         {setupStep === 'mode' ? (
-          <View style={styles.modeRail}>
-            {loadingModes ? (
-              <Text style={[styles.trackInfo, { color: themeColors.textSecondary }]}>Cargando modos...</Text>
-            ) : null}
-            {!loadingModes && !rapModes.length ? (
-              <Text style={[styles.trackInfo, { color: themeColors.textSecondary }]}>No hay modos configurados en la base de datos.</Text>
-            ) : null}
-            {rapModes.map((mode) => {
-              const selected = selectedMode === mode.key;
-              const isActiveMode = selected || pressedMode === mode.key;
-              const selectedCardTextColor = themeColors.textPrimary;
-              const selectedModeBackground = isDark ? `${mode.accent}2B` : `${mode.accent}14`;
-              const modeIcon = (mode.icon in MaterialIcons.glyphMap ? mode.icon : 'help-outline') as keyof typeof MaterialIcons.glyphMap;
-              return (
-                <Pressable
-                  key={mode.key}
-                  onPressIn={() => setPressedMode(mode.key)}
-                  onPressOut={() => setPressedMode((currentMode) => (currentMode === mode.key ? null : currentMode))}
-                  onPress={() => setSelectedMode(mode.key)}
-                  style={[
-                    styles.modeCard,
-                    { borderColor: selected ? mode.accent : themeColors.optionBorder, backgroundColor: selected ? selectedModeBackground : themeColors.card },
-                    selected && styles.modeCardSelected,
-                  ]}>
-                  <View style={styles.modeCardInner}>
-                    <View>
-                      <Text style={[styles.modeTitle, { color: selectedCardTextColor }]}>{mode.label}</Text>
-                      <Text style={[styles.modeDescription, { color: selected ? themeColors.textPrimary : themeColors.textSecondary }]}>{mode.description}</Text>
-                    </View>
-                    <View
-                      style={[
-                        styles.modeIconBubble,
-                        {
-                          borderColor: selected ? mode.accent : themeColors.optionBorder,
-                          backgroundColor: selected ? (isDark ? `${mode.accent}26` : `${mode.accent}12`) : 'transparent',
-                        },
-                      ]}>
-                      <MaterialIcons name={modeIcon} size={24} color={isActiveMode ? mode.accent : themeColors.textSecondary} />
-                    </View>
-                  </View>
-                </Pressable>
-              );
-            })}
-          </View>
+          <ModeStepView
+            isDark={isDark}
+            loadingModes={loadingModes}
+            rapModes={rapModes}
+            selectedMode={selectedMode}
+            pressedMode={pressedMode}
+            onPressInMode={setPressedMode}
+            onPressOutMode={(mode) => setPressedMode((currentMode) => (currentMode === mode ? null : currentMode))}
+            onSelectMode={setSelectedMode}
+            themeColors={themeColors}
+          />
         ) : null}
 
         {setupStep === 'track' ? (
-          <View style={styles.optionsColumn}>
-            {loadingInstrumentals ? (
-              <Text style={[styles.trackInfo, { color: themeColors.textSecondary }]}>Cargando instrumentales...</Text>
-            ) : null}
-            {!loadingInstrumentals && !tracks.length ? (
-              <Text style={[styles.trackInfo, { color: themeColors.textSecondary }]}>No hay instrumentales activas en la base de datos.</Text>
-            ) : null}
-            {tracks.map((track) => {
-              const selected = selectedTrack === track.key;
-              const isPlaying = previewTrack === track.key;
-
-              return (
-                <View key={track.key} style={[styles.trackCard, { backgroundColor: selected ? '#6B46FF22' : themeColors.card, borderColor: selected ? '#6B46FF' : themeColors.optionBorder }]}>
-                  <Pressable onPress={() => setSelectedTrack(track.key)} style={styles.trackMainArea}>
-                    <Text style={[styles.trackTitle, { color: themeColors.textPrimary }]}>{track.label}</Text>
-                    <Text style={[styles.trackInfo, { color: themeColors.textSecondary }]}>{track.description}</Text>
-                    <Text style={[styles.trackMeta, { color: themeColors.textSecondary }]}>{track.bpm}</Text>
-                  </Pressable>
-                  <Pressable style={[styles.previewButton, { backgroundColor: isPlaying ? '#DC2626' : '#6B46FF' }]} onPress={() => onToggleTrackPreview(track.key)}>
-                    <MaterialIcons name={isPlaying ? 'stop' : 'play-arrow'} size={16} color="#FFFFFF" />
-                    <Text style={styles.previewButtonText}>{isPlaying ? 'Parar' : 'Reproducir'}</Text>
-                  </Pressable>
-                </View>
-              );
-            })}
-          </View>
+          <TrackStepView
+            loadingInstrumentals={loadingInstrumentals}
+            tracks={tracks}
+            selectedTrack={selectedTrack}
+            previewTrack={previewTrack}
+            onSelectTrack={setSelectedTrack}
+            onToggleTrackPreview={(trackId) => void onToggleTrackPreview(trackId)}
+            themeColors={themeColors}
+          />
         ) : null}
 
         {setupStep === 'time' ? (
-          <View style={styles.optionsColumn}>
-            <View style={[styles.sessionTypeCard, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
-              <Text style={[styles.sectionCaption, { color: themeColors.textSecondary }]}>MODO DE SESIÓN</Text>
-              <View style={[styles.sessionTypeSegment, { backgroundColor: themeColors.mutedBg, borderColor: themeColors.mutedBorder }]}>
-                {SESSION_TYPES.map((sessionType) => {
-                  const isSelected = selectedSessionType === sessionType.key;
-
-                  return (
-                    <Pressable
-                      key={sessionType.key}
-                      onPress={() => onSelectSessionType(sessionType.key)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: isSelected }}
-                      style={[styles.sessionTypeOption, isSelected && styles.sessionTypeOptionSelected]}>
-                      <MaterialIcons name={sessionType.key === 'record' ? 'mic' : 'school'} size={16} color={isSelected ? '#FFFFFF' : themeColors.textSecondary} />
-                      <Text style={[styles.sessionTypeOptionText, { color: isSelected ? '#FFFFFF' : themeColors.textSecondary }]}>{sessionType.label}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-            {availableSessionTimes.map((sessionTime) => {
-              const selected = selectedSessionTime === sessionTime.key;
-              return (
-                <Pressable
-                  key={sessionTime.key}
-                  onPress={() => setSelectedSessionTime(sessionTime.key)}
-                  style={[styles.timeCard, { borderColor: selected ? '#6B46FF' : themeColors.optionBorder, backgroundColor: selected ? '#6B46FF22' : themeColors.card }]}>
-                  {sessionTime.icon ? <MaterialIcons name={sessionTime.icon} size={30} color={themeColors.textPrimary} /> : null}
-                  {!sessionTime.icon ? <Text style={[styles.timeTitle, { color: themeColors.textPrimary }]}>{sessionTime.label}</Text> : null}
-                  <Text style={[styles.timeDescription, { color: themeColors.textSecondary }]}>{sessionTime.description}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <TimeStepView
+            selectedSessionType={selectedSessionType}
+            selectedSessionTime={selectedSessionTime}
+            availableSessionTimes={availableSessionTimes}
+            onSelectSessionType={onSelectSessionType}
+            onSelectSessionTime={setSelectedSessionTime}
+            themeColors={themeColors}
+          />
         ) : null}
 
         {setupStep === 'time' ? (
@@ -1322,161 +1211,3 @@ export default function RapearScreen() {
     </SafeAreaView>
   );
 }
-
-function getSessionDuration(time: SessionTime | null) {
-  if (time === '1-min') return 60;
-  if (time === '2-min') return 120;
-  if (time === '5-min') return 300;
-  return null;
-}
-
-function formatTime(totalSeconds: number) {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-
-  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-}
-
-function getSessionTimerColor(remainingSeconds: number | null, totalSeconds: number | null, isUnlimited: boolean) {
-  if (isUnlimited || totalSeconds === null || remainingSeconds === null) {
-    return '#FFFFFF';
-  }
-
-  const ratio = remainingSeconds / totalSeconds;
-
-  if (ratio > 0.6) return '#22C55E';
-  if (ratio > 0.3) return '#FACC15';
-  if (ratio > 0.1) return '#FB923C';
-  return '#EF4444';
-}
-
-function getCountdownColor(value: number) {
-  if (value > 3) return '#22C55E';
-  if (value > 1) return '#FACC15';
-  return '#EF4444';
-}
-
-const styles = StyleSheet.create({
-  screen: { flex: 1 },
-  container: { flex: 1 },
-  contentContainer: { paddingHorizontal: 20, gap: 18 },
-  badgeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  badgeLeftRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  badge: { fontSize: 11, letterSpacing: 1.8, textTransform: 'uppercase', fontWeight: '700' },
-  stepPill: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
-  stepPillText: { fontSize: 11, fontWeight: '700' },
-  headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 },
-  headerRightActions: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 4 },
-  headerAction: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  headerGhostAction: { opacity: 0.95 },
-  headerTitleWrap: { flex: 1 },
-  title: { fontSize: 29, fontWeight: '800', textTransform: 'uppercase' },
-  continueButton: { borderRadius: 12, paddingHorizontal: 14, paddingVertical: 9 },
-  continueButtonText: { fontWeight: '800', fontSize: 13 },
-  sectionCaption: { fontSize: 11, fontWeight: '700', letterSpacing: 1.2 },
-  sessionTypeCard: { borderRadius: 14, borderWidth: 1, padding: 10, gap: 8 },
-  sessionTypeSegment: { flexDirection: 'row', borderRadius: 12, borderWidth: 1, padding: 4, gap: 6 },
-  sessionTypeOption: { flex: 1, borderRadius: 9, paddingVertical: 8, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
-  sessionTypeOptionSelected: { backgroundColor: '#6B46FF' },
-  sessionTypeOptionText: { fontSize: 13, fontWeight: '700' },
-
-  modeRail: { gap: 12 },
-  modeCard: { borderRadius: 18, borderWidth: 1, overflow: 'hidden' },
-  modeCardSelected: { shadowColor: '#6B46FF', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 6 },
-  modeCardInner: { paddingHorizontal: 14, paddingVertical: 14, flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  modeTitle: { fontSize: 24, fontWeight: '500', marginTop: 2 },
-  modeDescription: { fontSize: 13, marginTop: 4, maxWidth: 250, fontWeight: '400' },
-  modeIconBubble: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
-
-  optionsColumn: { gap: 10 },
-  trackCard: { borderWidth: 1, borderRadius: 14, padding: 12, flexDirection: 'row', justifyContent: 'space-between', gap: 12, alignItems: 'center' },
-  trackMainArea: { flex: 1, gap: 4 },
-  trackTitle: { fontSize: 17, fontWeight: '700' },
-  trackInfo: { fontSize: 13 },
-  trackMeta: { fontSize: 12, fontWeight: '700', letterSpacing: 0.8 },
-  previewButton: { borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', gap: 4, alignItems: 'center' },
-  previewButtonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 12 },
-
-  timeCard: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 4 },
-  timeTitle: { fontSize: 24, fontWeight: '500' },
-  timeDescription: { fontSize: 13 },
-  startButton: { marginTop: 4, borderRadius: 16, paddingVertical: 14, alignItems: 'center' },
-  startButtonText: { fontSize: 17, fontWeight: '800' },
-
-  sessionFullscreen: { flex: 1, backgroundColor: '#000000' },
-  cameraPlaceholder: { flex: 1, justifyContent: 'space-between' },
-  sessionModalCard: { marginHorizontal: 12, borderRadius: 18, overflow: 'hidden' },
-  cameraPreviewLayer: { ...StyleSheet.absoluteFillObject, zIndex: 0 },
-  cameraPermissionEmptyState: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 26 },
-  cameraPermissionEmptyStateText: { color: '#FFFFFFCC', marginTop: 8, textAlign: 'center', fontSize: 13, fontWeight: '600' },
-  recordingBackground: { backgroundColor: '#1A1A1A' },
-  trainingBackground: { backgroundColor: '#14122A' },
-  trainingHeader: { paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  trainingAppName: { color: '#D4CCFF', fontSize: 12, letterSpacing: 1.6, textTransform: 'uppercase', fontWeight: '700', marginBottom: 6 },
-  trainingModeTag: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  trainingModeTagText: { color: '#CFC5FF', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6 },
-  recordingModeTagText: { color: '#FFD9D9', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6 },
-  trainingCenterClearSpace: { flex: 1 },
-  trainingBottomArea: { gap: 12, paddingHorizontal: 12 },
-  selectBeatButton: { alignSelf: 'flex-end', borderRadius: 999, paddingVertical: 10, paddingHorizontal: 14, backgroundColor: '#6B46FF', flexDirection: 'row', alignItems: 'center', gap: 8 },
-  selectBeatButtonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
-  trainingPlayerBar: { borderRadius: 18, borderWidth: 1, borderColor: '#FFFFFF20', backgroundColor: '#00000099', paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
-  trainingTrackMeta: { flex: 1, gap: 2 },
-  trainingTrackTitle: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
-  trainingTrackSub: { color: '#B3B3C4', fontSize: 12, fontWeight: '600' },
-  trainingPlayerControls: { flexDirection: 'row', gap: 8 },
-  trainingControlButton: { width: 38, height: 38, borderRadius: 19, borderWidth: 1, borderColor: '#FFFFFF26', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF14' },
-  sessionHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  timer: { fontSize: 20, fontWeight: '800', color: '#FFFFFF' },
-  finishButton: { borderRadius: 999, backgroundColor: '#0000007A', paddingHorizontal: 16, paddingVertical: 10 },
-  finishButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
-  preSessionActionsRow: { width: '100%', alignItems: 'center', justifyContent: 'center', position: 'relative', gap: 10 },
-  recordingConfigCard: { position: 'absolute', top: -112, width: '66%', alignSelf: 'center', borderRadius: 12, borderWidth: 1, borderColor: '#FFFFFF24', backgroundColor: '#050505AB', paddingVertical: 8, paddingHorizontal: 10, gap: 6 },
-  recordingConfigTitle: { color: '#FFFFFF', fontSize: 11, fontWeight: '700', textAlign: 'center' },
-  recordingConfigActions: { flexDirection: 'row', justifyContent: 'center' },
-  recordingConfigActionButton: { borderRadius: 10, borderWidth: 1, borderColor: '#FFFFFF20', backgroundColor: '#FFFFFF12', paddingVertical: 7, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
-  recordingConfigActionText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
-  recordPreControlsRow: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 52 },
-  preRecordSideButton: { width: 54, height: 54, borderRadius: 27, borderWidth: 1, borderColor: '#FFFFFF3A', backgroundColor: '#0000007A', alignItems: 'center', justifyContent: 'center' },
-  bottomSwitchCameraButton: { alignItems: 'center', gap: 2, padding: 8 },
-  bottomSwitchCameraButtonBeforeStart: { position: 'absolute', left: '50%', marginLeft: 58 },
-  bottomSwitchCameraDisabled: { opacity: 0.4 },
-  sessionBottomActions: { alignItems: 'center', justifyContent: 'center', minHeight: 150 },
-  recordButton: { width: 86, height: 86, borderRadius: 43, borderWidth: 4, borderColor: '#FFFFFFAA', justifyContent: 'center', alignItems: 'center' },
-  recordButtonInner: { width: 58, height: 58, borderRadius: 29, backgroundColor: '#EF4444' },
-  liveSessionSwitchCameraButton: { width: 86, height: 86, borderRadius: 43, borderWidth: 1, borderColor: '#FFFFFF33', backgroundColor: '#0000007A', alignItems: 'center', justifyContent: 'center' },
-  countdownNumber: { fontSize: 82, fontWeight: '800' },
-  volumeControlCard: { position: 'absolute', top: '38%', zIndex: 25 },
-  volumeControlLeft: { left: 10 },
-  volumeControlRight: { right: 10 },
-  volumeControlTouchArea: { width: 20, height: 180, borderRadius: 999, backgroundColor: '#FFFFFF30', overflow: 'hidden', justifyContent: 'flex-end' },
-  volumeControlTrack: { width: 20, height: 180, borderRadius: 999, backgroundColor: '#FFFFFF30', overflow: 'hidden', justifyContent: 'flex-end' },
-  volumeProgressFill: { width: '100%', backgroundColor: '#8B5CF6' },
-  volumeThumb: { position: 'absolute', left: -1, width: 22, height: 22, borderRadius: 11, backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#8B5CF6', marginBottom: -11 },
-  baseModalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: '#000000A6', justifyContent: 'center', paddingHorizontal: 18, zIndex: 20 },
-  baseModalCard: { borderRadius: 20, borderWidth: 1, borderColor: '#FFFFFF1F', backgroundColor: '#121022', padding: 14, gap: 12, maxHeight: '70%' },
-  baseModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  baseModalTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '800' },
-  baseModalClose: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#FFFFFF1A', alignItems: 'center', justifyContent: 'center' },
-  baseOptionsColumn: { gap: 8 },
-  baseOptionItem: { borderRadius: 12, borderWidth: 1, borderColor: '#FFFFFF1F', backgroundColor: '#FFFFFF0A', padding: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  baseOptionSelected: { borderColor: '#6B46FF', backgroundColor: '#6B46FF22' },
-  baseOptionMain: { gap: 2 },
-  baseOptionTitle: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
-  baseOptionDesc: { color: '#BDB7E5', fontSize: 12, fontWeight: '600' },
-
-  summaryScreen: { flex: 1, paddingHorizontal: 20, paddingVertical: 16, gap: 16 },
-  summaryHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  summaryTitle: { fontSize: 22, fontWeight: '800' },
-  summaryCloseButton: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  summaryMetaCard: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 6 },
-  summaryMetaText: { fontSize: 14, fontWeight: '600' },
-  summaryMetaDescription: { fontSize: 13, fontWeight: '500' },
-  previewCard: { gap: 8 },
-  previewVideo: { height: 320, borderRadius: 16, borderWidth: 1, justifyContent: 'flex-start', alignItems: 'flex-start', padding: 14 },
-  previewTimer: { fontSize: 18, fontWeight: '800' },
-  previewHint: { fontSize: 12 },
-  summaryActions: { flexDirection: 'row', gap: 10, marginTop: 'auto' },
-  summaryActionButton: { flex: 1, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  summaryActionText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
-});
