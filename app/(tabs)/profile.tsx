@@ -105,7 +105,7 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={[styles.container, styles.loggedOutContainer, { backgroundColor: colors.screen }]} edges={['top', 'bottom']}>
         <View style={[styles.loggedOutCard, { backgroundColor: colors.card, borderColor: colors.sectionBorder }]}>
-          <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Perfil bloqueado</Text>
+          <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Inicia sesión para acceder a las funcionalidades</Text>
           <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Inicia sesión o regístrate para ver tu perfil.</Text>
           <Pressable onPress={openAuthModal} style={styles.saveButton}>
             <Text style={styles.saveButtonText}>Iniciar sesión / Registrarse</Text>
