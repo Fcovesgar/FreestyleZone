@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FirebaseError } from 'firebase/app';
 import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
@@ -70,6 +71,25 @@ async function upsertUserProfile({ uid, name, email }: { uid: string; name: stri
     },
     { merge: true }
   );
+}
+
+function getCredentialRegisterErrorMessage(error: unknown) {
+  if (!(error instanceof FirebaseError)) {
+    return 'No se pudo crear la cuenta.';
+  }
+
+  switch (error.code) {
+    case 'auth/email-already-in-use':
+      return 'Ese correo ya está registrado. Inicia sesión o usa otro email.';
+    case 'auth/invalid-email':
+      return 'El formato del email no es válido.';
+    case 'auth/weak-password':
+      return 'La contraseña es demasiado débil. Usa al menos 6 caracteres.';
+    case 'auth/network-request-failed':
+      return 'Error de red. Revisa tu conexión e inténtalo de nuevo.';
+    default:
+      return 'No se pudo crear la cuenta.';
+  }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -160,12 +180,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         try {
           const credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
-          await updateProfile(credential.user, { displayName: name.trim() });
-          await upsertUserProfile({ uid: credential.user.uid, name: name.trim(), email: email.trim() });
+
+          try {
+            await updateProfile(credential.user, { displayName: name.trim() });
+          } catch {
+            // Si falla, mantenemos la cuenta creada y usamos fallback de nombre.
+          }
+
+          try {
+            await upsertUserProfile({ uid: credential.user.uid, name: name.trim(), email: email.trim() });
+          } catch {
+            // Si Firestore falla por reglas/permisos, no bloqueamos el registro en Auth.
+          }
+
           setIsAuthModalOpen(false);
           return { ok: true };
-        } catch {
-          return { ok: false, message: 'No se pudo crear la cuenta.' };
+        } catch (error) {
+          return { ok: false, message: getCredentialRegisterErrorMessage(error) };
         }
       },
       signOutFromApp: async () => {

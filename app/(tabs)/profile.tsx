@@ -105,10 +105,10 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={[styles.container, styles.loggedOutContainer, { backgroundColor: colors.screen }]} edges={['top', 'bottom']}>
         <View style={[styles.loggedOutCard, { backgroundColor: colors.card, borderColor: colors.sectionBorder }]}>
-          <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Inicia sesión para acceder a las funcionalidades</Text>
-          <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Inicia sesión o regístrate para ver tu perfil.</Text>
+          <Text style={[styles.loggedOutTitle, { color: colors.textPrimary }]}>FreestyleZone</Text>
+          <Text style={[styles.loggedOutDescription, { color: colors.textSecondary }]}>Accede a todas las funcionalidades.</Text>
           <Pressable onPress={openAuthModal} style={styles.saveButton}>
-            <Text style={styles.saveButtonText}>Iniciar sesión / Registrarse</Text>
+            <Text style={styles.saveButtonText}>ACCEDER</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -431,4 +431,6 @@ const styles = StyleSheet.create({
   logoutBtnText: { fontWeight: '700', color: '#DB2C2C' },
   loggedOutContainer: { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
   loggedOutCard: { borderWidth: 1, borderRadius: 14, padding: 16, width: '100%', gap: 12 },
+  loggedOutTitle: { fontSize: 24, fontWeight: '800', textAlign: 'center' },
+  loggedOutDescription: { fontSize: 14, fontWeight: '600', textAlign: 'center' },
 });
