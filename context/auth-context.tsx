@@ -74,6 +74,20 @@ async function loadProfile(firebaseUser: User): Promise<AuthProviderUser> {
   };
 }
 
+async function buildAuthUserFromFirebase(firebaseUser: User): Promise<AuthProviderUser> {
+  try {
+    return await loadProfile(firebaseUser);
+  } catch {
+    const fallbackName = firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Freestyler';
+    return {
+      uid: firebaseUser.uid,
+      name: fallbackName,
+      email: firebaseUser.email || '',
+      authMethod: mapAuthMethod(firebaseUser.providerData[0]?.providerId),
+    };
+  }
+}
+
 function getGoogleAuthErrorMessage(error: unknown, fallback: string) {
   if (error instanceof FirebaseError && error.code.startsWith('auth/')) {
     return fallback;
@@ -175,6 +189,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         try {
+          if (auth.currentUser) {
+            await signOut(auth);
+          }
+
           const provider = new GoogleAuthProvider();
           provider.setCustomParameters({ prompt: 'select_account' });
           const response = await signInWithPopup(auth, provider);
@@ -182,6 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const email = response.user.email || '';
 
           await upsertUserProfile({ uid: response.user.uid, name, email });
+          setUser(await buildAuthUserFromFirebase(response.user));
           setIsAuthModalOpen(false);
           return { ok: true };
         } catch (error) {
@@ -200,6 +219,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const email = response.user.email || '';
 
           await upsertUserProfile({ uid: response.user.uid, name, email });
+          setUser(await buildAuthUserFromFirebase(response.user));
           setIsAuthModalOpen(false);
           return { ok: true };
         } catch (error) {
@@ -230,6 +250,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         try {
+          if (auth.currentUser) {
+            await signOut(auth);
+          }
+
           const provider = new GoogleAuthProvider();
           provider.setCustomParameters({ prompt: 'select_account' });
           const response = await signInWithPopup(auth, provider);
@@ -237,6 +261,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const email = response.user.email || '';
 
           await upsertUserProfile({ uid: response.user.uid, name, email });
+          setUser(await buildAuthUserFromFirebase(response.user));
           setIsAuthModalOpen(false);
           return { ok: true };
         } catch (error) {
