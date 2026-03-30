@@ -16,7 +16,7 @@ import {
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { auth } from '@/firebase/firebaseConfig';
-import { getUserProfile, mapUserProfileErrorMessage, upsertUserProfile } from '@/data/user_profiles';
+import { getEmailByUsername, getUserProfile, mapUserProfileErrorMessage, upsertUserProfile } from '@/data/user_profiles';
 import { useAppThemeColors } from '@/hooks/use-app-theme-colors';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -38,7 +38,7 @@ type AuthContextValue = {
   isLoadingSession: boolean;
   signInWithGoogle: () => Promise<AuthResult>;
   signInWithGoogleToken: (idToken: string) => Promise<AuthResult>;
-  signInWithCredentials: (username: string, password: string) => Promise<AuthResult>;
+  signInWithCredentials: (usernameOrEmail: string, password: string) => Promise<AuthResult>;
   registerWithGoogle: () => Promise<AuthResult>;
   registerWithCredentials: (name: string, password: string) => Promise<AuthResult>;
   signOutFromApp: () => Promise<void>;
@@ -208,13 +208,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return { ok: false, message: getGoogleAuthErrorMessage(error, 'No se pudo iniciar con Google.') };
         }
       },
-      signInWithCredentials: async (username: string, password: string) => {
-        if (!username.trim() || !password.trim()) {
-          return { ok: false, message: 'Introduce nombre de usuario y contraseña.' };
+      signInWithCredentials: async (usernameOrEmail: string, password: string) => {
+        if (!usernameOrEmail.trim() || !password.trim()) {
+          return { ok: false, message: 'Introduce nombre de usuario/email y contraseña.' };
         }
 
         try {
-          await signInWithEmailAndPassword(auth, usernameToEmail(username), password);
+          const resolvedEmail = await getEmailByUsername(usernameOrEmail);
+          if (!resolvedEmail) {
+            return { ok: false, message: 'No existe ningún usuario con ese nombre o email.' };
+          }
+
+          await signInWithEmailAndPassword(auth, resolvedEmail, password);
           setIsAuthModalOpen(false);
           return { ok: true };
         } catch {
@@ -388,12 +393,12 @@ export function AuthEntryModal() {
             <Text style={[styles.closeBtnText, { color: colors.textPrimary }]}>✕</Text>
           </Pressable>
 
-          <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Nombre de usuario</Text>
+          <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Usuario o email</Text>
           <TextInput
             value={name}
             onChangeText={setName}
             autoCapitalize="none"
-            placeholder="Tu nombre único"
+            placeholder="Tu usuario o correo"
             placeholderTextColor="#8A8A8A"
             style={[styles.input, { borderColor: colors.border, backgroundColor: colors.inputBg, color: colors.textPrimary }]}
           />
