@@ -88,15 +88,15 @@ function getCredentialRegisterErrorMessage(error: unknown) {
     case 'auth/network-request-failed':
       return 'Error de red. Revisa tu conexión e inténtalo de nuevo.';
     case 'auth/operation-not-allowed':
-      return 'Registro por email desactivado. Activa Email/Password en Firebase Authentication.';
+      return 'El registro no está disponible temporalmente. Inténtalo más tarde.';
     case 'auth/configuration-not-found':
-      return 'No está habilitado el proveedor Email/Password en Firebase Authentication.';
+      return 'El registro no está disponible temporalmente. Inténtalo más tarde.';
     case 'auth/admin-restricted-operation':
-      return 'Firebase bloquea este registro por configuración del proyecto.';
+      return 'No se puede completar el registro en este momento.';
     case 'auth/too-many-requests':
       return 'Demasiados intentos. Espera un momento e inténtalo otra vez.';
     default:
-      return `No se pudo crear la cuenta (${error.code}).`;
+      return 'No se pudo crear la cuenta en este momento.';
   }
 }
 
