@@ -19,6 +19,7 @@ import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAppTheme } from '@/context/app-theme-context';
+import { useAuth } from '@/context/auth-context';
 import { useAppThemeColors } from '@/hooks/use-app-theme-colors';
 
 type RapStyle = 'Doble punch' | 'Metriquero' | 'Batallero';
@@ -47,6 +48,7 @@ export default function ProfileScreen() {
   const isDark = effectiveColorScheme === 'dark';
   const colors = useAppThemeColors();
   const insets = useSafeAreaInsets();
+  const { user, signOutFromApp } = useAuth();
 
   const [profile, setProfile] = useState<ProfileData>({
     username: '@mc_verso',
@@ -58,6 +60,7 @@ export default function ProfileScreen() {
   const [draftProfile, setDraftProfile] = useState<ProfileData>(profile);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [accountVisible, setAccountVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<ProfileContentTab>('videos');
   const [refreshing, setRefreshing] = useState(false);
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -226,11 +229,42 @@ export default function ProfileScreen() {
       ) : null}
 
       <Modal animationType="fade" transparent visible={settingsVisible} onRequestClose={() => setSettingsVisible(false)}>
-        <View style={[styles.settingsBackdrop, { backgroundColor: colors.overlay }]}>
+        <View style={[styles.settingsBackdrop, { backgroundColor: colors.overlay }]}> 
           <View style={[styles.settingsCard, { backgroundColor: colors.card, borderColor: colors.border }]}> 
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Configuración</Text>
-            <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Por ahora este panel no tiene opciones configurables.</Text>
+            <Pressable
+              onPress={() => {
+                setSettingsVisible(false);
+                setAccountVisible(true);
+              }}
+              style={[styles.closeSettingsBtn, { borderColor: colors.border }]}> 
+              <Text style={[styles.actionBtnText, { color: colors.textPrimary }]}>Datos del usuario</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                setSettingsVisible(false);
+                void signOutFromApp();
+              }}
+              style={[styles.logoutBtn, { borderColor: '#DB2C2C' }]}> 
+              <Text style={styles.logoutBtnText}>Cerrar sesión</Text>
+            </Pressable>
             <Pressable onPress={() => setSettingsVisible(false)} style={[styles.closeSettingsBtn, { borderColor: colors.border }]}> 
+              <Text style={[styles.actionBtnText, { color: colors.textPrimary }]}>Cerrar</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal animationType="fade" transparent visible={accountVisible} onRequestClose={() => setAccountVisible(false)}>
+        <View style={[styles.settingsBackdrop, { backgroundColor: colors.overlay }]}> 
+          <View style={[styles.settingsCard, { backgroundColor: colors.card, borderColor: colors.border }]}> 
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Datos del usuario</Text>
+            <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Nombre: {user?.name ?? 'Sin sesión'}</Text>
+            <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Email: {user?.email ?? 'Sin sesión'}</Text>
+            <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
+              Método: {user?.authMethod === 'google' ? 'Google' : user?.authMethod === 'credentials' ? 'Usuario y contraseña' : 'Sin sesión'}
+            </Text>
+            <Pressable onPress={() => setAccountVisible(false)} style={[styles.closeSettingsBtn, { borderColor: colors.border }]}> 
               <Text style={[styles.actionBtnText, { color: colors.textPrimary }]}>Cerrar</Text>
             </Pressable>
           </View>
@@ -379,4 +413,6 @@ const styles = StyleSheet.create({
   chip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
   actionBtnText: { fontWeight: '600' },
   closeSettingsBtn: { borderWidth: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
+  logoutBtn: { borderWidth: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center', backgroundColor: '#DB2C2C1A' },
+  logoutBtnText: { fontWeight: '700', color: '#DB2C2C' },
 });

@@ -10,6 +10,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 import { AppThemeProvider, useAppTheme } from '@/context/app-theme-context';
+import { AuthEntryModal, AuthProvider } from '@/context/auth-context';
 
 
 void SplashScreen.preventAutoHideAsync();
@@ -35,6 +36,7 @@ function AppNavigator() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false, gestureEnabled: false }} />
       </Stack>
       <StatusBar style={effectiveColorScheme === 'dark' ? 'light' : 'dark'} />
+      <AuthEntryModal />
     </ThemeProvider>
   );
 }
@@ -76,7 +78,9 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.gestureRoot}>
       <AppThemeProvider>
-        <AppNavigator />
+        <AuthProvider>
+          <AppNavigator />
+        </AuthProvider>
       </AppThemeProvider>
     </GestureHandlerRootView>
   );
