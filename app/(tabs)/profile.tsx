@@ -26,7 +26,6 @@ type RapStyle = '' | 'Doble punch' | 'Metriquero' | 'Batallero';
 
 type ProfileData = {
   username: string;
-  city: string;
   bio: string;
   rapStyle: RapStyle;
   avatarUri: string;
@@ -52,7 +51,6 @@ export default function ProfileScreen() {
 
   const [profile, setProfile] = useState<ProfileData>({
     username: user?.name ?? '',
-    city: '',
     bio: '',
     rapStyle: '',
     avatarUri: AVATAR_OPTIONS[0],
@@ -155,8 +153,11 @@ export default function ProfileScreen() {
                   <MaterialIcons name="edit" size={18} color={colors.textPrimary} />
                 </Pressable>
               </View>
-              <Text style={[styles.metaText, { color: colors.textSecondary }]}>{profile.city}</Text>
-              <Text style={[styles.metaText, { color: colors.textSecondary }]}>Estilo: {profile.rapStyle || '—'}</Text>
+              <View style={styles.styleBadgeRow}>
+                <View style={styles.styleBadge}>
+                  <Text style={styles.styleBadgeText}>{profile.rapStyle || 'Sin estilo'}</Text>
+                </View>
+              </View>
             </View>
           </View>
 
@@ -209,12 +210,6 @@ export default function ProfileScreen() {
                 label="Nombre de usuario"
                 value={draftProfile.username}
                 onChangeText={(text) => setDraftProfile((prev) => ({ ...prev, username: text }))}
-                colors={colors}
-              />
-              <Field
-                label="Ciudad"
-                value={draftProfile.city}
-                onChangeText={(text) => setDraftProfile((prev) => ({ ...prev, city: text }))}
                 colors={colors}
               />
               <Field
@@ -348,6 +343,14 @@ const styles = StyleSheet.create({
   username: { fontSize: 24, fontWeight: '700' },
   iconBtn: { padding: 4 },
   metaText: { fontSize: 13, fontWeight: '500', marginTop: 2 },
+  styleBadgeRow: { marginTop: 8, alignSelf: 'flex-start' },
+  styleBadge: {
+    backgroundColor: '#6B46FF',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  styleBadgeText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
   settingsBtn: {
     borderWidth: 1,
     width: 38,
