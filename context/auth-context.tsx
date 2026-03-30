@@ -12,9 +12,8 @@ import {
   updateProfile,
   type User,
 } from 'firebase/auth';
-import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
-
-import { auth, db } from '@/firebase/firebaseConfig';
+import { auth } from '@/firebase/firebaseConfig';
+import { getUserProfile, mapUserProfileErrorMessage, upsertUserProfile } from '@/data/user_profiles';
 import { useAppThemeColors } from '@/hooks/use-app-theme-colors';
 
 export type AuthProviderUser = {
@@ -47,10 +46,9 @@ function mapAuthMethod(providerId?: string): 'google' | 'credentials' {
 }
 
 async function loadProfile(firebaseUser: User): Promise<AuthProviderUser> {
-  const userRef = doc(db, 'users', firebaseUser.uid);
-  const snapshot = await getDoc(userRef);
+  const profile = await getUserProfile(firebaseUser.uid);
 
-  const firestoreName = snapshot.exists() ? snapshot.data().Name : undefined;
+  const firestoreName = profile?.Name;
   const fallbackName = firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Freestyler';
 
   return {
@@ -61,17 +59,14 @@ async function loadProfile(firebaseUser: User): Promise<AuthProviderUser> {
   };
 }
 
-async function upsertUserProfile({ uid, name, email }: { uid: string; name: string; email: string }) {
-  await setDoc(
-    doc(db, 'users', uid),
-    {
-      Name: name,
-      Email: email,
-      updatedAt: serverTimestamp(),
-      createdAt: serverTimestamp(),
-    },
-    { merge: true }
-  );
+
+
+function getGoogleAuthErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof FirebaseError && error.code.startsWith('auth/')) {
+    return fallback;
+  }
+
+  return mapUserProfileErrorMessage(error);
 }
 
 function getCredentialRegisterErrorMessage(error: unknown) {
@@ -144,8 +139,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await upsertUserProfile({ uid: response.user.uid, name, email });
           setIsAuthModalOpen(false);
           return { ok: true };
-        } catch {
-          return { ok: false, message: 'No se pudo iniciar con Google.' };
+        } catch (error) {
+          return { ok: false, message: getGoogleAuthErrorMessage(error, 'No se pudo iniciar con Google.') };
         }
       },
       signInWithCredentials: async (email: string, password: string) => {
@@ -176,8 +171,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await upsertUserProfile({ uid: response.user.uid, name, email });
           setIsAuthModalOpen(false);
           return { ok: true };
-        } catch {
-          return { ok: false, message: 'No se pudo registrar con Google.' };
+        } catch (error) {
+          return { ok: false, message: getGoogleAuthErrorMessage(error, 'No se pudo registrar con Google.') };
         }
       },
       registerWithCredentials: async (name: string, email: string, password: string) => {
@@ -196,8 +191,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           try {
             await upsertUserProfile({ uid: credential.user.uid, name: name.trim(), email: email.trim() });
-          } catch {
-            // Si Firestore falla por reglas/permisos, no bloqueamos el registro en Auth.
+          } catch (error) {
+            return { ok: false, message: mapUserProfileErrorMessage(error) };
           }
 
           setIsAuthModalOpen(false);
