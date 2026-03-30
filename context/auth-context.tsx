@@ -12,9 +12,8 @@ import {
   updateProfile,
   type User,
 } from 'firebase/auth';
-import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
-
-import { auth, db } from '@/firebase/firebaseConfig';
+import { auth } from '@/firebase/firebaseConfig';
+import { getUserProfile, mapUserProfileErrorMessage, upsertUserProfile } from '@/data/user_profiles';
 import { useAppThemeColors } from '@/hooks/use-app-theme-colors';
 
 export type AuthProviderUser = {
@@ -47,10 +46,9 @@ function mapAuthMethod(providerId?: string): 'google' | 'credentials' {
 }
 
 async function loadProfile(firebaseUser: User): Promise<AuthProviderUser> {
-  const userRef = doc(db, 'users', firebaseUser.uid);
-  const snapshot = await getDoc(userRef);
+  const profile = await getUserProfile(firebaseUser.uid);
 
-  const firestoreName = snapshot.exists() ? snapshot.data().Name : undefined;
+  const firestoreName = profile?.Name;
   const fallbackName = firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Freestyler';
 
   return {
@@ -61,17 +59,14 @@ async function loadProfile(firebaseUser: User): Promise<AuthProviderUser> {
   };
 }
 
-async function upsertUserProfile({ uid, name, email }: { uid: string; name: string; email: string }) {
-  await setDoc(
-    doc(db, 'users', uid),
-    {
-      Name: name,
-      Email: email,
-      updatedAt: serverTimestamp(),
-      createdAt: serverTimestamp(),
-    },
-    { merge: true }
-  );
+
+
+function getGoogleAuthErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof FirebaseError && error.code.startsWith('auth/')) {
+    return fallback;
+  }
+
+  return mapUserProfileErrorMessage(error);
 }
 
 function getCredentialRegisterErrorMessage(error: unknown) {
@@ -84,16 +79,24 @@ function getCredentialRegisterErrorMessage(error: unknown) {
       return 'Ese correo ya está registrado. Inicia sesión o usa otro email.';
     case 'auth/invalid-email':
       return 'El formato del email no es válido.';
+    case 'auth/missing-email':
+      return 'Introduce un email válido para registrarte.';
+    case 'auth/missing-password':
+      return 'Introduce una contraseña para registrarte.';
     case 'auth/weak-password':
       return 'La contraseña es demasiado débil. Usa al menos 6 caracteres.';
     case 'auth/network-request-failed':
       return 'Error de red. Revisa tu conexión e inténtalo de nuevo.';
     case 'auth/operation-not-allowed':
-      return 'Registro por email desactivado. Activa Email/Password en Firebase Authentication.';
+      return 'El registro no está disponible temporalmente. Inténtalo más tarde.';
+    case 'auth/configuration-not-found':
+      return 'El registro no está disponible temporalmente. Inténtalo más tarde.';
+    case 'auth/admin-restricted-operation':
+      return 'No se puede completar el registro en este momento.';
     case 'auth/too-many-requests':
       return 'Demasiados intentos. Espera un momento e inténtalo otra vez.';
     default:
-      return 'No se pudo crear la cuenta.';
+      return 'No se pudo crear la cuenta en este momento.';
   }
 }
 
@@ -144,8 +147,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await upsertUserProfile({ uid: response.user.uid, name, email });
           setIsAuthModalOpen(false);
           return { ok: true };
-        } catch {
-          return { ok: false, message: 'No se pudo iniciar con Google.' };
+        } catch (error) {
+          return { ok: false, message: getGoogleAuthErrorMessage(error, 'No se pudo iniciar con Google.') };
         }
       },
       signInWithCredentials: async (email: string, password: string) => {
@@ -176,8 +179,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await upsertUserProfile({ uid: response.user.uid, name, email });
           setIsAuthModalOpen(false);
           return { ok: true };
-        } catch {
-          return { ok: false, message: 'No se pudo registrar con Google.' };
+        } catch (error) {
+          return { ok: false, message: getGoogleAuthErrorMessage(error, 'No se pudo registrar con Google.') };
         }
       },
       registerWithCredentials: async (name: string, email: string, password: string) => {
@@ -196,8 +199,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           try {
             await upsertUserProfile({ uid: credential.user.uid, name: name.trim(), email: email.trim() });
-          } catch {
-            // Si Firestore falla por reglas/permisos, no bloqueamos el registro en Auth.
+          } catch (error) {
+            return { ok: false, message: mapUserProfileErrorMessage(error) };
           }
 
           setIsAuthModalOpen(false);
@@ -293,7 +296,7 @@ export function AuthEntryModal() {
     <Modal animationType="fade" transparent visible={!isLoggedIn && !isLoadingSession && isAuthModalOpen}>
       <View style={[styles.backdrop, { backgroundColor: colors.overlay }]}> 
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}> 
-          <Text style={[styles.title, { color: colors.textPrimary }]}>{mode === 'login' ? 'Inicia sesión' : 'Registrate'}</Text>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>{mode === 'login' ? 'Inicia sesión' : 'Regístrate'}</Text>
 
           <Pressable onPress={closeAuthModal} style={[styles.closeBtn, { borderColor: colors.border }]}>
             <Text style={[styles.closeBtnText, { color: colors.textPrimary }]}>✕</Text>
