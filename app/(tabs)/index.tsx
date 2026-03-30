@@ -214,6 +214,22 @@ export default function RapearScreen() {
     }
   }, []);
 
+  const createNativeAudioPlayer = useCallback((audioModule: any, source: string): NativeAudioPlayer | null => {
+    if (audioModule?.createAudioPlayer) {
+      return audioModule.createAudioPlayer(source) as NativeAudioPlayer;
+    }
+    if (audioModule?.Audio?.createAudioPlayer) {
+      return audioModule.Audio.createAudioPlayer(source) as NativeAudioPlayer;
+    }
+    return null;
+  }, []);
+
+  const disposeNativeSound = useCallback((sound: NativeAudioPlayer | null) => {
+    if (!sound) return;
+    sound.remove?.();
+    sound.release?.();
+  }, []);
+
   const resolveCameraModule = useCallback(() => {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -227,13 +243,13 @@ export default function RapearScreen() {
     if (Platform.OS === 'web' || !ref.current) return;
     try {
       ref.current.pause?.();
-      ref.current.remove?.();
+      disposeNativeSound(ref.current);
     } catch {
       // ignore cleanup errors
     } finally {
       ref.current = null;
     }
-  }, []);
+  }, [disposeNativeSound]);
 
   const stopWebPreviewSound = useCallback(() => {
     if (Platform.OS !== 'web' || !webPreviewAudioRef.current) return;
@@ -352,7 +368,7 @@ export default function RapearScreen() {
       if (!currentTrack?.url) return;
 
       const audioModule = resolveNativeAudioModule();
-      if (!audioModule?.Audio?.createAudioPlayer) return;
+      if (!audioModule) return;
 
       const shouldRestart = trainingRestartKey !== nativeRestartKeyAppliedRef.current;
 
@@ -377,19 +393,23 @@ export default function RapearScreen() {
       }
 
       try {
-        const sound = audioModule.Audio.createAudioPlayer(currentTrack.url) as NativeAudioPlayer;
+        const sound = createNativeAudioPlayer(audioModule, currentTrack.url);
+        if (!sound) {
+          Alert.alert('Audio no compatible', 'No se pudo crear el reproductor de audio nativo.');
+          return;
+        }
         sound.loop = true;
         sound.volume = instrumentalVolume;
         sound.play();
         if (requestId !== trainingRequestRef.current) {
-          sound.remove();
+          disposeNativeSound(sound);
           return;
         }
         nativeTrainingSoundRef.current = sound;
         nativeTrainingTrackRef.current = selectedTrack;
         nativeRestartKeyAppliedRef.current = trainingRestartKey;
         if (previousTrainingSound && previousTrainingSound !== sound) {
-          previousTrainingSound.remove?.();
+          disposeNativeSound(previousTrainingSound);
         }
       } catch {
         Alert.alert('No se pudo reproducir', 'No se pudo iniciar la reproducción de la base.');
@@ -398,7 +418,7 @@ export default function RapearScreen() {
     };
 
     playTrainingNative();
-  }, [hasSessionStarted, instrumentalVolume, isRecordingBeatPlaying, resolveNativeAudioModule, isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, stopNativeSound, stopTrainingPlayback, tracks, trainingRestartKey]);
+  }, [createNativeAudioPlayer, disposeNativeSound, hasSessionStarted, instrumentalVolume, isRecordingBeatPlaying, resolveNativeAudioModule, isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, stopNativeSound, stopTrainingPlayback, tracks, trainingRestartKey]);
 
   useEffect(() => {
     return () => {
@@ -486,7 +506,7 @@ export default function RapearScreen() {
       setPreviewTrack(trackId);
 
       const audioModule = resolveNativeAudioModule();
-      if (!audioModule?.Audio?.createAudioPlayer) return;
+      if (!audioModule) return;
 
       const previousPreviewSound = nativePreviewSoundRef.current;
       if (previousPreviewSound) {
@@ -497,12 +517,17 @@ export default function RapearScreen() {
       if (requestId !== previewRequestRef.current) return;
 
       try {
-        const sound = audioModule.Audio.createAudioPlayer(currentTrack.url) as NativeAudioPlayer;
+        const sound = createNativeAudioPlayer(audioModule, currentTrack.url);
+        if (!sound) {
+          setPreviewTrack(null);
+          Alert.alert('Audio no compatible', 'No se pudo crear el reproductor de audio nativo.');
+          return;
+        }
         sound.loop = false;
         sound.volume = instrumentalVolume;
         sound.play();
         if (requestId !== previewRequestRef.current) {
-          sound.remove();
+          disposeNativeSound(sound);
           return;
         }
         nativePreviewStatusListenerRef.current?.remove();
@@ -514,7 +539,7 @@ export default function RapearScreen() {
         }) ?? null;
         nativePreviewSoundRef.current = sound;
         if (previousPreviewSound && previousPreviewSound !== sound) {
-          previousPreviewSound.remove?.();
+          disposeNativeSound(previousPreviewSound);
         }
       } catch {
         setPreviewTrack(null);
