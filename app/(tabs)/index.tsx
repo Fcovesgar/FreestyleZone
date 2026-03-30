@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, type LayoutChangeEvent, Linking, Modal, PermissionsAndroid, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getInstrumentals } from '../../data/get_instrumentals';
 import { getModes, type Mode } from '../../data/get_modes';
@@ -299,13 +300,32 @@ export default function RapearScreen() {
     nativeRestartKeyAppliedRef.current = trainingRestartKey;
   }, [stopNativeSound, stopWebTrainingSound, trainingRestartKey]);
 
+  const stopAllAudioPlayback = useCallback(async () => {
+    await stopPreviewPlayback();
+    await stopTrainingPlayback();
+    setIsTrainingBeatPlaying(false);
+    setIsRecordingBeatPlaying(false);
+  }, [stopPreviewPlayback, stopTrainingPlayback]);
+
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+        if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current);
+        setCountdown(null);
+        setHasSessionStarted(false);
+        setSessionVisible(false);
+        setBaseSelectorVisible(false);
+        void stopAllAudioPlayback();
+      };
+    }, [stopAllAudioPlayback])
+  );
+
   useEffect(() => {
     if (setupStep !== 'track') {
-      setPreviewTrack(null);
-      stopPreviewPlayback();
-      setIsTrainingBeatPlaying(false);
+      void stopAllAudioPlayback();
     }
-  }, [setupStep, stopPreviewPlayback]);
+  }, [setupStep, stopAllAudioPlayback]);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -742,7 +762,9 @@ export default function RapearScreen() {
         }
 
         const nextCountdown = previousCountdown - 1;
-        Vibration.vibrate(90);
+        if (nextCountdown <= 3 && nextCountdown >= 1) {
+          Vibration.vibrate(90);
+        }
 
         if (nextCountdown <= 0) {
           if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
@@ -1070,7 +1092,7 @@ export default function RapearScreen() {
       <Modal visible={sessionVisible} animationType="slide" onRequestClose={stopSession}>
         <View style={styles.sessionFullscreen}>
           <View style={[styles.cameraPlaceholder, styles.sessionModalCard, selectedSessionType === 'train' ? styles.trainingBackground : styles.recordingBackground, { marginTop: insets.top + 8, marginBottom: insets.bottom + 8 }]}>
-            {(selectedSessionType === 'train' || !hasSessionStarted) ? renderVolumeControl(selectedSessionType === 'train' ? 'right' : 'left') : null}
+            {(selectedSessionType === 'train' || (!hasSessionStarted && countdown === null)) ? renderVolumeControl(selectedSessionType === 'train' ? 'right' : 'left') : null}
             {selectedSessionType === 'train' ? (
               <>
                 <View style={[styles.trainingHeader, { paddingTop: insets.top + 8 }]}>
