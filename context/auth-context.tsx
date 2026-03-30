@@ -38,7 +38,7 @@ type AuthContextValue = {
   signInWithGoogleToken: (idToken: string) => Promise<AuthResult>;
   signInWithCredentials: (usernameOrEmail: string, password: string) => Promise<AuthResult>;
   registerWithGoogle: () => Promise<AuthResult>;
-  registerWithCredentials: (name: string, password: string) => Promise<AuthResult>;
+  registerWithCredentials: (name: string, email: string, password: string) => Promise<AuthResult>;
   signOutFromApp: () => Promise<void>;
   isAuthModalOpen: boolean;
   openAuthModal: () => void;
@@ -63,15 +63,29 @@ function usernameToEmail(username: string) {
 async function loadProfile(firebaseUser: User): Promise<AuthProviderUser> {
   const profile = await getUserProfile(firebaseUser.uid);
 
-  const firestoreName = profile?.Name;
+  const firestoreName = profile?.Name ?? profile?.name;
   const fallbackName = firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Freestyler';
 
   return {
     uid: firebaseUser.uid,
-    name: String(firestoreName || fallbackName),
+    name: String(firestoreName || fallbackName).trim(),
     email: firebaseUser.email || '',
     authMethod: mapAuthMethod(firebaseUser.providerData[0]?.providerId),
   };
+}
+
+async function buildAuthUserFromFirebase(firebaseUser: User): Promise<AuthProviderUser> {
+  try {
+    return await loadProfile(firebaseUser);
+  } catch {
+    const fallbackName = firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Freestyler';
+    return {
+      uid: firebaseUser.uid,
+      name: fallbackName,
+      email: firebaseUser.email || '',
+      authMethod: mapAuthMethod(firebaseUser.providerData[0]?.providerId),
+    };
+  }
 }
 
 function getGoogleAuthErrorMessage(error: unknown, fallback: string) {
@@ -175,6 +189,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         try {
+          if (auth.currentUser) {
+            await signOut(auth);
+          }
+
           const provider = new GoogleAuthProvider();
           provider.setCustomParameters({ prompt: 'select_account' });
           const response = await signInWithPopup(auth, provider);
@@ -182,6 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const email = response.user.email || '';
 
           await upsertUserProfile({ uid: response.user.uid, name, email });
+          setUser(await buildAuthUserFromFirebase(response.user));
           setIsAuthModalOpen(false);
           return { ok: true };
         } catch (error) {
@@ -200,6 +219,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const email = response.user.email || '';
 
           await upsertUserProfile({ uid: response.user.uid, name, email });
+          setUser(await buildAuthUserFromFirebase(response.user));
           setIsAuthModalOpen(false);
           return { ok: true };
         } catch (error) {
@@ -230,6 +250,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         try {
+          if (auth.currentUser) {
+            await signOut(auth);
+          }
+
           const provider = new GoogleAuthProvider();
           provider.setCustomParameters({ prompt: 'select_account' });
           const response = await signInWithPopup(auth, provider);
@@ -237,33 +261,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const email = response.user.email || '';
 
           await upsertUserProfile({ uid: response.user.uid, name, email });
+          setUser(await buildAuthUserFromFirebase(response.user));
           setIsAuthModalOpen(false);
           return { ok: true };
         } catch (error) {
           return { ok: false, message: getGoogleAuthErrorMessage(error, 'No se pudo registrar con Google.') };
         }
       },
-      registerWithCredentials: async (name: string, password: string) => {
-        if (!name.trim() || !password.trim()) {
-          return { ok: false, message: 'Completa nombre y contraseña para registrarte.' };
+      registerWithCredentials: async (name: string, email: string, password: string) => {
+        if (!name.trim() || !email.trim() || !password.trim()) {
+          return { ok: false, message: 'Completa nombre, email y contraseña para registrarte.' };
         }
 
         try {
+          const normalizedName = name.trim();
           const normalizedEmail = email.trim().toLowerCase();
           const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
 
           try {
-            await updateProfile(credential.user, { displayName: name.trim() });
+            await updateProfile(credential.user, { displayName: normalizedName });
           } catch {
             // Si falla, mantenemos la cuenta creada y usamos fallback de nombre.
           }
 
           try {
-            await upsertUserProfile({ uid: credential.user.uid, name: name.trim(), email: normalizedEmail });
+            await upsertUserProfile({ uid: credential.user.uid, name: normalizedName, email: normalizedEmail });
           } catch (error) {
             return { ok: false, message: mapUserProfileErrorMessage(error) };
           }
 
+          setUser({
+            uid: credential.user.uid,
+            name: normalizedName,
+            email: normalizedEmail,
+            authMethod: 'credentials',
+          });
           setIsAuthModalOpen(false);
           return { ok: true };
         } catch (error) {
