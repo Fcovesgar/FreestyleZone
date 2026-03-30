@@ -1,5 +1,5 @@
 import { FirebaseError } from 'firebase/app';
-import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, limit, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 
 import { db } from '@/firebase/firebaseConfig';
 
@@ -27,6 +27,7 @@ export async function upsertUserProfile(profile: UserProfile) {
   const payload: Record<string, unknown> = {
     Name: profile.name,
     Email: profile.email,
+    UsernameNormalized: profile.name.trim().toLowerCase(),
     updatedAt: serverTimestamp(),
   };
 
@@ -41,6 +42,38 @@ export async function upsertUserProfile(profile: UserProfile) {
   }
 
   await setDoc(userRef, payload, { merge: true });
+}
+
+export async function getEmailByUsername(usernameOrEmail: string) {
+  const input = usernameOrEmail.trim();
+  if (!input) {
+    return null;
+  }
+
+  if (input.includes('@')) {
+    return input.toLowerCase();
+  }
+
+  const normalized = input.toLowerCase();
+
+  const usersRef = collection(db, 'users');
+  const normalizedQuery = query(usersRef, where('UsernameNormalized', '==', normalized), limit(1));
+  const normalizedSnapshot = await getDocs(normalizedQuery);
+
+  if (!normalizedSnapshot.empty) {
+    const data = normalizedSnapshot.docs[0].data();
+    return typeof data.Email === 'string' ? data.Email : null;
+  }
+
+  const legacyQuery = query(usersRef, where('Name', '==', input), limit(1));
+  const legacySnapshot = await getDocs(legacyQuery);
+
+  if (legacySnapshot.empty) {
+    return null;
+  }
+
+  const legacyData = legacySnapshot.docs[0].data();
+  return typeof legacyData.Email === 'string' ? legacyData.Email : null;
 }
 
 export function mapUserProfileErrorMessage(error: unknown) {
