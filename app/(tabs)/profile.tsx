@@ -48,7 +48,7 @@ export default function ProfileScreen() {
   const isDark = effectiveColorScheme === 'dark';
   const colors = useAppThemeColors();
   const insets = useSafeAreaInsets();
-  const { user, signOut } = useAuth();
+  const { user, signOutFromApp } = useAuth();
 
   const [profile, setProfile] = useState<ProfileData>({
     username: '@mc_verso',
@@ -243,7 +243,7 @@ export default function ProfileScreen() {
             <Pressable
               onPress={() => {
                 setSettingsVisible(false);
-                signOut();
+                void signOutFromApp();
               }}
               style={[styles.logoutBtn, { borderColor: '#DB2C2C' }]}> 
               <Text style={styles.logoutBtnText}>Cerrar sesión</Text>
@@ -259,7 +259,8 @@ export default function ProfileScreen() {
         <View style={[styles.settingsBackdrop, { backgroundColor: colors.overlay }]}> 
           <View style={[styles.settingsCard, { backgroundColor: colors.card, borderColor: colors.border }]}> 
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Datos del usuario</Text>
-            <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Usuario: {user?.username ?? 'Sin sesión'}</Text>
+            <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Nombre: {user?.name ?? 'Sin sesión'}</Text>
+            <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Email: {user?.email ?? 'Sin sesión'}</Text>
             <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
               Método: {user?.authMethod === 'google' ? 'Google' : user?.authMethod === 'credentials' ? 'Usuario y contraseña' : 'Sin sesión'}
             </Text>
