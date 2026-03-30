@@ -48,7 +48,7 @@ export default function ProfileScreen() {
   const isDark = effectiveColorScheme === 'dark';
   const colors = useAppThemeColors();
   const insets = useSafeAreaInsets();
-  const { user, signOutFromApp } = useAuth();
+  const { user, isLoggedIn, openAuthModal, signOutFromApp } = useAuth();
 
   const [profile, setProfile] = useState<ProfileData>({
     username: '@mc_verso',
@@ -100,6 +100,20 @@ export default function ProfileScreen() {
     const nextIndex = (currentIndex + 1) % AVATAR_OPTIONS.length;
     setDraftProfile((prev) => ({ ...prev, avatarUri: AVATAR_OPTIONS[nextIndex] }));
   };
+
+  if (!isLoggedIn) {
+    return (
+      <SafeAreaView style={[styles.container, styles.loggedOutContainer, { backgroundColor: colors.screen }]} edges={['top', 'bottom']}>
+        <View style={[styles.loggedOutCard, { backgroundColor: colors.card, borderColor: colors.sectionBorder }]}>
+          <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Perfil bloqueado</Text>
+          <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Inicia sesión o regístrate para ver tu perfil.</Text>
+          <Pressable onPress={openAuthModal} style={styles.saveButton}>
+            <Text style={styles.saveButtonText}>Iniciar sesión / Registrarse</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.screen }]} edges={['top', 'bottom']}>
@@ -415,4 +429,6 @@ const styles = StyleSheet.create({
   closeSettingsBtn: { borderWidth: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
   logoutBtn: { borderWidth: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center', backgroundColor: '#DB2C2C1A' },
   logoutBtnText: { fontWeight: '700', color: '#DB2C2C' },
+  loggedOutContainer: { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
+  loggedOutCard: { borderWidth: 1, borderRadius: 14, padding: 16, width: '100%', gap: 12 },
 });

@@ -33,6 +33,9 @@ type AuthContextValue = {
   registerWithGoogle: () => Promise<AuthResult>;
   registerWithCredentials: (name: string, email: string, password: string) => Promise<AuthResult>;
   signOutFromApp: () => Promise<void>;
+  isAuthModalOpen: boolean;
+  openAuthModal: () => void;
+  closeAuthModal: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -72,6 +75,7 @@ async function upsertUserProfile({ uid, name, email }: { uid: string; name: stri
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthProviderUser | null>(null);
   const [isLoadingSession, setIsLoadingSession] = useState(true);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
@@ -84,6 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       void loadProfile(firebaseUser)
         .then((profile) => {
           setUser(profile);
+          setIsAuthModalOpen(false);
         })
         .finally(() => {
           setIsLoadingSession(false);
@@ -98,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       isLoggedIn: Boolean(user),
       isLoadingSession,
+      isAuthModalOpen,
       signInWithGoogle: async () => {
         if (Platform.OS !== 'web') {
           return { ok: false, message: 'El inicio con Google está disponible en web por ahora.' };
@@ -110,6 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const email = response.user.email || '';
 
           await upsertUserProfile({ uid: response.user.uid, name, email });
+          setIsAuthModalOpen(false);
           return { ok: true };
         } catch {
           return { ok: false, message: 'No se pudo iniciar con Google.' };
@@ -122,13 +129,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         try {
           await signInWithEmailAndPassword(auth, email.trim(), password);
+          setIsAuthModalOpen(false);
           return { ok: true };
         } catch {
           return { ok: false, message: 'Credenciales inválidas.' };
         }
       },
       registerWithGoogle: async () => {
-        return value.signInWithGoogle();
+        if (Platform.OS !== 'web') {
+          return { ok: false, message: 'El inicio con Google está disponible en web por ahora.' };
+        }
+
+        try {
+          const provider = new GoogleAuthProvider();
+          const response = await signInWithPopup(auth, provider);
+          const name = response.user.displayName || response.user.email?.split('@')[0] || 'Freestyler';
+          const email = response.user.email || '';
+
+          await upsertUserProfile({ uid: response.user.uid, name, email });
+          setIsAuthModalOpen(false);
+          return { ok: true };
+        } catch {
+          return { ok: false, message: 'No se pudo registrar con Google.' };
+        }
       },
       registerWithCredentials: async (name: string, email: string, password: string) => {
         if (!name.trim() || !email.trim() || !password.trim()) {
@@ -139,6 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
           await updateProfile(credential.user, { displayName: name.trim() });
           await upsertUserProfile({ uid: credential.user.uid, name: name.trim(), email: email.trim() });
+          setIsAuthModalOpen(false);
           return { ok: true };
         } catch {
           return { ok: false, message: 'No se pudo crear la cuenta.' };
@@ -146,9 +170,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       signOutFromApp: async () => {
         await signOut(auth);
+        setIsAuthModalOpen(true);
       },
+      openAuthModal: () => setIsAuthModalOpen(true),
+      closeAuthModal: () => setIsAuthModalOpen(false),
     }),
-    [isLoadingSession, user]
+    [isAuthModalOpen, isLoadingSession, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -166,7 +193,16 @@ export function useAuth() {
 
 export function AuthEntryModal() {
   const colors = useAppThemeColors();
-  const { isLoggedIn, isLoadingSession, signInWithGoogle, signInWithCredentials, registerWithGoogle, registerWithCredentials } = useAuth();
+  const {
+    isLoggedIn,
+    isLoadingSession,
+    isAuthModalOpen,
+    closeAuthModal,
+    signInWithGoogle,
+    signInWithCredentials,
+    registerWithGoogle,
+    registerWithCredentials,
+  } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -216,11 +252,15 @@ export function AuthEntryModal() {
   };
 
   return (
-    <Modal animationType="fade" transparent visible={!isLoggedIn && !isLoadingSession}>
+    <Modal animationType="fade" transparent visible={!isLoggedIn && !isLoadingSession && isAuthModalOpen}>
       <View style={[styles.backdrop, { backgroundColor: colors.overlay }]}> 
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}> 
           <Text style={[styles.title, { color: colors.textPrimary }]}>Bienvenido a FreestyleZone</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Inicia sesión ahora para acceder a todas las funcionalidades.</Text>
+
+          <Pressable onPress={closeAuthModal} style={[styles.closeBtn, { borderColor: colors.border }]}>
+            <Text style={[styles.closeBtnText, { color: colors.textPrimary }]}>✕</Text>
+          </Pressable>
 
           {mode === 'register' ? (
             <>
@@ -313,7 +353,19 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   title: { fontSize: 22, fontWeight: '700' },
-  subtitle: { fontSize: 14, lineHeight: 19 },
+  subtitle: { fontSize: 14, lineHeight: 19, paddingRight: 28 },
+  closeBtn: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeBtnText: { fontWeight: '700', fontSize: 14 },
   inputLabel: { fontSize: 13, fontWeight: '600', marginTop: 4 },
   input: {
     borderWidth: 1,
