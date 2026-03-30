@@ -3,6 +3,13 @@ import { Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'r
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { FirebaseError } from 'firebase/app';
 import {
+  makeRedirectUri,
+  ResponseType,
+  exchangeCodeAsync,
+  useAuthRequest,
+  useAutoDiscovery,
+} from 'expo-auth-session';
+import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
   onAuthStateChanged,
@@ -14,7 +21,6 @@ import {
   type User,
 } from 'firebase/auth';
 import * as WebBrowser from 'expo-web-browser';
-import * as Linking from 'expo-linking';
 import { auth } from '@/firebase/firebaseConfig';
 import { getEmailByUsername, getUserProfile, mapUserProfileErrorMessage, upsertUserProfile } from '@/data/user_profiles';
 import { useAppThemeColors } from '@/hooks/use-app-theme-colors';
@@ -94,30 +100,6 @@ function getGoogleAuthErrorMessage(error: unknown, fallback: string) {
   }
 
   return mapUserProfileErrorMessage(error);
-}
-
-function extractIdTokenFromUrl(url?: string | null) {
-  if (!url) return null;
-  const hash = url.split('#')[1];
-  if (!hash) return null;
-  const params = new URLSearchParams(hash);
-  return params.get('id_token');
-}
-
-function buildGoogleAuthUrl(redirectUri: string, nonce: string) {
-  const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
-  if (!webClientId) return null;
-
-  const params = new URLSearchParams({
-    client_id: webClientId,
-    redirect_uri: redirectUri,
-    response_type: 'id_token',
-    scope: 'openid profile email',
-    nonce,
-    prompt: 'select_account',
-  });
-
-  return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }
 
 function getCredentialRegisterErrorMessage(error: unknown) {
@@ -344,6 +326,22 @@ export function AuthEntryModal() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [isGoogleAuthInProgress, setIsGoogleAuthInProgress] = useState(false);
+  const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
+  const googleAndroidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
+  const mobileGoogleClientId = Platform.OS === 'ios' ? googleIosClientId : googleAndroidClientId;
+  const googleDiscovery = useAutoDiscovery('https://accounts.google.com');
+  const mobileGoogleRedirectUri = makeRedirectUri({ scheme: 'freestylezone', path: 'auth' });
+  const [googleRequest, googleResponse, promptGoogleAuth] = useAuthRequest(
+    {
+      clientId: mobileGoogleClientId ?? 'missing-mobile-google-client-id',
+      responseType: ResponseType.Code,
+      scopes: ['openid', 'profile', 'email'],
+      redirectUri: mobileGoogleRedirectUri,
+      extraParams: { prompt: 'select_account' },
+    },
+    googleDiscovery
+  );
 
   const resetForm = () => {
     setName('');
@@ -357,6 +355,73 @@ export function AuthEntryModal() {
     setMode((prev) => (prev === 'login' ? 'register' : 'login'));
     resetForm();
   };
+
+  useEffect(() => {
+    if (Platform.OS === 'web' || !isGoogleAuthInProgress) {
+      return;
+    }
+
+    if (googleResponse?.type === 'dismiss' || googleResponse?.type === 'cancel') {
+      setError('Se canceló el inicio de sesión con Google.');
+      setIsGoogleAuthInProgress(false);
+      return;
+    }
+
+    if (googleResponse?.type !== 'success') {
+      return;
+    }
+
+    if (!mobileGoogleClientId || !googleDiscovery?.tokenEndpoint || !googleRequest?.codeVerifier) {
+      setError('La configuración de Google OAuth para móvil está incompleta.');
+      setIsGoogleAuthInProgress(false);
+      return;
+    }
+
+    const code = googleResponse.params?.code;
+    if (!code) {
+      setError('No se recibió el código de autorización de Google.');
+      setIsGoogleAuthInProgress(false);
+      return;
+    }
+
+    void (async () => {
+      let idToken = '';
+      try {
+        const tokenResponse = await exchangeCodeAsync(
+          {
+            clientId: mobileGoogleClientId,
+            code,
+            redirectUri: mobileGoogleRedirectUri,
+            extraParams: { code_verifier: googleRequest.codeVerifier },
+          },
+          { tokenEndpoint: googleDiscovery.tokenEndpoint }
+        );
+        idToken = tokenResponse.idToken ?? '';
+      } catch {
+        setError('No se pudo completar el intercambio OAuth con Google.');
+        setIsGoogleAuthInProgress(false);
+        return;
+      }
+
+      if (!idToken) {
+        setError('No se recibió el token de Google. Revisa la configuración OAuth de Android/iOS.');
+        setIsGoogleAuthInProgress(false);
+        return;
+      }
+
+      const authResult = await signInWithGoogleToken(idToken);
+      if (!authResult.ok) {
+        setError(authResult.message ?? 'No se pudo iniciar con Google.');
+      } else {
+        setName('');
+        setRegisterEmail('');
+        setPassword('');
+        setConfirmPassword('');
+        setError('');
+      }
+      setIsGoogleAuthInProgress(false);
+    })();
+  }, [googleDiscovery, googleRequest, googleResponse, isGoogleAuthInProgress, mobileGoogleClientId, mobileGoogleRedirectUri, signInWithGoogleToken]);
 
   const handleCredentials = async () => {
     if (mode === 'register' && password !== confirmPassword) {
@@ -386,34 +451,23 @@ export function AuthEntryModal() {
       return;
     }
 
-    const redirectUri = Linking.createURL('auth');
-    const nonce = `${Date.now()}-${Math.random()}`;
-    const authUrl = buildGoogleAuthUrl(redirectUri, nonce);
-    if (!authUrl) {
-      setError('Configura EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID para iniciar con Google en Android/iOS.');
+    if (!googleIosClientId || !googleAndroidClientId) {
+      setError('Configura EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID y EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID.');
+      return;
+    }
+    if (!googleRequest) {
+      setError('No se pudo preparar la autenticación de Google en móvil.');
       return;
     }
 
-    const nativeResult = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
-
-    if (nativeResult.type !== 'success') {
+    setError('');
+    setIsGoogleAuthInProgress(true);
+    const nativeResult = await promptGoogleAuth();
+    if (nativeResult.type === 'dismiss' || nativeResult.type === 'cancel') {
       setError('Se canceló el inicio de sesión con Google.');
+      setIsGoogleAuthInProgress(false);
       return;
     }
-
-    const idToken = extractIdTokenFromUrl(nativeResult.url);
-    if (!idToken) {
-      setError('No se recibió el token de Google. Revisa Redirect URI en Google Cloud Console.');
-      return;
-    }
-
-    const authResult = await signInWithGoogleToken(idToken);
-    if (!authResult.ok) {
-      setError(authResult.message ?? 'No se pudo iniciar con Google.');
-      return;
-    }
-
-    resetForm();
   };
 
   return (
