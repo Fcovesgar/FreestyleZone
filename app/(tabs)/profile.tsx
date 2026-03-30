@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
@@ -22,11 +22,10 @@ import { useAppTheme } from '@/context/app-theme-context';
 import { useAuth } from '@/context/auth-context';
 import { useAppThemeColors } from '@/hooks/use-app-theme-colors';
 
-type RapStyle = 'Doble punch' | 'Metriquero' | 'Batallero';
+type RapStyle = '' | 'Doble punch' | 'Metriquero' | 'Batallero';
 
 type ProfileData = {
   username: string;
-  city: string;
   bio: string;
   rapStyle: RapStyle;
   avatarUri: string;
@@ -51,10 +50,9 @@ export default function ProfileScreen() {
   const { user, isLoggedIn, openAuthModal, signOutFromApp } = useAuth();
 
   const [profile, setProfile] = useState<ProfileData>({
-    username: '@mc_verso',
-    city: 'Madrid, ES',
-    bio: 'MC en progreso, barras y métricas todos los días.',
-    rapStyle: 'Doble punch',
+    username: user?.name ?? '',
+    bio: '',
+    rapStyle: '',
     avatarUri: AVATAR_OPTIONS[0],
   });
   const [draftProfile, setDraftProfile] = useState<ProfileData>(profile);
@@ -64,6 +62,15 @@ export default function ProfileScreen() {
   const [activeTab, setActiveTab] = useState<ProfileContentTab>('videos');
   const [refreshing, setRefreshing] = useState(false);
   const slideAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!user?.name) {
+      return;
+    }
+
+    setProfile((prev) => ({ ...prev, username: user.name }));
+    setDraftProfile((prev) => ({ ...prev, username: user.name }));
+  }, [user?.name]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -107,7 +114,7 @@ export default function ProfileScreen() {
         <View style={[styles.loggedOutCard, { backgroundColor: colors.card, borderColor: colors.sectionBorder }]}>
           <Text style={[styles.loggedOutTitle, { color: colors.textPrimary }]}>FreestyleZone</Text>
           <Text style={[styles.loggedOutDescription, { color: colors.textSecondary }]}>
-            Inicia sesión/registrate para acceder ahora a todas las funcionalidades
+            Inicia sesión/regístrate para acceder ahora a todas las funcionalidades
           </Text>
           <Pressable onPress={openAuthModal} style={styles.loggedOutButton}>
             <Text style={styles.saveButtonText}>ACCEDER</Text>
@@ -146,8 +153,11 @@ export default function ProfileScreen() {
                   <MaterialIcons name="edit" size={18} color={colors.textPrimary} />
                 </Pressable>
               </View>
-              <Text style={[styles.metaText, { color: colors.textSecondary }]}>{profile.city}</Text>
-              <Text style={[styles.metaText, { color: colors.textSecondary }]}>Estilo: {profile.rapStyle}</Text>
+              <View style={styles.styleBadgeRow}>
+                <View style={styles.styleBadge}>
+                  <Text style={styles.styleBadgeText}>{profile.rapStyle || 'Sin estilo'}</Text>
+                </View>
+              </View>
             </View>
           </View>
 
@@ -200,12 +210,6 @@ export default function ProfileScreen() {
                 label="Nombre de usuario"
                 value={draftProfile.username}
                 onChangeText={(text) => setDraftProfile((prev) => ({ ...prev, username: text }))}
-                colors={colors}
-              />
-              <Field
-                label="Ciudad"
-                value={draftProfile.city}
-                onChangeText={(text) => setDraftProfile((prev) => ({ ...prev, city: text }))}
                 colors={colors}
               />
               <Field
@@ -339,6 +343,14 @@ const styles = StyleSheet.create({
   username: { fontSize: 24, fontWeight: '700' },
   iconBtn: { padding: 4 },
   metaText: { fontSize: 13, fontWeight: '500', marginTop: 2 },
+  styleBadgeRow: { marginTop: 8, alignSelf: 'flex-start' },
+  styleBadge: {
+    backgroundColor: '#6B46FF',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  styleBadgeText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
   settingsBtn: {
     borderWidth: 1,
     width: 38,
