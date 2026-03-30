@@ -43,7 +43,8 @@ export type TrackItem = {
 export type NativeAudioPlayer = {
   play: () => void;
   pause: () => void;
-  remove: () => void;
+  remove?: () => void;
+  release?: () => void;
   seekTo: (seconds: number) => void;
   addListener?: (eventName: string, listener: (status: any) => void) => { remove: () => void };
   duration?: number;
