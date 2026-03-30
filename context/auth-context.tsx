@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { FirebaseError } from 'firebase/app';
 import {
   GoogleAuthProvider,
@@ -87,6 +88,10 @@ function getCredentialRegisterErrorMessage(error: unknown) {
       return 'La contraseña es demasiado débil. Usa al menos 6 caracteres.';
     case 'auth/network-request-failed':
       return 'Error de red. Revisa tu conexión e inténtalo de nuevo.';
+    case 'auth/operation-not-allowed':
+      return 'Registro por email desactivado. Activa Email/Password en Firebase Authentication.';
+    case 'auth/too-many-requests':
+      return 'Demasiados intentos. Espera un momento e inténtalo otra vez.';
     default:
       return 'No se pudo crear la cuenta.';
   }
@@ -131,6 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         try {
           const provider = new GoogleAuthProvider();
+          provider.setCustomParameters({ prompt: 'select_account' });
           const response = await signInWithPopup(auth, provider);
           const name = response.user.displayName || response.user.email?.split('@')[0] || 'Freestyler';
           const email = response.user.email || '';
@@ -162,6 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         try {
           const provider = new GoogleAuthProvider();
+          provider.setCustomParameters({ prompt: 'select_account' });
           const response = await signInWithPopup(auth, provider);
           const name = response.user.displayName || response.user.email?.split('@')[0] || 'Freestyler';
           const email = response.user.email || '';
@@ -346,7 +353,10 @@ export function AuthEntryModal() {
 
           <View style={styles.actionRow}>
             <Pressable onPress={handleGoogle} style={styles.googleBtn}>
-              <Text style={styles.googleBtnText}>Google</Text>
+              <View style={styles.googleBtnContent}>
+                <FontAwesome name="google" size={16} color="#FFFFFF" />
+                <Text style={styles.googleBtnText}>Google</Text>
+              </View>
             </Pressable>
             <Pressable onPress={handleCredentials} style={[styles.mainBtn, { borderColor: colors.border }]}> 
               <Text style={[styles.mainBtnText, { color: colors.textPrimary }]}>{mode === 'login' ? 'Iniciar sesión' : 'Registrarse'}</Text>
@@ -417,6 +427,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
+  googleBtnContent: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   googleBtnText: { color: '#FFFFFF', fontWeight: '700' },
   mainBtn: {
     borderWidth: 1,
