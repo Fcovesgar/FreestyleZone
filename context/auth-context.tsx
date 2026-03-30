@@ -3,6 +3,13 @@ import { Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'r
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { FirebaseError } from 'firebase/app';
 import {
+  makeRedirectUri,
+  ResponseType,
+  exchangeCodeAsync,
+  useAuthRequest,
+  useAutoDiscovery,
+} from 'expo-auth-session';
+import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
   onAuthStateChanged,
@@ -14,7 +21,6 @@ import {
   type User,
 } from 'firebase/auth';
 import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
 import { auth } from '@/firebase/firebaseConfig';
 import { getEmailByUsername, getUserProfile, mapUserProfileErrorMessage, upsertUserProfile } from '@/data/user_profiles';
 import { useAppThemeColors } from '@/hooks/use-app-theme-colors';
@@ -321,16 +327,22 @@ export function AuthEntryModal() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isGoogleAuthInProgress, setIsGoogleAuthInProgress] = useState(false);
-  const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
   const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
   const googleAndroidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
-
-  const [, googleResponse, promptGoogleAuth] = Google.useIdTokenAuthRequest({
-    iosClientId: googleIosClientId,
-    androidClientId: googleAndroidClientId,
-    webClientId: googleWebClientId,
-    selectAccount: true,
-  });
+  const mobileGoogleClientId = Platform.OS === 'ios' ? googleIosClientId : googleAndroidClientId;
+  const googleDiscovery = useAutoDiscovery('https://accounts.google.com');
+  const [googleRequest, googleResponse, promptGoogleAuth] = useAuthRequest(
+    mobileGoogleClientId
+      ? {
+          clientId: mobileGoogleClientId,
+          responseType: ResponseType.Code,
+          scopes: ['openid', 'profile', 'email'],
+          redirectUri: makeRedirectUri({ scheme: 'freestylezone', path: 'auth' }),
+          extraParams: { prompt: 'select_account' },
+        }
+      : null,
+    googleDiscovery
+  );
 
   const resetForm = () => {
     setName('');
@@ -360,14 +372,45 @@ export function AuthEntryModal() {
       return;
     }
 
-    const idToken = googleResponse.authentication?.idToken;
-    if (!idToken) {
-      setError('No se recibió el token de Google. Revisa la configuración OAuth de Android/iOS.');
+    if (!mobileGoogleClientId || !googleDiscovery?.tokenEndpoint || !googleRequest?.codeVerifier) {
+      setError('La configuración de Google OAuth para móvil está incompleta.');
       setIsGoogleAuthInProgress(false);
       return;
     }
 
-    void signInWithGoogleToken(idToken).then((authResult) => {
+    const code = googleResponse.params?.code;
+    if (!code) {
+      setError('No se recibió el código de autorización de Google.');
+      setIsGoogleAuthInProgress(false);
+      return;
+    }
+
+    void (async () => {
+      let idToken = '';
+      try {
+        const tokenResponse = await exchangeCodeAsync(
+          {
+            clientId: mobileGoogleClientId,
+            code,
+            redirectUri: makeRedirectUri({ scheme: 'freestylezone', path: 'auth' }),
+            extraParams: { code_verifier: googleRequest.codeVerifier },
+          },
+          { tokenEndpoint: googleDiscovery.tokenEndpoint }
+        );
+        idToken = tokenResponse.idToken ?? '';
+      } catch {
+        setError('No se pudo completar el intercambio OAuth con Google.');
+        setIsGoogleAuthInProgress(false);
+        return;
+      }
+
+      if (!idToken) {
+        setError('No se recibió el token de Google. Revisa la configuración OAuth de Android/iOS.');
+        setIsGoogleAuthInProgress(false);
+        return;
+      }
+
+      const authResult = await signInWithGoogleToken(idToken);
       if (!authResult.ok) {
         setError(authResult.message ?? 'No se pudo iniciar con Google.');
       } else {
@@ -378,8 +421,8 @@ export function AuthEntryModal() {
         setError('');
       }
       setIsGoogleAuthInProgress(false);
-    });
-  }, [googleResponse, isGoogleAuthInProgress, signInWithGoogleToken]);
+    })();
+  }, [googleDiscovery, googleRequest, googleResponse, isGoogleAuthInProgress, mobileGoogleClientId, signInWithGoogleToken]);
 
   const handleCredentials = async () => {
     if (mode === 'register' && password !== confirmPassword) {
@@ -411,6 +454,10 @@ export function AuthEntryModal() {
 
     if (!googleIosClientId || !googleAndroidClientId) {
       setError('Configura EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID y EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID.');
+      return;
+    }
+    if (!googleRequest) {
+      setError('No se pudo preparar la autenticación de Google en móvil.');
       return;
     }
 
