@@ -21,8 +21,6 @@ import { useAppThemeColors } from '@/hooks/use-app-theme-colors';
 
 WebBrowser.maybeCompleteAuthSession();
 
-const AUTH_EMAIL_DOMAIN = 'freestylezone.app';
-
 export type AuthProviderUser = {
   uid: string;
   name: string;
@@ -115,11 +113,11 @@ function getCredentialRegisterErrorMessage(error: unknown) {
 
   switch (error.code) {
     case 'auth/email-already-in-use':
-      return 'Ese nombre de usuario ya existe. Prueba con otro.';
+      return 'Ese correo ya está registrado. Prueba con otro.';
     case 'auth/invalid-email':
-      return 'El nombre de usuario no es válido.';
+      return 'El correo no es válido.';
     case 'auth/missing-email':
-      return 'Introduce un nombre de usuario válido para registrarte.';
+      return 'Introduce un correo válido para registrarte.';
     case 'auth/missing-password':
       return 'Introduce una contraseña para registrarte.';
     case 'auth/weak-password':
@@ -251,8 +249,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         try {
-          const email = usernameToEmail(name);
-          const credential = await createUserWithEmailAndPassword(auth, email, password);
+          const normalizedEmail = email.trim().toLowerCase();
+          const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
 
           try {
             await updateProfile(credential.user, { displayName: name.trim() });
@@ -261,7 +259,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
 
           try {
-            await upsertUserProfile({ uid: credential.user.uid, name: name.trim(), email });
+            await upsertUserProfile({ uid: credential.user.uid, name: name.trim(), email: normalizedEmail });
           } catch (error) {
             return { ok: false, message: mapUserProfileErrorMessage(error) };
           }
@@ -332,7 +330,8 @@ export function AuthEntryModal() {
       return;
     }
 
-    const result = mode === 'login' ? await signInWithCredentials(name, password) : await registerWithCredentials(name, password);
+    const result =
+      mode === 'login' ? await signInWithCredentials(name, password) : await registerWithCredentials(name, email, password);
 
     if (!result.ok) {
       setError(result.message ?? 'No se pudo completar la acción.');
@@ -393,15 +392,30 @@ export function AuthEntryModal() {
             <Text style={[styles.closeBtnText, { color: colors.textPrimary }]}>✕</Text>
           </Pressable>
 
-          <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Usuario o email</Text>
+          <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>{mode === 'login' ? 'Usuario o email' : 'Nombre de usuario'}</Text>
           <TextInput
             value={name}
             onChangeText={setName}
             autoCapitalize="none"
-            placeholder="Tu usuario o correo"
+            placeholder={mode === 'login' ? 'Tu usuario o correo' : 'Tu nombre de usuario'}
             placeholderTextColor="#8A8A8A"
             style={[styles.input, { borderColor: colors.border, backgroundColor: colors.inputBg, color: colors.textPrimary }]}
           />
+
+          {mode === 'register' ? (
+            <>
+              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Email</Text>
+              <TextInput
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                placeholder="correo@ejemplo.com"
+                placeholderTextColor="#8A8A8A"
+                style={[styles.input, { borderColor: colors.border, backgroundColor: colors.inputBg, color: colors.textPrimary }]}
+              />
+            </>
+          ) : null}
 
           <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Contraseña</Text>
           <TextInput
