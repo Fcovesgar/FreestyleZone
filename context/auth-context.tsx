@@ -331,16 +331,15 @@ export function AuthEntryModal() {
   const googleAndroidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
   const mobileGoogleClientId = Platform.OS === 'ios' ? googleIosClientId : googleAndroidClientId;
   const googleDiscovery = useAutoDiscovery('https://accounts.google.com');
+  const mobileGoogleRedirectUri = makeRedirectUri({ scheme: 'freestylezone', path: 'auth' });
   const [googleRequest, googleResponse, promptGoogleAuth] = useAuthRequest(
-    mobileGoogleClientId
-      ? {
-          clientId: mobileGoogleClientId,
-          responseType: ResponseType.Code,
-          scopes: ['openid', 'profile', 'email'],
-          redirectUri: makeRedirectUri({ scheme: 'freestylezone', path: 'auth' }),
-          extraParams: { prompt: 'select_account' },
-        }
-      : null,
+    {
+      clientId: mobileGoogleClientId ?? 'missing-mobile-google-client-id',
+      responseType: ResponseType.Code,
+      scopes: ['openid', 'profile', 'email'],
+      redirectUri: mobileGoogleRedirectUri,
+      extraParams: { prompt: 'select_account' },
+    },
     googleDiscovery
   );
 
@@ -392,7 +391,7 @@ export function AuthEntryModal() {
           {
             clientId: mobileGoogleClientId,
             code,
-            redirectUri: makeRedirectUri({ scheme: 'freestylezone', path: 'auth' }),
+            redirectUri: mobileGoogleRedirectUri,
             extraParams: { code_verifier: googleRequest.codeVerifier },
           },
           { tokenEndpoint: googleDiscovery.tokenEndpoint }
@@ -422,7 +421,7 @@ export function AuthEntryModal() {
       }
       setIsGoogleAuthInProgress(false);
     })();
-  }, [googleDiscovery, googleRequest, googleResponse, isGoogleAuthInProgress, mobileGoogleClientId, signInWithGoogleToken]);
+  }, [googleDiscovery, googleRequest, googleResponse, isGoogleAuthInProgress, mobileGoogleClientId, mobileGoogleRedirectUri, signInWithGoogleToken]);
 
   const handleCredentials = async () => {
     if (mode === 'register' && password !== confirmPassword) {
