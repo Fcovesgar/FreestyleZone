@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FirebaseError } from 'firebase/app';
 import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
@@ -70,6 +71,25 @@ async function upsertUserProfile({ uid, name, email }: { uid: string; name: stri
     },
     { merge: true }
   );
+}
+
+function getCredentialRegisterErrorMessage(error: unknown) {
+  if (!(error instanceof FirebaseError)) {
+    return 'No se pudo crear la cuenta.';
+  }
+
+  switch (error.code) {
+    case 'auth/email-already-in-use':
+      return 'Ese correo ya está registrado. Inicia sesión o usa otro email.';
+    case 'auth/invalid-email':
+      return 'El formato del email no es válido.';
+    case 'auth/weak-password':
+      return 'La contraseña es demasiado débil. Usa al menos 6 caracteres.';
+    case 'auth/network-request-failed':
+      return 'Error de red. Revisa tu conexión e inténtalo de nuevo.';
+    default:
+      return 'No se pudo crear la cuenta.';
+  }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -160,12 +180,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         try {
           const credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
-          await updateProfile(credential.user, { displayName: name.trim() });
-          await upsertUserProfile({ uid: credential.user.uid, name: name.trim(), email: email.trim() });
+
+          try {
+            await updateProfile(credential.user, { displayName: name.trim() });
+          } catch {
+            // Si falla, mantenemos la cuenta creada y usamos fallback de nombre.
+          }
+
+          try {
+            await upsertUserProfile({ uid: credential.user.uid, name: name.trim(), email: email.trim() });
+          } catch {
+            // Si Firestore falla por reglas/permisos, no bloqueamos el registro en Auth.
+          }
+
           setIsAuthModalOpen(false);
           return { ok: true };
-        } catch {
-          return { ok: false, message: 'No se pudo crear la cuenta.' };
+        } catch (error) {
+          return { ok: false, message: getCredentialRegisterErrorMessage(error) };
         }
       },
       signOutFromApp: async () => {
@@ -255,8 +286,7 @@ export function AuthEntryModal() {
     <Modal animationType="fade" transparent visible={!isLoggedIn && !isLoadingSession && isAuthModalOpen}>
       <View style={[styles.backdrop, { backgroundColor: colors.overlay }]}> 
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}> 
-          <Text style={[styles.title, { color: colors.textPrimary }]}>Bienvenido a FreestyleZone</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Inicia sesión ahora para acceder a todas las funcionalidades.</Text>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>{mode === 'login' ? 'Inicia sesión' : 'Registrate'}</Text>
 
           <Pressable onPress={closeAuthModal} style={[styles.closeBtn, { borderColor: colors.border }]}>
             <Text style={[styles.closeBtnText, { color: colors.textPrimary }]}>✕</Text>
@@ -349,11 +379,11 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: 16,
     borderWidth: 1,
-    padding: 16,
-    gap: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 22,
+    gap: 14,
   },
-  title: { fontSize: 22, fontWeight: '700' },
-  subtitle: { fontSize: 14, lineHeight: 19, paddingRight: 28 },
+  title: { fontSize: 22, fontWeight: '700', textAlign: 'center', marginBottom: 2 },
   closeBtn: {
     position: 'absolute',
     top: 10,
@@ -366,18 +396,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   closeBtnText: { fontWeight: '700', fontSize: 14 },
-  inputLabel: { fontSize: 13, fontWeight: '600', marginTop: 4 },
+  inputLabel: { fontSize: 13, fontWeight: '600', marginTop: 8 },
   input: {
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
+    marginTop: 2,
   },
-  errorText: { color: '#DB2C2C', fontSize: 13, fontWeight: '600' },
+  errorText: { color: '#DB2C2C', fontSize: 13, fontWeight: '600', marginTop: 2 },
   actionRow: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 4,
+    marginTop: 10,
   },
   googleBtn: {
     backgroundColor: '#6B46FF',
@@ -395,7 +426,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   mainBtnText: { fontWeight: '700' },
-  footText: { textAlign: 'center', marginTop: 6 },
-  textButton: { alignItems: 'center', paddingVertical: 4 },
+  footText: { textAlign: 'center', marginTop: 10 },
+  textButton: { alignItems: 'center', paddingVertical: 6, marginBottom: 2 },
   textButtonLabel: { color: '#6B46FF', fontWeight: '700' },
 });
