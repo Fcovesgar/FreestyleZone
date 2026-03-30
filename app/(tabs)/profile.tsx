@@ -107,7 +107,7 @@ export default function ProfileScreen() {
         <View style={[styles.loggedOutCard, { backgroundColor: colors.card, borderColor: colors.sectionBorder }]}>
           <Text style={[styles.loggedOutTitle, { color: colors.textPrimary }]}>FreestyleZone</Text>
           <Text style={[styles.loggedOutDescription, { color: colors.textSecondary }]}>
-            Inicia sesión/registrate para acceder ahora a todas las funcionalidades
+            Inicia sesión/regístrate para acceder ahora a todas las funcionalidades
           </Text>
           <Pressable onPress={openAuthModal} style={styles.loggedOutButton}>
             <Text style={styles.saveButtonText}>ACCEDER</Text>

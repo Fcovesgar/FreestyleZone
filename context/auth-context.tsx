@@ -79,16 +79,24 @@ function getCredentialRegisterErrorMessage(error: unknown) {
       return 'Ese correo ya está registrado. Inicia sesión o usa otro email.';
     case 'auth/invalid-email':
       return 'El formato del email no es válido.';
+    case 'auth/missing-email':
+      return 'Introduce un email válido para registrarte.';
+    case 'auth/missing-password':
+      return 'Introduce una contraseña para registrarte.';
     case 'auth/weak-password':
       return 'La contraseña es demasiado débil. Usa al menos 6 caracteres.';
     case 'auth/network-request-failed':
       return 'Error de red. Revisa tu conexión e inténtalo de nuevo.';
     case 'auth/operation-not-allowed':
       return 'Registro por email desactivado. Activa Email/Password en Firebase Authentication.';
+    case 'auth/configuration-not-found':
+      return 'No está habilitado el proveedor Email/Password en Firebase Authentication.';
+    case 'auth/admin-restricted-operation':
+      return 'Firebase bloquea este registro por configuración del proyecto.';
     case 'auth/too-many-requests':
       return 'Demasiados intentos. Espera un momento e inténtalo otra vez.';
     default:
-      return 'No se pudo crear la cuenta.';
+      return `No se pudo crear la cuenta (${error.code}).`;
   }
 }
 
@@ -198,6 +206,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setIsAuthModalOpen(false);
           return { ok: true };
         } catch (error) {
+          console.error('registerWithCredentials error', error);
           return { ok: false, message: getCredentialRegisterErrorMessage(error) };
         }
       },
@@ -288,7 +297,7 @@ export function AuthEntryModal() {
     <Modal animationType="fade" transparent visible={!isLoggedIn && !isLoadingSession && isAuthModalOpen}>
       <View style={[styles.backdrop, { backgroundColor: colors.overlay }]}> 
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}> 
-          <Text style={[styles.title, { color: colors.textPrimary }]}>{mode === 'login' ? 'Inicia sesión' : 'Registrate'}</Text>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>{mode === 'login' ? 'Inicia sesión' : 'Regístrate'}</Text>
 
           <Pressable onPress={closeAuthModal} style={[styles.closeBtn, { borderColor: colors.border }]}>
             <Text style={[styles.closeBtnText, { color: colors.textPrimary }]}>✕</Text>
