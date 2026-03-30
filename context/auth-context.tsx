@@ -38,7 +38,7 @@ type AuthContextValue = {
   signInWithGoogleToken: (idToken: string) => Promise<AuthResult>;
   signInWithCredentials: (usernameOrEmail: string, password: string) => Promise<AuthResult>;
   registerWithGoogle: () => Promise<AuthResult>;
-  registerWithCredentials: (name: string, email: string, password: string) => Promise<AuthResult>;
+  registerWithCredentials: (name: string, password: string) => Promise<AuthResult>;
   signOutFromApp: () => Promise<void>;
   isAuthModalOpen: boolean;
   openAuthModal: () => void;
@@ -49,6 +49,15 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 function mapAuthMethod(providerId?: string): 'google' | 'credentials' {
   return providerId === 'google.com' ? 'google' : 'credentials';
+}
+
+function normalizeUsername(username: string) {
+  return username.trim().toLowerCase().replace(/\s+/g, '.');
+}
+
+function usernameToEmail(username: string) {
+  const normalized = normalizeUsername(username);
+  return `${normalized}@${AUTH_EMAIL_DOMAIN}`;
 }
 
 async function loadProfile(firebaseUser: User): Promise<AuthProviderUser> {
@@ -234,9 +243,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return { ok: false, message: getGoogleAuthErrorMessage(error, 'No se pudo registrar con Google.') };
         }
       },
-      registerWithCredentials: async (name: string, email: string, password: string) => {
-        if (!name.trim() || !email.trim() || !password.trim()) {
-          return { ok: false, message: 'Completa nombre, email y contraseña para registrarte.' };
+      registerWithCredentials: async (name: string, password: string) => {
+        if (!name.trim() || !password.trim()) {
+          return { ok: false, message: 'Completa nombre y contraseña para registrarte.' };
         }
 
         try {
@@ -299,14 +308,12 @@ export function AuthEntryModal() {
   } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
 
   const resetForm = () => {
     setName('');
-    setEmail('');
     setPassword('');
     setConfirmPassword('');
     setError('');
