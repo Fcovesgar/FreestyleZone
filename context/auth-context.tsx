@@ -6,15 +6,22 @@ import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  signInWithCredential,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
   updateProfile,
   type User,
 } from 'firebase/auth';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import { auth } from '@/firebase/firebaseConfig';
 import { getUserProfile, mapUserProfileErrorMessage, upsertUserProfile } from '@/data/user_profiles';
 import { useAppThemeColors } from '@/hooks/use-app-theme-colors';
+
+WebBrowser.maybeCompleteAuthSession();
+
+const AUTH_EMAIL_DOMAIN = 'freestylezone.app';
 
 export type AuthProviderUser = {
   uid: string;
@@ -30,9 +37,10 @@ type AuthContextValue = {
   isLoggedIn: boolean;
   isLoadingSession: boolean;
   signInWithGoogle: () => Promise<AuthResult>;
-  signInWithCredentials: (email: string, password: string) => Promise<AuthResult>;
+  signInWithGoogleToken: (idToken: string) => Promise<AuthResult>;
+  signInWithCredentials: (username: string, password: string) => Promise<AuthResult>;
   registerWithGoogle: () => Promise<AuthResult>;
-  registerWithCredentials: (name: string, email: string, password: string) => Promise<AuthResult>;
+  registerWithCredentials: (name: string, password: string) => Promise<AuthResult>;
   signOutFromApp: () => Promise<void>;
   isAuthModalOpen: boolean;
   openAuthModal: () => void;
@@ -43,6 +51,15 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 function mapAuthMethod(providerId?: string): 'google' | 'credentials' {
   return providerId === 'google.com' ? 'google' : 'credentials';
+}
+
+function normalizeUsername(username: string) {
+  return username.trim().toLowerCase().replace(/\s+/g, '.');
+}
+
+function usernameToEmail(username: string) {
+  const normalized = normalizeUsername(username);
+  return `${normalized}@${AUTH_EMAIL_DOMAIN}`;
 }
 
 async function loadProfile(firebaseUser: User): Promise<AuthProviderUser> {
@@ -59,14 +76,36 @@ async function loadProfile(firebaseUser: User): Promise<AuthProviderUser> {
   };
 }
 
-
-
 function getGoogleAuthErrorMessage(error: unknown, fallback: string) {
   if (error instanceof FirebaseError && error.code.startsWith('auth/')) {
     return fallback;
   }
 
   return mapUserProfileErrorMessage(error);
+}
+
+function extractIdTokenFromUrl(url?: string | null) {
+  if (!url) return null;
+  const hash = url.split('#')[1];
+  if (!hash) return null;
+  const params = new URLSearchParams(hash);
+  return params.get('id_token');
+}
+
+function buildGoogleAuthUrl(redirectUri: string, nonce: string) {
+  const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+  if (!webClientId) return null;
+
+  const params = new URLSearchParams({
+    client_id: webClientId,
+    redirect_uri: redirectUri,
+    response_type: 'id_token',
+    scope: 'openid profile email',
+    nonce,
+    prompt: 'select_account',
+  });
+
+  return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }
 
 function getCredentialRegisterErrorMessage(error: unknown) {
@@ -76,11 +115,11 @@ function getCredentialRegisterErrorMessage(error: unknown) {
 
   switch (error.code) {
     case 'auth/email-already-in-use':
-      return 'Ese correo ya está registrado. Inicia sesión o usa otro email.';
+      return 'Ese nombre de usuario ya existe. Prueba con otro.';
     case 'auth/invalid-email':
-      return 'El formato del email no es válido.';
+      return 'El nombre de usuario no es válido.';
     case 'auth/missing-email':
-      return 'Introduce un email válido para registrarte.';
+      return 'Introduce un nombre de usuario válido para registrarte.';
     case 'auth/missing-password':
       return 'Introduce una contraseña para registrarte.';
     case 'auth/weak-password':
@@ -134,7 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthModalOpen,
       signInWithGoogle: async () => {
         if (Platform.OS !== 'web') {
-          return { ok: false, message: 'El inicio con Google está disponible en web por ahora.' };
+          return { ok: false, message: 'Google no está configurado para esta plataforma.' };
         }
 
         try {
@@ -151,13 +190,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return { ok: false, message: getGoogleAuthErrorMessage(error, 'No se pudo iniciar con Google.') };
         }
       },
-      signInWithCredentials: async (email: string, password: string) => {
-        if (!email.trim() || !password.trim()) {
-          return { ok: false, message: 'Introduce email y contraseña.' };
+      signInWithGoogleToken: async (idToken: string) => {
+        if (!idToken) {
+          return { ok: false, message: 'No se recibió el token de Google.' };
         }
 
         try {
-          await signInWithEmailAndPassword(auth, email.trim(), password);
+          const credential = GoogleAuthProvider.credential(idToken);
+          const response = await signInWithCredential(auth, credential);
+          const name = response.user.displayName || response.user.email?.split('@')[0] || 'Freestyler';
+          const email = response.user.email || '';
+
+          await upsertUserProfile({ uid: response.user.uid, name, email });
+          setIsAuthModalOpen(false);
+          return { ok: true };
+        } catch (error) {
+          return { ok: false, message: getGoogleAuthErrorMessage(error, 'No se pudo iniciar con Google.') };
+        }
+      },
+      signInWithCredentials: async (username: string, password: string) => {
+        if (!username.trim() || !password.trim()) {
+          return { ok: false, message: 'Introduce nombre de usuario y contraseña.' };
+        }
+
+        try {
+          await signInWithEmailAndPassword(auth, usernameToEmail(username), password);
           setIsAuthModalOpen(false);
           return { ok: true };
         } catch {
@@ -166,7 +223,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       registerWithGoogle: async () => {
         if (Platform.OS !== 'web') {
-          return { ok: false, message: 'El inicio con Google está disponible en web por ahora.' };
+          return { ok: false, message: 'Google no está configurado para esta plataforma.' };
         }
 
         try {
@@ -183,13 +240,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return { ok: false, message: getGoogleAuthErrorMessage(error, 'No se pudo registrar con Google.') };
         }
       },
-      registerWithCredentials: async (name: string, email: string, password: string) => {
-        if (!name.trim() || !email.trim() || !password.trim()) {
-          return { ok: false, message: 'Completa nombre, email y contraseña para registrarte.' };
+      registerWithCredentials: async (name: string, password: string) => {
+        if (!name.trim() || !password.trim()) {
+          return { ok: false, message: 'Completa nombre y contraseña para registrarte.' };
         }
 
         try {
-          const credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+          const email = usernameToEmail(name);
+          const credential = await createUserWithEmailAndPassword(auth, email, password);
 
           try {
             await updateProfile(credential.user, { displayName: name.trim() });
@@ -198,7 +256,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
 
           try {
-            await upsertUserProfile({ uid: credential.user.uid, name: name.trim(), email: email.trim() });
+            await upsertUserProfile({ uid: credential.user.uid, name: name.trim(), email });
           } catch (error) {
             return { ok: false, message: mapUserProfileErrorMessage(error) };
           }
@@ -206,7 +264,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setIsAuthModalOpen(false);
           return { ok: true };
         } catch (error) {
-          console.error('registerWithCredentials error', error);
           return { ok: false, message: getCredentialRegisterErrorMessage(error) };
         }
       },
@@ -241,20 +298,19 @@ export function AuthEntryModal() {
     isAuthModalOpen,
     closeAuthModal,
     signInWithGoogle,
+    signInWithGoogleToken,
     signInWithCredentials,
     registerWithGoogle,
     registerWithCredentials,
   } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
 
   const resetForm = () => {
     setName('');
-    setEmail('');
     setPassword('');
     setConfirmPassword('');
     setError('');
@@ -271,8 +327,7 @@ export function AuthEntryModal() {
       return;
     }
 
-    const result =
-      mode === 'login' ? await signInWithCredentials(email, password) : await registerWithCredentials(name, email, password);
+    const result = mode === 'login' ? await signInWithCredentials(name, password) : await registerWithCredentials(name, password);
 
     if (!result.ok) {
       setError(result.message ?? 'No se pudo completar la acción.');
@@ -283,10 +338,40 @@ export function AuthEntryModal() {
   };
 
   const handleGoogle = async () => {
-    const result = mode === 'login' ? await signInWithGoogle() : await registerWithGoogle();
+    if (Platform.OS === 'web') {
+      const result = mode === 'login' ? await signInWithGoogle() : await registerWithGoogle();
+      if (!result.ok) {
+        setError(result.message ?? 'No se pudo iniciar con Google.');
+        return;
+      }
+      resetForm();
+      return;
+    }
 
-    if (!result.ok) {
-      setError(result.message ?? 'No se pudo iniciar con Google.');
+    const redirectUri = Linking.createURL('auth');
+    const nonce = `${Date.now()}-${Math.random()}`;
+    const authUrl = buildGoogleAuthUrl(redirectUri, nonce);
+    if (!authUrl) {
+      setError('Configura EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID para iniciar con Google en Android/iOS.');
+      return;
+    }
+
+    const nativeResult = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+
+    if (nativeResult.type !== 'success') {
+      setError('Se canceló el inicio de sesión con Google.');
+      return;
+    }
+
+    const idToken = extractIdTokenFromUrl(nativeResult.url);
+    if (!idToken) {
+      setError('No se recibió el token de Google. Revisa Redirect URI en Google Cloud Console.');
+      return;
+    }
+
+    const authResult = await signInWithGoogleToken(idToken);
+    if (!authResult.ok) {
+      setError(authResult.message ?? 'No se pudo iniciar con Google.');
       return;
     }
 
@@ -303,26 +388,12 @@ export function AuthEntryModal() {
             <Text style={[styles.closeBtnText, { color: colors.textPrimary }]}>✕</Text>
           </Pressable>
 
-          {mode === 'register' ? (
-            <>
-              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Nombre</Text>
-              <TextInput
-                value={name}
-                onChangeText={setName}
-                placeholder="Tu nombre"
-                placeholderTextColor="#8A8A8A"
-                style={[styles.input, { borderColor: colors.border, backgroundColor: colors.inputBg, color: colors.textPrimary }]}
-              />
-            </>
-          ) : null}
-
-          <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Email</Text>
+          <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Nombre de usuario</Text>
           <TextInput
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
+            value={name}
+            onChangeText={setName}
             autoCapitalize="none"
-            placeholder="correo@ejemplo.com"
+            placeholder="Tu nombre único"
             placeholderTextColor="#8A8A8A"
             style={[styles.input, { borderColor: colors.border, backgroundColor: colors.inputBg, color: colors.textPrimary }]}
           />
