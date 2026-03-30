@@ -286,8 +286,7 @@ export function AuthEntryModal() {
     <Modal animationType="fade" transparent visible={!isLoggedIn && !isLoadingSession && isAuthModalOpen}>
       <View style={[styles.backdrop, { backgroundColor: colors.overlay }]}> 
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}> 
-          <Text style={[styles.title, { color: colors.textPrimary }]}>Bienvenido a FreestyleZone</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Inicia sesión/regístrate para acceder ahora a todas las funcionalidades.</Text>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>{mode === 'login' ? 'Inicia sesión' : 'Registrate'}</Text>
 
           <Pressable onPress={closeAuthModal} style={[styles.closeBtn, { borderColor: colors.border }]}>
             <Text style={[styles.closeBtnText, { color: colors.textPrimary }]}>✕</Text>
@@ -384,8 +383,7 @@ const styles = StyleSheet.create({
     paddingVertical: 22,
     gap: 14,
   },
-  title: { fontSize: 22, fontWeight: '700' },
-  subtitle: { fontSize: 14, lineHeight: 21, paddingRight: 34, marginBottom: 4 },
+  title: { fontSize: 22, fontWeight: '700', textAlign: 'center', marginBottom: 2 },
   closeBtn: {
     position: 'absolute',
     top: 10,
