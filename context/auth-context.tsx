@@ -63,12 +63,12 @@ function usernameToEmail(username: string) {
 async function loadProfile(firebaseUser: User): Promise<AuthProviderUser> {
   const profile = await getUserProfile(firebaseUser.uid);
 
-  const firestoreName = profile?.Name;
+  const firestoreName = profile?.Name ?? profile?.name;
   const fallbackName = firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Freestyler';
 
   return {
     uid: firebaseUser.uid,
-    name: String(firestoreName || fallbackName),
+    name: String(firestoreName || fallbackName).trim(),
     email: firebaseUser.email || '',
     authMethod: mapAuthMethod(firebaseUser.providerData[0]?.providerId),
   };
@@ -249,21 +249,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         try {
+          const normalizedName = name.trim();
           const normalizedEmail = email.trim().toLowerCase();
           const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
 
           try {
-            await updateProfile(credential.user, { displayName: name.trim() });
+            await updateProfile(credential.user, { displayName: normalizedName });
           } catch {
             // Si falla, mantenemos la cuenta creada y usamos fallback de nombre.
           }
 
           try {
-            await upsertUserProfile({ uid: credential.user.uid, name: name.trim(), email: normalizedEmail });
+            await upsertUserProfile({ uid: credential.user.uid, name: normalizedName, email: normalizedEmail });
           } catch (error) {
             return { ok: false, message: mapUserProfileErrorMessage(error) };
           }
 
+          setUser({
+            uid: credential.user.uid,
+            name: normalizedName,
+            email: normalizedEmail,
+            authMethod: 'credentials',
+          });
           setIsAuthModalOpen(false);
           return { ok: true };
         } catch (error) {
