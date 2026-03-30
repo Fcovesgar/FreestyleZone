@@ -31,7 +31,13 @@ export async function upsertUserProfile(profile: UserProfile) {
   };
 
   if (!snapshot.exists()) {
-    payload.createdAt = serverTimestamp();
+    payload.Biography = '';
+    payload.City = '';
+    payload.Language = '';
+    payload.Profile_image = '';
+    payload.Rap_style = '';
+    payload.Theme = '';
+    payload.CreatedAt = serverTimestamp();
   }
 
   await setDoc(userRef, payload, { merge: true });

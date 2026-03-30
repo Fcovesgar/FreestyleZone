@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
@@ -22,7 +22,7 @@ import { useAppTheme } from '@/context/app-theme-context';
 import { useAuth } from '@/context/auth-context';
 import { useAppThemeColors } from '@/hooks/use-app-theme-colors';
 
-type RapStyle = 'Doble punch' | 'Metriquero' | 'Batallero';
+type RapStyle = '' | 'Doble punch' | 'Metriquero' | 'Batallero';
 
 type ProfileData = {
   username: string;
@@ -51,10 +51,10 @@ export default function ProfileScreen() {
   const { user, isLoggedIn, openAuthModal, signOutFromApp } = useAuth();
 
   const [profile, setProfile] = useState<ProfileData>({
-    username: '@mc_verso',
-    city: 'Madrid, ES',
-    bio: 'MC en progreso, barras y métricas todos los días.',
-    rapStyle: 'Doble punch',
+    username: user?.name ?? '',
+    city: '',
+    bio: '',
+    rapStyle: '',
     avatarUri: AVATAR_OPTIONS[0],
   });
   const [draftProfile, setDraftProfile] = useState<ProfileData>(profile);
@@ -64,6 +64,15 @@ export default function ProfileScreen() {
   const [activeTab, setActiveTab] = useState<ProfileContentTab>('videos');
   const [refreshing, setRefreshing] = useState(false);
   const slideAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!user?.name) {
+      return;
+    }
+
+    setProfile((prev) => ({ ...prev, username: user.name }));
+    setDraftProfile((prev) => ({ ...prev, username: user.name }));
+  }, [user?.name]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -147,7 +156,7 @@ export default function ProfileScreen() {
                 </Pressable>
               </View>
               <Text style={[styles.metaText, { color: colors.textSecondary }]}>{profile.city}</Text>
-              <Text style={[styles.metaText, { color: colors.textSecondary }]}>Estilo: {profile.rapStyle}</Text>
+              <Text style={[styles.metaText, { color: colors.textSecondary }]}>Estilo: {profile.rapStyle || '—'}</Text>
             </View>
           </View>
 
