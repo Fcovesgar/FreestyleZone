@@ -38,7 +38,7 @@ type AuthContextValue = {
   signInWithGoogleToken: (idToken: string) => Promise<AuthResult>;
   signInWithCredentials: (usernameOrEmail: string, password: string) => Promise<AuthResult>;
   registerWithGoogle: () => Promise<AuthResult>;
-  registerWithCredentials: (name: string, password: string) => Promise<AuthResult>;
+  registerWithCredentials: (name: string, email: string, password: string) => Promise<AuthResult>;
   signOutFromApp: () => Promise<void>;
   isAuthModalOpen: boolean;
   openAuthModal: () => void;
@@ -243,9 +243,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return { ok: false, message: getGoogleAuthErrorMessage(error, 'No se pudo registrar con Google.') };
         }
       },
-      registerWithCredentials: async (name: string, password: string) => {
-        if (!name.trim() || !password.trim()) {
-          return { ok: false, message: 'Completa nombre y contraseña para registrarte.' };
+      registerWithCredentials: async (name: string, email: string, password: string) => {
+        if (!name.trim() || !email.trim() || !password.trim()) {
+          return { ok: false, message: 'Completa nombre, email y contraseña para registrarte.' };
         }
 
         try {
