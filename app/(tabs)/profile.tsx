@@ -59,6 +59,7 @@ export default function ProfileScreen() {
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [accountVisible, setAccountVisible] = useState(false);
+  const [confirmLogoutVisible, setConfirmLogoutVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<ProfileContentTab>('videos');
   const [refreshing, setRefreshing] = useState(false);
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -263,7 +264,7 @@ export default function ProfileScreen() {
             <Pressable
               onPress={() => {
                 setSettingsVisible(false);
-                void signOutFromApp();
+                setConfirmLogoutVisible(true);
               }}
               style={[styles.logoutBtn, { borderColor: '#DB2C2C' }]}> 
               <Text style={styles.logoutBtnText}>Cerrar sesión</Text>
@@ -281,12 +282,31 @@ export default function ProfileScreen() {
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Datos del usuario</Text>
             <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Nombre: {user?.name ?? 'Sin sesión'}</Text>
             <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Email: {user?.email ?? 'Sin sesión'}</Text>
-            <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
-              Método: {user?.authMethod === 'google' ? 'Google' : user?.authMethod === 'credentials' ? 'Usuario y contraseña' : 'Sin sesión'}
-            </Text>
             <Pressable onPress={() => setAccountVisible(false)} style={[styles.closeSettingsBtn, { borderColor: colors.border }]}> 
               <Text style={[styles.actionBtnText, { color: colors.textPrimary }]}>Cerrar</Text>
             </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal animationType="fade" transparent visible={confirmLogoutVisible} onRequestClose={() => setConfirmLogoutVisible(false)}>
+        <View style={[styles.confirmBackdrop, { backgroundColor: colors.overlay }]}> 
+          <View style={[styles.confirmCard, { backgroundColor: colors.card, borderColor: colors.border }]}> 
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>¿Cerrar sesión?</Text>
+            <Text style={[styles.confirmDescription, { color: colors.textSecondary }]}>¿Seguro que quieres cerrar tu sesión actual?</Text>
+            <View style={styles.confirmActions}>
+              <Pressable onPress={() => setConfirmLogoutVisible(false)} style={[styles.confirmSecondaryBtn, { borderColor: colors.border }]}> 
+                <Text style={[styles.actionBtnText, { color: colors.textPrimary }]}>Cancelar</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setConfirmLogoutVisible(false);
+                  void signOutFromApp();
+                }}
+                style={[styles.confirmPrimaryBtn, { borderColor: '#DB2C2C' }]}> 
+                <Text style={styles.logoutBtnText}>Sí, cerrar</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </Modal>
@@ -443,6 +463,12 @@ const styles = StyleSheet.create({
   closeSettingsBtn: { borderWidth: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
   logoutBtn: { borderWidth: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center', backgroundColor: '#DB2C2C1A' },
   logoutBtnText: { fontWeight: '700', color: '#DB2C2C' },
+  confirmBackdrop: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 },
+  confirmCard: { width: '100%', borderWidth: 1, borderRadius: 16, paddingHorizontal: 18, paddingVertical: 20, gap: 14 },
+  confirmDescription: { fontSize: 14, lineHeight: 22, marginTop: -2, marginBottom: 2 },
+  confirmActions: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  confirmSecondaryBtn: { borderWidth: 1, borderRadius: 10, paddingVertical: 11, alignItems: 'center', flex: 1 },
+  confirmPrimaryBtn: { borderWidth: 1, borderRadius: 10, paddingVertical: 11, alignItems: 'center', flex: 1, backgroundColor: '#DB2C2C1A' },
   loggedOutContainer: { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
   loggedOutCard: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 20, paddingVertical: 24, width: '100%', gap: 18 },
   loggedOutTitle: { fontSize: 24, fontWeight: '800', textAlign: 'center' },
