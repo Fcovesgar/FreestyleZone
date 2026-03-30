@@ -206,6 +206,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setIsAuthModalOpen(false);
           return { ok: true };
         } catch (error) {
+          console.error('registerWithCredentials error', error);
           return { ok: false, message: getCredentialRegisterErrorMessage(error) };
         }
       },
