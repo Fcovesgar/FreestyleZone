@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Image, type LayoutChangeEvent, Linking, Modal, PermissionsAndroid, Platform, Pressable, RefreshControl, ScrollView, Text, Vibration, View } from 'react-native';
+import { Alert, Image, Linking, Modal, PermissionsAndroid, Platform, Pressable, RefreshControl, ScrollView, Text, Vibration, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useFocusEffect } from '@react-navigation/native';
 // eslint-disable-next-line import/no-unresolved
@@ -60,8 +60,6 @@ export default function RapearScreen() {
   const [isRecordingBeatPlaying, setIsRecordingBeatPlaying] = useState(true);
   const [trainingRestartKey, setTrainingRestartKey] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
-  const [instrumentalVolume, setInstrumentalVolume] = useState(0.8);
-  const [volumeTrackHeight, setVolumeTrackHeight] = useState(1);
   const [, setRecordedVideoUri] = useState<string | null>(null);
   const [, setRecordedThumbnailUri] = useState<string | null>(null);
   const [isRecordingCaptureActive, setIsRecordingCaptureActive] = useState(false);
@@ -142,7 +140,7 @@ export default function RapearScreen() {
   const selectedTrackLabel = tracks.find((track) => track.key === selectedTrack)?.label ?? '-';
   latestTrainingRestartKeyRef.current = trainingRestartKey;
   const summaryModeInfo = rapModes.find((mode) => mode.key === sessionSummary?.mode);
-  const instrumentalVolumePercent = Math.round(instrumentalVolume * 100);
+  const instrumentalVolume = 0.8;
   const sessionBeatVolume = selectedSessionType === 'record' && hasSessionStarted ? Math.max(instrumentalVolume, 0.65) : instrumentalVolume;
 
   const summaryVideoPlayer = useVideoPlayer(
@@ -159,27 +157,6 @@ export default function RapearScreen() {
     (setupStep === 'time' && selectedSessionTime !== null);
 
   const isReadyToStart = selectedMode !== null && selectedTrack !== null && selectedSessionTime !== null;
-
-  const updateInstrumentalVolume = useCallback((nextVolume: number) => {
-    const clampedVolume = Math.max(0, Math.min(1, nextVolume));
-    setInstrumentalVolume(clampedVolume);
-  }, []);
-
-  const updateVolumeFromPosition = useCallback(
-    (positionY: number) => {
-      if (volumeTrackHeight <= 0) return;
-      const nextValue = 1 - positionY / volumeTrackHeight;
-      updateInstrumentalVolume(nextValue);
-    },
-    [updateInstrumentalVolume, volumeTrackHeight]
-  );
-
-  const onVolumeTrackLayout = useCallback((event: LayoutChangeEvent) => {
-    const nextHeight = event.nativeEvent.layout.height;
-    if (nextHeight > 0) {
-      setVolumeTrackHeight(nextHeight);
-    }
-  }, []);
 
   useEffect(() => {
     return () => {
@@ -469,7 +446,7 @@ export default function RapearScreen() {
 
     if (nativePreviewSoundRef.current) nativePreviewSoundRef.current.volume = instrumentalVolume;
     if (nativeTrainingSoundRef.current) nativeTrainingSoundRef.current.volume = sessionBeatVolume;
-  }, [instrumentalVolume, sessionBeatVolume]);
+  }, [sessionBeatVolume]);
 
   const onSelectSessionType = (sessionType: SessionType) => {
     setSelectedSessionType(sessionType);
@@ -1108,22 +1085,6 @@ export default function RapearScreen() {
   };
   const CameraPreviewComponent = resolveCameraModule()?.CameraView ?? null;
 
-  const renderVolumeControl = (side: 'left' | 'right' = 'right') => (
-    <View style={[styles.volumeControlCard, side === 'left' ? styles.volumeControlLeft : styles.volumeControlRight]}>
-      <View
-        style={styles.volumeControlTouchArea}
-        onLayout={onVolumeTrackLayout}
-        onStartShouldSetResponder={() => true}
-        onMoveShouldSetResponder={() => true}
-        onResponderTerminationRequest={() => false}
-        onResponderGrant={(event) => updateVolumeFromPosition(event.nativeEvent.locationY)}
-        onResponderMove={(event) => updateVolumeFromPosition(event.nativeEvent.locationY)}>
-        <View pointerEvents="none" style={[styles.volumeProgressFill, { height: `${instrumentalVolumePercent}%` }]} />
-        <View pointerEvents="none" style={[styles.volumeThumb, { bottom: `${instrumentalVolumePercent}%` }]} />
-      </View>
-    </View>
-  );
-
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: themeColors.screen }]} edges={['top']}>
       <ScrollView
@@ -1220,7 +1181,6 @@ export default function RapearScreen() {
       <Modal visible={sessionVisible} animationType="slide" onRequestClose={() => void stopSession()}>
         <View style={styles.sessionFullscreen}>
           <View style={[styles.cameraPlaceholder, styles.sessionModalCard, selectedSessionType === 'train' ? styles.trainingBackground : styles.recordingBackground, { marginTop: insets.top + 8, marginBottom: insets.bottom + 8 }]}>
-            {(selectedSessionType === 'train' || (!hasSessionStarted && countdown === null)) ? renderVolumeControl(selectedSessionType === 'train' ? 'right' : 'left') : null}
             {selectedSessionType === 'train' ? (
               <>
                 <View style={[styles.trainingHeader, { paddingTop: insets.top + 8 }]}>
