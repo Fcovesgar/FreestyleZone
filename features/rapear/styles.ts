@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
   recordingOverlayInfoBlock: { alignSelf: 'flex-start', gap: 6 },
   recordingOverlayTitleRow: { borderRadius: 16, backgroundColor: '#0000007A', borderWidth: 1, borderColor: '#FFFFFF2A', paddingHorizontal: 12, paddingVertical: 8, minWidth: 138 },
   recordingOverlayAppName: { color: '#FFFFFF', fontSize: 12, letterSpacing: 1.6, textTransform: 'uppercase', fontWeight: '700' },
-  recordingOverlayTimer: { color: '#FFFFFF', fontSize: 18, alignSelf: 'flex-end', marginTop: 2 },
+  recordingOverlayTimer: { color: '#FFFFFF', fontSize: 18, alignSelf: 'flex-start', marginTop: 2 },
   trainingModeTag: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
   recordingOverlayTag: { alignSelf: 'flex-start', borderRadius: 999, borderWidth: 1, borderColor: '#FFFFFF2A', paddingHorizontal: 10, paddingVertical: 6, backgroundColor: '#0000007A' },
   trainingModeTagText: { color: '#CFC5FF', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6 },
