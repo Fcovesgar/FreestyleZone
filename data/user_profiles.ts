@@ -9,6 +9,13 @@ export type UserProfile = {
   email: string;
 };
 
+export type UserProfileDetailsUpdate = {
+  name: string;
+  bio: string;
+  rapStyle: string;
+  avatarUri: string;
+};
+
 export async function getUserProfile(uid: string) {
   const userRef = doc(db, 'users', uid);
   const snapshot = await getDoc(userRef);
@@ -36,10 +43,25 @@ export async function upsertUserProfile(profile: UserProfile) {
     payload.City = '';
     payload.Language = '';
     payload.Profile_image = '';
-    payload.Rap_style = '';
+    payload.Rap_style = 'Sin estilo';
     payload.Theme = '';
     payload.CreatedAt = serverTimestamp();
   }
+
+  await setDoc(userRef, payload, { merge: true });
+}
+
+export async function updateUserProfileDetails(uid: string, profile: UserProfileDetailsUpdate) {
+  const userRef = doc(db, 'users', uid);
+
+  const payload: Record<string, unknown> = {
+    Name: profile.name,
+    UsernameNormalized: profile.name.trim().toLowerCase(),
+    Biography: profile.bio,
+    Rap_style: profile.rapStyle || 'Sin estilo',
+    Profile_image: profile.avatarUri,
+    updatedAt: serverTimestamp(),
+  };
 
   await setDoc(userRef, payload, { merge: true });
 }
