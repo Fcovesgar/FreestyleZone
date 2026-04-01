@@ -39,6 +39,11 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const VIEW_TOP_OFFSET = 12;
 const DEFAULT_AVATAR_URI = 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=400&h=400&fit=crop';
 
+function resolveImagePickerModule() {
+  const moduleName = 'expo-image-picker';
+  return import(moduleName).catch(() => null);
+}
+
 export default function ProfileScreen() {
   const { effectiveColorScheme, themePreference, setThemePreference } = useAppTheme();
   const isDark = effectiveColorScheme === 'dark';
@@ -156,6 +161,68 @@ export default function ProfileScreen() {
     setDraftProfile((prev) => ({ ...prev, avatarUri: avatarOptions[nextIndex] }));
   };
 
+  const pickAvatarFromGallery = async () => {
+    const imagePicker = await resolveImagePickerModule();
+    if (!imagePicker) {
+      Alert.alert('Módulo no disponible', 'No encontramos expo-image-picker en esta build.');
+      return;
+    }
+
+    try {
+      const permission = await imagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Permiso denegado', 'Necesitas habilitar la galería para elegir una foto de perfil.');
+        return;
+      }
+
+      const result = await imagePicker.launchImageLibraryAsync({
+        mediaTypes: imagePicker.MediaType.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (result.canceled || !result.assets[0]?.uri) {
+        return;
+      }
+
+      setDraftProfile((prev) => ({ ...prev, avatarUri: result.assets[0].uri }));
+    } catch {
+      Alert.alert('Error', 'No se pudo abrir la galería.');
+    }
+  };
+
+  const takeAvatarPhoto = async () => {
+    const imagePicker = await resolveImagePickerModule();
+    if (!imagePicker) {
+      Alert.alert('Módulo no disponible', 'No encontramos expo-image-picker en esta build.');
+      return;
+    }
+
+    try {
+      const permission = await imagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Permiso denegado', 'Necesitas habilitar la cámara para sacar una foto de perfil.');
+        return;
+      }
+
+      const result = await imagePicker.launchCameraAsync({
+        mediaTypes: imagePicker.MediaType.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (result.canceled || !result.assets[0]?.uri) {
+        return;
+      }
+
+      setDraftProfile((prev) => ({ ...prev, avatarUri: result.assets[0].uri }));
+    } catch {
+      Alert.alert('Error', 'No se pudo abrir la cámara.');
+    }
+  };
+
   if (!isLoggedIn) {
     return (
       <SafeAreaView style={[styles.container, styles.loggedOutContainer, { backgroundColor: colors.screen }]} edges={['top', 'bottom']}>
@@ -249,14 +316,15 @@ export default function ProfileScreen() {
             <ScrollView contentContainerStyle={styles.editContent} keyboardShouldPersistTaps="handled">
               <View style={styles.editAvatarWrap}>
                 <Image source={{ uri: draftProfile.avatarUri }} style={[styles.editAvatar, { borderColor: colors.border }]} contentFit="cover" />
+                <Pressable onPress={rotateAvatar} style={styles.editAvatarButton}>
+                  <MaterialIcons name="edit" size={16} color="#FFFFFF" />
+                </Pressable>
                 <View style={styles.avatarActionsRow}>
-                  <Pressable onPress={() => void pickAvatarFromLibrary()} style={styles.editAvatarActionButton}>
-                    <MaterialIcons name="photo-library" size={16} color="#FFFFFF" />
-                    <Text style={styles.editAvatarActionText}>Galería</Text>
+                  <Pressable onPress={pickAvatarFromGallery} style={[styles.avatarActionBtn, { borderColor: colors.border }]}>
+                    <Text style={[styles.avatarActionText, { color: colors.textPrimary }]}>Galería</Text>
                   </Pressable>
-                  <Pressable onPress={() => void takeAvatarPhoto()} style={styles.editAvatarActionButton}>
-                    <MaterialIcons name="photo-camera" size={16} color="#FFFFFF" />
-                    <Text style={styles.editAvatarActionText}>Cámara</Text>
+                  <Pressable onPress={takeAvatarPhoto} style={[styles.avatarActionBtn, { borderColor: colors.border }]}>
+                    <Text style={[styles.avatarActionText, { color: colors.textPrimary }]}>Cámara</Text>
                   </Pressable>
                 </View>
               </View>
@@ -504,7 +572,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 6,
   },
-  editAvatarActionText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
+  avatarActionsRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  avatarActionBtn: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  avatarActionText: { fontSize: 13, fontWeight: '600' },
   settingsBackdrop: { flex: 1, justifyContent: 'flex-end', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 0 },
   settingsCard: { borderWidth: 1, borderRadius: 14, padding: 16, gap: 12, alignSelf: 'stretch' },
   modalTitle: { fontSize: 18, fontWeight: '700' },
