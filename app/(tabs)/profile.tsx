@@ -37,8 +37,7 @@ type ProfileContentTab = 'videos' | 'lines';
 const RAP_STYLES: RapStyle[] = ['Sin estilo', 'Doble punch', 'Metriquero', 'Batallero'];
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const VIEW_TOP_OFFSET = 12;
-
-const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=400&h=400&fit=crop';
+const DEFAULT_AVATAR_URI = 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=400&h=400&fit=crop';
 
 export default function ProfileScreen() {
   const { effectiveColorScheme, themePreference, setThemePreference } = useAppTheme();
@@ -46,12 +45,17 @@ export default function ProfileScreen() {
   const colors = useAppThemeColors();
   const insets = useSafeAreaInsets();
   const { user, isLoggedIn, openAuthModal, signOutFromApp } = useAuth();
+  const avatarOptions = [
+    DEFAULT_AVATAR_URI,
+    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop',
+  ];
 
   const [profile, setProfile] = useState<ProfileData>({
     username: user?.name ?? '',
     bio: '',
     rapStyle: 'Sin estilo',
-    avatarUri: AVATAR_OPTIONS[0],
+    avatarUri: DEFAULT_AVATAR_URI,
   });
   const [draftProfile, setDraftProfile] = useState<ProfileData>(profile);
   const [settingsVisible, setSettingsVisible] = useState(false);
@@ -86,7 +90,7 @@ export default function ProfileScreen() {
           username: String(remoteProfile.Name ?? user.name ?? '').trim(),
           bio: String(remoteProfile.Biography ?? '').trim(),
           rapStyle: (remoteProfile.Rap_style as RapStyle) || 'Sin estilo',
-          avatarUri: String(remoteProfile.Profile_image ?? AVATAR_OPTIONS[0]).trim() || AVATAR_OPTIONS[0],
+          avatarUri: String(remoteProfile.Profile_image ?? DEFAULT_AVATAR_URI).trim() || DEFAULT_AVATAR_URI,
         };
 
         setProfile(hydratedProfile);
@@ -123,7 +127,7 @@ export default function ProfileScreen() {
         username: draftProfile.username.trim() || user?.name || 'Freestyler',
         bio: draftProfile.bio.trim(),
         rapStyle: draftProfile.rapStyle || 'Sin estilo',
-        avatarUri: draftProfile.avatarUri || AVATAR_OPTIONS[0],
+        avatarUri: draftProfile.avatarUri || DEFAULT_AVATAR_URI,
       };
 
       setProfile(sanitizedProfile);
@@ -146,53 +150,10 @@ export default function ProfileScreen() {
     });
   };
 
-  const pickAvatarFromLibrary = async () => {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const imagePicker = require('expo-image-picker');
-      const permission = await imagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission?.granted) {
-        Alert.alert('Permiso denegado', 'Debes permitir acceso a fotos para usar una imagen de tu biblioteca.');
-        return;
-      }
-
-      const result = await imagePicker.launchImageLibraryAsync({
-        mediaTypes: imagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      if (!result?.canceled && result?.assets?.[0]?.uri) {
-        setDraftProfile((prev) => ({ ...prev, avatarUri: result.assets[0].uri }));
-      }
-    } catch {
-      Alert.alert('No disponible', 'Instala expo-image-picker para elegir una foto de la galería.');
-    }
-  };
-
-  const takeAvatarPhoto = async () => {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const imagePicker = require('expo-image-picker');
-      const permission = await imagePicker.requestCameraPermissionsAsync();
-      if (!permission?.granted) {
-        Alert.alert('Permiso denegado', 'Debes permitir acceso a la cámara para tomar una foto.');
-        return;
-      }
-
-      const result = await imagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      if (!result?.canceled && result?.assets?.[0]?.uri) {
-        setDraftProfile((prev) => ({ ...prev, avatarUri: result.assets[0].uri }));
-      }
-    } catch {
-      Alert.alert('No disponible', 'Instala expo-image-picker para tomar una foto desde la app.');
-    }
+  const rotateAvatar = () => {
+    const currentIndex = avatarOptions.findIndex((item) => item === draftProfile.avatarUri);
+    const nextIndex = (currentIndex + 1) % avatarOptions.length;
+    setDraftProfile((prev) => ({ ...prev, avatarUri: avatarOptions[nextIndex] }));
   };
 
   if (!isLoggedIn) {
