@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Image, type LayoutChangeEvent, Linking, Modal, PermissionsAndroid, Platform, Pressable, RefreshControl, ScrollView, Text, Vibration, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useFocusEffect } from '@react-navigation/native';
-import { ResizeMode, Video } from 'expo-av';
+// eslint-disable-next-line import/no-unresolved
+import { VideoView, useVideoPlayer } from 'expo-video';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getInstrumentals } from '../../data/get_instrumentals';
 import { getModes } from '../../data/get_modes';
@@ -136,6 +137,14 @@ export default function RapearScreen() {
   const selectedTrackLabel = tracks.find((track) => track.key === selectedTrack)?.label ?? '-';
   const summaryModeInfo = rapModes.find((mode) => mode.key === sessionSummary?.mode);
   const instrumentalVolumePercent = Math.round(instrumentalVolume * 100);
+
+  const summaryVideoPlayer = useVideoPlayer(
+    sessionSummary?.recordedVideoUri ? { uri: sessionSummary.recordedVideoUri } : null,
+    (player) => {
+      player.pause();
+      player.loop = false;
+    }
+  );
 
   const canAdvance =
     (setupStep === 'mode' && selectedMode !== null) ||
@@ -1302,12 +1311,11 @@ export default function RapearScreen() {
           <View style={styles.previewCard}>
             <View style={[styles.previewVideo, { backgroundColor: summaryTheme.previewBg, borderColor: summaryTheme.cardBorder }]}>
               {sessionSummary?.recordedVideoUri ? (
-                <Video
-                  source={{ uri: sessionSummary.recordedVideoUri }}
+                <VideoView
+                  player={summaryVideoPlayer}
                   style={styles.previewVideoPlayer}
-                  resizeMode={ResizeMode.COVER}
-                  shouldPlay={false}
-                  useNativeControls
+                  contentFit="cover"
+                  nativeControls
                 />
               ) : null}
               {sessionSummary?.recordedThumbnailUri ? <Image source={{ uri: sessionSummary.recordedThumbnailUri }} style={styles.previewThumbnail} /> : null}
