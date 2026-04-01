@@ -1403,7 +1403,6 @@ export default function RapearScreen() {
                 <MaterialIcons name="graphic-eq" size={12} color="#FFFFFF" />
                 <Text style={styles.previewOverlayChipText}>{sessionSummary?.instrumentalLabel ?? 'Base'}</Text>
               </View>
-              <Text style={[styles.previewTimer, { color: summaryTheme.primaryText }]}>{formatTime(sessionSummary?.elapsedSeconds ?? 0)}</Text>
             </View>
             <Text style={[styles.previewHint, { color: summaryTheme.tertiaryText }]}>Preview de la grabación + miniatura de referencia.</Text>
           </View>
