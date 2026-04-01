@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getUserProfile, mapUserProfileErrorMessage, updateUserProfileDetails } from '@/data/user_profiles';
@@ -38,11 +39,6 @@ const RAP_STYLES: RapStyle[] = ['Sin estilo', 'Doble punch', 'Metriquero', 'Bata
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const VIEW_TOP_OFFSET = 12;
 const DEFAULT_AVATAR_URI = 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=400&h=400&fit=crop';
-
-function resolveImagePickerModule() {
-  const moduleName = 'expo-image-picker';
-  return import(moduleName).catch(() => null);
-}
 
 export default function ProfileScreen() {
   const { effectiveColorScheme, themePreference, setThemePreference } = useAppTheme();
@@ -151,22 +147,15 @@ export default function ProfileScreen() {
   };
 
   const pickAvatarFromGallery = async () => {
-    const imagePicker = await resolveImagePickerModule();
-    if (!imagePicker) {
-      Alert.alert('Módulo no disponible', 'No encontramos expo-image-picker en esta build.');
-      return;
-    }
-
     try {
-      const permission = await imagePicker.requestMediaLibraryPermissionsAsync();
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
         Alert.alert('Permiso denegado', 'Necesitas habilitar la galería para elegir una foto de perfil.');
         return;
       }
 
-      const imageMediaType = imagePicker.MediaType?.Images ?? imagePicker.MediaTypeOptions?.Images;
-      const result = await imagePicker.launchImageLibraryAsync({
-        ...(imageMediaType ? { mediaTypes: imageMediaType } : {}),
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -184,22 +173,15 @@ export default function ProfileScreen() {
   };
 
   const takeAvatarPhoto = async () => {
-    const imagePicker = await resolveImagePickerModule();
-    if (!imagePicker) {
-      Alert.alert('Módulo no disponible', 'No encontramos expo-image-picker en esta build.');
-      return;
-    }
-
     try {
-      const permission = await imagePicker.requestCameraPermissionsAsync();
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (!permission.granted) {
         Alert.alert('Permiso denegado', 'Necesitas habilitar la cámara para sacar una foto de perfil.');
         return;
       }
 
-      const imageMediaType = imagePicker.MediaType?.Images ?? imagePicker.MediaTypeOptions?.Images;
-      const result = await imagePicker.launchCameraAsync({
-        ...(imageMediaType ? { mediaTypes: imageMediaType } : {}),
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
