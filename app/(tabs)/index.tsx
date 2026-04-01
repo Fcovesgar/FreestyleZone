@@ -122,6 +122,7 @@ export default function RapearScreen() {
   const webTrainingAudioRef = useRef<any>(null);
   const webTrainingTrackRef = useRef<InstrumentalId | null>(null);
   const webRestartKeyAppliedRef = useRef(0);
+  const latestTrainingRestartKeyRef = useRef(0);
   const nativePreviewSoundRef = useRef<NativeAudioPlayer | null>(null);
   const nativeTrainingSoundRef = useRef<NativeAudioPlayer | null>(null);
   const nativeTrainingTrackRef = useRef<InstrumentalId | null>(null);
@@ -135,6 +136,7 @@ export default function RapearScreen() {
   const initialSessionSeconds = getSessionDuration(selectedSessionTime);
   const availableSessionTimes = selectedSessionType === 'train' ? TRAINING_TIME : SESSION_TIMES;
   const selectedTrackLabel = tracks.find((track) => track.key === selectedTrack)?.label ?? '-';
+  latestTrainingRestartKeyRef.current = trainingRestartKey;
   const summaryModeInfo = rapModes.find((mode) => mode.key === sessionSummary?.mode);
   const instrumentalVolumePercent = Math.round(instrumentalVolume * 100);
 
@@ -278,8 +280,8 @@ export default function RapearScreen() {
     webTrainingAudioRef.current.currentTime = 0;
     webTrainingAudioRef.current = null;
     webTrainingTrackRef.current = null;
-    webRestartKeyAppliedRef.current = trainingRestartKey;
-  }, [trainingRestartKey]);
+    webRestartKeyAppliedRef.current = latestTrainingRestartKeyRef.current;
+  }, []);
 
   const stopPreviewPlayback = useCallback(async () => {
     setPreviewTrack(null);
@@ -293,8 +295,8 @@ export default function RapearScreen() {
     stopWebTrainingSound();
     await stopNativeSound(nativeTrainingSoundRef);
     nativeTrainingTrackRef.current = null;
-    nativeRestartKeyAppliedRef.current = trainingRestartKey;
-  }, [stopNativeSound, stopWebTrainingSound, trainingRestartKey]);
+    nativeRestartKeyAppliedRef.current = latestTrainingRestartKeyRef.current;
+  }, [stopNativeSound, stopWebTrainingSound]);
 
   const stopAllAudioPlayback = useCallback(async () => {
     await stopPreviewPlayback();
@@ -940,11 +942,16 @@ export default function RapearScreen() {
     setSetupStep('mode');
   };
 
-  const onSelectTrainingTrack = (track: InstrumentalId) => {
-    stopPreviewPlayback();
+  const applyTrainingTrackChange = useCallback((track: InstrumentalId) => {
+    void stopPreviewPlayback();
     setSelectedTrack(track);
     setTrainingRestartKey((previous) => previous + 1);
     setIsTrainingBeatPlaying(true);
+  }, [stopPreviewPlayback]);
+
+  const onSelectTrainingTrack = (track: InstrumentalId) => {
+    applyTrainingTrackChange(track);
+    setBaseSelectorVisible(false);
   };
 
   const onSeekTrainingTrack = async (secondsDelta: number) => {
@@ -975,8 +982,7 @@ export default function RapearScreen() {
     const currentTrackIndex = tracks.findIndex((track) => track.key === selectedTrack);
     if (currentTrackIndex === -1) return;
     const previousTrack = tracks[(currentTrackIndex - 1 + tracks.length) % tracks.length];
-    setSelectedTrack(previousTrack.key);
-    setIsTrainingBeatPlaying(true);
+    applyTrainingTrackChange(previousTrack.key);
   };
 
   const onTrainingNextTrack = () => {
@@ -984,8 +990,7 @@ export default function RapearScreen() {
     const currentTrackIndex = tracks.findIndex((track) => track.key === selectedTrack);
     if (currentTrackIndex === -1) return;
     const nextTrack = tracks[(currentTrackIndex + 1) % tracks.length];
-    setSelectedTrack(nextTrack.key);
-    setIsTrainingBeatPlaying(true);
+    applyTrainingTrackChange(nextTrack.key);
   };
 
   const summaryTheme = {
