@@ -61,8 +61,8 @@ export default function RapearScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [instrumentalVolume, setInstrumentalVolume] = useState(0.8);
   const [volumeTrackHeight, setVolumeTrackHeight] = useState(1);
-  const [recordedVideoUri, setRecordedVideoUri] = useState<string | null>(null);
-  const [recordedThumbnailUri, setRecordedThumbnailUri] = useState<string | null>(null);
+  const [, setRecordedVideoUri] = useState<string | null>(null);
+  const [, setRecordedThumbnailUri] = useState<string | null>(null);
   const [isRecordingCaptureActive, setIsRecordingCaptureActive] = useState(false);
 
   const rapModes: RapModeOption[] = useMemo(
@@ -132,6 +132,9 @@ export default function RapearScreen() {
   const trainingRequestRef = useRef(0);
   const nativePreviewStatusListenerRef = useRef<{ remove: () => void } | null>(null);
   const cameraRef = useRef<any>(null);
+  const recordingTaskRef = useRef<Promise<void> | null>(null);
+  const recordedVideoUriRef = useRef<string | null>(null);
+  const recordedThumbnailUriRef = useRef<string | null>(null);
 
   const initialSessionSeconds = getSessionDuration(selectedSessionTime);
   const availableSessionTimes = selectedSessionType === 'train' ? TRAINING_TIME : SESSION_TIMES;
@@ -695,6 +698,9 @@ export default function RapearScreen() {
     setIsRecordingBeatPlaying(false);
     setRecordedVideoUri(null);
     setRecordedThumbnailUri(null);
+    recordedVideoUriRef.current = null;
+    recordedThumbnailUriRef.current = null;
+    recordingTaskRef.current = null;
 
     if (selectedSessionType === 'train') {
       startSessionTimer();
@@ -741,24 +747,30 @@ export default function RapearScreen() {
     }
   }, []);
 
-  const startVideoRecordingCapture = useCallback(async () => {
+  const startVideoRecordingCapture = useCallback(() => {
     if (selectedSessionType !== 'record' || Platform.OS === 'web') return;
     const activeCamera = cameraRef.current;
     if (!activeCamera?.recordAsync || isRecordingCaptureActive) return;
 
-    try {
-      setIsRecordingCaptureActive(true);
-      const video = await activeCamera.recordAsync();
-      const uri = video?.uri ?? null;
-      if (!uri) return;
-      setRecordedVideoUri(uri);
-      const thumbnailUri = await generateVideoThumbnail(uri);
-      setRecordedThumbnailUri(thumbnailUri);
-    } catch {
-      // ignore recording interruption errors when user ends session
-    } finally {
-      setIsRecordingCaptureActive(false);
-    }
+    const recordingTask = (async () => {
+      try {
+        setIsRecordingCaptureActive(true);
+        const video = await activeCamera.recordAsync();
+        const uri = video?.uri ?? null;
+        if (!uri) return;
+        recordedVideoUriRef.current = uri;
+        setRecordedVideoUri(uri);
+        const thumbnailUri = await generateVideoThumbnail(uri);
+        recordedThumbnailUriRef.current = thumbnailUri;
+        setRecordedThumbnailUri(thumbnailUri);
+      } catch {
+        // ignore recording interruption errors when user ends session
+      } finally {
+        setIsRecordingCaptureActive(false);
+      }
+    })();
+
+    recordingTaskRef.current = recordingTask;
   }, [generateVideoThumbnail, isRecordingCaptureActive, selectedSessionType]);
 
   const stopVideoRecordingCapture = useCallback(async () => {
@@ -767,8 +779,11 @@ export default function RapearScreen() {
     if (!activeCamera?.stopRecording) return;
     try {
       activeCamera.stopRecording();
+      await recordingTaskRef.current;
     } catch {
       // ignore stop errors
+    } finally {
+      recordingTaskRef.current = null;
     }
   }, []);
 
@@ -849,14 +864,16 @@ export default function RapearScreen() {
     setBaseSelectorVisible(false);
     setIsRecordingBeatPlaying(false);
 
+    const capturedVideoUri = recordedVideoUriRef.current;
+    const capturedThumbnailUri = recordedThumbnailUriRef.current;
     const nextSummary: SessionSummary = {
       mode: selectedMode,
       sessionType: selectedSessionType,
       instrumental: selectedTrack,
       instrumentalLabel: selectedTrackLabel,
       elapsedSeconds,
-      recordedVideoUri: recordedVideoUri ?? undefined,
-      recordedThumbnailUri: recordedThumbnailUri ?? undefined,
+      recordedVideoUri: capturedVideoUri ?? undefined,
+      recordedThumbnailUri: capturedThumbnailUri ?? undefined,
     };
 
     if (selectedSessionType === 'record') {
