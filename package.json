@@ -8,7 +8,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "check:no-expo-av": "rg -n \"expo-av\" app components context data features firebase hooks constants && exit 1 || exit 0"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
