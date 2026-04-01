@@ -940,11 +940,16 @@ export default function RapearScreen() {
     setSetupStep('mode');
   };
 
-  const onSelectTrainingTrack = (track: InstrumentalId) => {
-    stopPreviewPlayback();
+  const applyTrainingTrackChange = useCallback((track: InstrumentalId) => {
+    void stopPreviewPlayback();
     setSelectedTrack(track);
     setTrainingRestartKey((previous) => previous + 1);
     setIsTrainingBeatPlaying(true);
+  }, [stopPreviewPlayback]);
+
+  const onSelectTrainingTrack = (track: InstrumentalId) => {
+    applyTrainingTrackChange(track);
+    setBaseSelectorVisible(false);
   };
 
   const onSeekTrainingTrack = async (secondsDelta: number) => {
@@ -975,8 +980,7 @@ export default function RapearScreen() {
     const currentTrackIndex = tracks.findIndex((track) => track.key === selectedTrack);
     if (currentTrackIndex === -1) return;
     const previousTrack = tracks[(currentTrackIndex - 1 + tracks.length) % tracks.length];
-    setSelectedTrack(previousTrack.key);
-    setIsTrainingBeatPlaying(true);
+    applyTrainingTrackChange(previousTrack.key);
   };
 
   const onTrainingNextTrack = () => {
@@ -984,8 +988,7 @@ export default function RapearScreen() {
     const currentTrackIndex = tracks.findIndex((track) => track.key === selectedTrack);
     if (currentTrackIndex === -1) return;
     const nextTrack = tracks[(currentTrackIndex + 1) % tracks.length];
-    setSelectedTrack(nextTrack.key);
-    setIsTrainingBeatPlaying(true);
+    applyTrainingTrackChange(nextTrack.key);
   };
 
   const summaryTheme = {
