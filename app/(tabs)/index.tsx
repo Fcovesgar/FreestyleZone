@@ -45,6 +45,7 @@ export default function RapearScreen() {
   const [pressedMode, setPressedMode] = useState<RapMode | null>(null);
   const [previewTrack, setPreviewTrack] = useState<InstrumentalId | null>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const [hasMicrophonePermission, setHasMicrophonePermission] = useState<boolean | null>(null);
   const [sessionVisible, setSessionVisible] = useState(false);
   const [cameraFacing, setCameraFacing] = useState<CameraFacing>('front');
   const [countdown, setCountdown] = useState<number | null>(null);
@@ -61,8 +62,8 @@ export default function RapearScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [instrumentalVolume, setInstrumentalVolume] = useState(0.8);
   const [volumeTrackHeight, setVolumeTrackHeight] = useState(1);
-  const [recordedVideoUri, setRecordedVideoUri] = useState<string | null>(null);
-  const [recordedThumbnailUri, setRecordedThumbnailUri] = useState<string | null>(null);
+  const [, setRecordedVideoUri] = useState<string | null>(null);
+  const [, setRecordedThumbnailUri] = useState<string | null>(null);
   const [isRecordingCaptureActive, setIsRecordingCaptureActive] = useState(false);
 
   const rapModes: RapModeOption[] = useMemo(
@@ -132,6 +133,9 @@ export default function RapearScreen() {
   const trainingRequestRef = useRef(0);
   const nativePreviewStatusListenerRef = useRef<{ remove: () => void } | null>(null);
   const cameraRef = useRef<any>(null);
+  const recordingTaskRef = useRef<Promise<void> | null>(null);
+  const recordedVideoUriRef = useRef<string | null>(null);
+  const recordedThumbnailUriRef = useRef<string | null>(null);
 
   const initialSessionSeconds = getSessionDuration(selectedSessionTime);
   const availableSessionTimes = selectedSessionType === 'train' ? TRAINING_TIME : SESSION_TIMES;
@@ -681,10 +685,84 @@ export default function RapearScreen() {
     return accepted;
   };
 
+  const syncMicrophonePermissionStatus = async () => {
+    if (Platform.OS === 'android') {
+      const granted = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO);
+      setHasMicrophonePermission(granted);
+      return granted;
+    }
+
+    if (Platform.OS === 'web') {
+      try {
+        if ('permissions' in navigator && navigator.permissions?.query) {
+          const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+          const granted = result.state === 'granted';
+          setHasMicrophonePermission(granted);
+          return granted;
+        }
+      } catch {
+        // ignore permission API errors on unsupported browsers
+      }
+
+      return hasMicrophonePermission === true;
+    }
+
+    const cameraModule = resolveCameraModule();
+    if (!cameraModule?.Camera) {
+      setHasMicrophonePermission(false);
+      return false;
+    }
+
+    const permission = await cameraModule.Camera.getMicrophonePermissionsAsync();
+    const granted = permission.status === 'granted';
+    setHasMicrophonePermission(granted);
+    return granted;
+  };
+
+  const requestMicrophonePermission = async () => {
+    if (Platform.OS === 'android') {
+      const granted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO, {
+        title: 'Permiso de micrófono',
+        message: 'Necesitamos acceder a tu micrófono para grabar tu voz durante la sesión.',
+        buttonPositive: 'Permitir',
+        buttonNegative: 'Cancelar',
+        buttonNeutral: 'Más tarde',
+      });
+
+      const accepted = granted === PermissionsAndroid.RESULTS.GRANTED;
+      setHasMicrophonePermission(accepted);
+      return accepted;
+    }
+
+    if (Platform.OS === 'web') {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach((track) => track.stop());
+        setHasMicrophonePermission(true);
+        return true;
+      } catch {
+        setHasMicrophonePermission(false);
+        return false;
+      }
+    }
+
+    const cameraModule = resolveCameraModule();
+    if (!cameraModule?.Camera) {
+      setHasMicrophonePermission(false);
+      return false;
+    }
+
+    const permission = await cameraModule.Camera.requestMicrophonePermissionsAsync();
+    const accepted = permission.status === 'granted';
+    setHasMicrophonePermission(accepted);
+    return accepted;
+  };
+
   const openSession = async () => {
     if (!isReadyToStart) return;
 
     await syncCameraPermissionStatus();
+    await syncMicrophonePermissionStatus();
     setSessionVisible(true);
     setCountdown(null);
     setElapsedSeconds(0);
@@ -695,6 +773,9 @@ export default function RapearScreen() {
     setIsRecordingBeatPlaying(false);
     setRecordedVideoUri(null);
     setRecordedThumbnailUri(null);
+    recordedVideoUriRef.current = null;
+    recordedThumbnailUriRef.current = null;
+    recordingTaskRef.current = null;
 
     if (selectedSessionType === 'train') {
       startSessionTimer();
@@ -741,24 +822,34 @@ export default function RapearScreen() {
     }
   }, []);
 
-  const startVideoRecordingCapture = useCallback(async () => {
+  const startVideoRecordingCapture = useCallback(() => {
     if (selectedSessionType !== 'record' || Platform.OS === 'web') return;
     const activeCamera = cameraRef.current;
-    if (!activeCamera?.recordAsync || isRecordingCaptureActive) return;
-
-    try {
-      setIsRecordingCaptureActive(true);
-      const video = await activeCamera.recordAsync();
-      const uri = video?.uri ?? null;
-      if (!uri) return;
-      setRecordedVideoUri(uri);
-      const thumbnailUri = await generateVideoThumbnail(uri);
-      setRecordedThumbnailUri(thumbnailUri);
-    } catch {
-      // ignore recording interruption errors when user ends session
-    } finally {
-      setIsRecordingCaptureActive(false);
+    if (isRecordingCaptureActive) return;
+    if (!activeCamera?.recordAsync) {
+      Alert.alert('Grabación no disponible', 'No se pudo iniciar la grabación de video en este dispositivo.');
+      return;
     }
+
+    const recordingTask = (async () => {
+      try {
+        setIsRecordingCaptureActive(true);
+        const video = await activeCamera.recordAsync({ mute: false });
+        const uri = video?.uri ?? null;
+        if (!uri) return;
+        recordedVideoUriRef.current = uri;
+        setRecordedVideoUri(uri);
+        const thumbnailUri = await generateVideoThumbnail(uri);
+        recordedThumbnailUriRef.current = thumbnailUri;
+        setRecordedThumbnailUri(thumbnailUri);
+      } catch {
+        // ignore recording interruption errors when user ends session
+      } finally {
+        setIsRecordingCaptureActive(false);
+      }
+    })();
+
+    recordingTaskRef.current = recordingTask;
   }, [generateVideoThumbnail, isRecordingCaptureActive, selectedSessionType]);
 
   const stopVideoRecordingCapture = useCallback(async () => {
@@ -767,8 +858,11 @@ export default function RapearScreen() {
     if (!activeCamera?.stopRecording) return;
     try {
       activeCamera.stopRecording();
+      await recordingTaskRef.current;
     } catch {
       // ignore stop errors
+    } finally {
+      recordingTaskRef.current = null;
     }
   }, []);
 
@@ -802,6 +896,11 @@ export default function RapearScreen() {
     const granted = await requestCameraPermission();
     if (!granted) {
       Alert.alert('Permiso requerido', 'Necesitas aceptar la cámara para iniciar la cuenta atrás de grabación.');
+      return;
+    }
+    const microphoneGranted = await requestMicrophonePermission();
+    if (!microphoneGranted) {
+      Alert.alert('Permiso requerido', 'Necesitas aceptar el micrófono para grabar tu voz.');
       return;
     }
 
@@ -849,14 +948,16 @@ export default function RapearScreen() {
     setBaseSelectorVisible(false);
     setIsRecordingBeatPlaying(false);
 
+    const capturedVideoUri = recordedVideoUriRef.current;
+    const capturedThumbnailUri = recordedThumbnailUriRef.current;
     const nextSummary: SessionSummary = {
       mode: selectedMode,
       sessionType: selectedSessionType,
       instrumental: selectedTrack,
       instrumentalLabel: selectedTrackLabel,
       elapsedSeconds,
-      recordedVideoUri: recordedVideoUri ?? undefined,
-      recordedThumbnailUri: recordedThumbnailUri ?? undefined,
+      recordedVideoUri: capturedVideoUri ?? undefined,
+      recordedThumbnailUri: capturedThumbnailUri ?? undefined,
     };
 
     if (selectedSessionType === 'record') {
@@ -1205,7 +1306,7 @@ export default function RapearScreen() {
             ) : (
               <>
                 {hasCameraPermission && CameraPreviewComponent ? (
-                  <CameraPreviewComponent ref={cameraRef} style={styles.cameraPreviewLayer} facing={cameraFacing} />
+                  <CameraPreviewComponent ref={cameraRef} style={styles.cameraPreviewLayer} facing={cameraFacing} mode="video" mute={false} />
                 ) : (
                   <View style={styles.cameraPermissionEmptyState}>
                     <MaterialIcons name="videocam-off" size={28} color="#FFFFFFCC" />
@@ -1233,14 +1334,22 @@ export default function RapearScreen() {
 
                   {!hasSessionStarted && countdown === null ? (
                     <View style={styles.preSessionActionsRow}>
-                      {!hasCameraPermission ? (
+                      {(!hasCameraPermission || !hasMicrophonePermission) ? (
                         <View style={styles.recordingConfigCard}>
-                          <Text style={styles.recordingConfigTitle}>Activa cámara</Text>
+                          <Text style={styles.recordingConfigTitle}>Activa permisos</Text>
                           <View style={styles.recordingConfigActions}>
-                            <Pressable style={styles.recordingConfigActionButton} onPress={requestCameraPermission}>
-                              <MaterialIcons name="videocam" size={17} color="#FFFFFF" />
-                              <Text style={styles.recordingConfigActionText}>Solicitar permiso</Text>
-                            </Pressable>
+                            {!hasCameraPermission ? (
+                              <Pressable style={styles.recordingConfigActionButton} onPress={requestCameraPermission}>
+                                <MaterialIcons name="videocam" size={17} color="#FFFFFF" />
+                                <Text style={styles.recordingConfigActionText}>Permiso cámara</Text>
+                              </Pressable>
+                            ) : null}
+                            {!hasMicrophonePermission ? (
+                              <Pressable style={styles.recordingConfigActionButton} onPress={requestMicrophonePermission}>
+                                <MaterialIcons name="mic" size={17} color="#FFFFFF" />
+                                <Text style={styles.recordingConfigActionText}>Permiso micro</Text>
+                              </Pressable>
+                            ) : null}
                           </View>
                         </View>
                       ) : null}
@@ -1324,6 +1433,10 @@ export default function RapearScreen() {
                 />
               ) : null}
               {sessionSummary?.recordedThumbnailUri ? <Image source={{ uri: sessionSummary.recordedThumbnailUri }} style={styles.previewThumbnail} /> : null}
+              <View style={styles.previewOverlayChip}>
+                <MaterialIcons name="graphic-eq" size={12} color="#FFFFFF" />
+                <Text style={styles.previewOverlayChipText}>{sessionSummary?.instrumentalLabel ?? 'Base'}</Text>
+              </View>
               <Text style={[styles.previewTimer, { color: summaryTheme.primaryText }]}>{formatTime(sessionSummary?.elapsedSeconds ?? 0)}</Text>
             </View>
             <Text style={[styles.previewHint, { color: summaryTheme.tertiaryText }]}>Preview de la grabación + miniatura de referencia.</Text>
