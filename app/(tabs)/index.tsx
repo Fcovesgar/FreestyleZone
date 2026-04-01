@@ -765,6 +765,7 @@ export default function RapearScreen() {
     setHasSessionStarted(true);
     setIsRecordingBeatPlaying(true);
     if (selectedSessionType === 'record') {
+      setTrainingRestartKey((previous) => previous + 1);
       void startVideoRecordingCapture();
     }
 
@@ -883,8 +884,8 @@ export default function RapearScreen() {
     }
 
     await stopPreviewPlayback();
-    setIsRecordingBeatPlaying(false);
     await resetSessionBeatPosition();
+    setIsRecordingBeatPlaying(true);
 
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
 
