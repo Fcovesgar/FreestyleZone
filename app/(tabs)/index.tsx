@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, type LayoutChangeEvent, Linking, Modal, PermissionsAndroid, Platform, Pressable, RefreshControl, ScrollView, Text, Vibration, View } from 'react-native';
+import { Alert, Image, type LayoutChangeEvent, Linking, Modal, PermissionsAndroid, Platform, Pressable, RefreshControl, ScrollView, Text, Vibration, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useFocusEffect } from '@react-navigation/native';
+import { ResizeMode, Video } from 'expo-av';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getInstrumentals } from '../../data/get_instrumentals';
 import { getModes } from '../../data/get_modes';
@@ -59,6 +60,9 @@ export default function RapearScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [instrumentalVolume, setInstrumentalVolume] = useState(0.8);
   const [volumeTrackHeight, setVolumeTrackHeight] = useState(1);
+  const [recordedVideoUri, setRecordedVideoUri] = useState<string | null>(null);
+  const [recordedThumbnailUri, setRecordedThumbnailUri] = useState<string | null>(null);
+  const [isRecordingCaptureActive, setIsRecordingCaptureActive] = useState(false);
 
   const rapModes: RapModeOption[] = useMemo(
     () =>
@@ -125,6 +129,7 @@ export default function RapearScreen() {
   const previewRequestRef = useRef(0);
   const trainingRequestRef = useRef(0);
   const nativePreviewStatusListenerRef = useRef<{ remove: () => void } | null>(null);
+  const cameraRef = useRef<any>(null);
 
   const initialSessionSeconds = getSessionDuration(selectedSessionTime);
   const availableSessionTimes = selectedSessionType === 'train' ? TRAINING_TIME : SESSION_TIMES;
@@ -676,7 +681,9 @@ export default function RapearScreen() {
     setRemainingSeconds(initialSessionSeconds);
     setHasSessionStarted(false);
     setIsTrainingBeatPlaying(selectedSessionType === 'train');
-    setIsRecordingBeatPlaying(selectedSessionType === 'record');
+    setIsRecordingBeatPlaying(false);
+    setRecordedVideoUri(null);
+    setRecordedThumbnailUri(null);
 
     if (selectedSessionType === 'train') {
       startSessionTimer();
@@ -687,6 +694,9 @@ export default function RapearScreen() {
     if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current);
     setHasSessionStarted(true);
     setIsRecordingBeatPlaying(true);
+    if (selectedSessionType === 'record') {
+      void startVideoRecordingCapture();
+    }
 
     sessionIntervalRef.current = setInterval(() => {
       setElapsedSeconds((previousElapsed) => previousElapsed + 1);
@@ -705,6 +715,51 @@ export default function RapearScreen() {
       });
     }, 1000);
   };
+
+  const generateVideoThumbnail = useCallback(async (videoUri: string) => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const videoThumbnails = require('expo-video-thumbnails');
+      if (!videoThumbnails?.getThumbnailAsync) return null;
+      const { uri } = await videoThumbnails.getThumbnailAsync(videoUri, {
+        time: 1000,
+      });
+      return uri ?? null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const startVideoRecordingCapture = useCallback(async () => {
+    if (selectedSessionType !== 'record' || Platform.OS === 'web') return;
+    const activeCamera = cameraRef.current;
+    if (!activeCamera?.recordAsync || isRecordingCaptureActive) return;
+
+    try {
+      setIsRecordingCaptureActive(true);
+      const video = await activeCamera.recordAsync();
+      const uri = video?.uri ?? null;
+      if (!uri) return;
+      setRecordedVideoUri(uri);
+      const thumbnailUri = await generateVideoThumbnail(uri);
+      setRecordedThumbnailUri(thumbnailUri);
+    } catch {
+      // ignore recording interruption errors when user ends session
+    } finally {
+      setIsRecordingCaptureActive(false);
+    }
+  }, [generateVideoThumbnail, isRecordingCaptureActive, selectedSessionType]);
+
+  const stopVideoRecordingCapture = useCallback(async () => {
+    if (Platform.OS === 'web') return;
+    const activeCamera = cameraRef.current;
+    if (!activeCamera?.stopRecording) return;
+    try {
+      activeCamera.stopRecording();
+    } catch {
+      // ignore stop errors
+    }
+  }, []);
 
   const onToggleCameraFacing = () => {
     if (!hasCameraPermission) {
@@ -769,11 +824,12 @@ export default function RapearScreen() {
     }, 1000);
   };
 
-  const finishSession = () => {
+  const finishSession = async () => {
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current);
 
     setSessionVisible(false);
+    await stopVideoRecordingCapture();
     stopTrainingPlayback();
     setCountdown(null);
     setRemainingSeconds(initialSessionSeconds);
@@ -786,7 +842,10 @@ export default function RapearScreen() {
       mode: selectedMode,
       sessionType: selectedSessionType,
       instrumental: selectedTrack,
+      instrumentalLabel: selectedTrackLabel,
       elapsedSeconds,
+      recordedVideoUri: recordedVideoUri ?? undefined,
+      recordedThumbnailUri: recordedThumbnailUri ?? undefined,
     };
 
     if (selectedSessionType === 'record') {
@@ -801,11 +860,12 @@ export default function RapearScreen() {
     setElapsedSeconds(0);
   };
 
-  const stopSession = () => {
+  const stopSession = async () => {
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current);
 
     setSessionVisible(false);
+    await stopVideoRecordingCapture();
     stopTrainingPlayback();
     setCountdown(null);
     setRemainingSeconds(initialSessionSeconds);
@@ -815,6 +875,44 @@ export default function RapearScreen() {
     setBaseSelectorVisible(false);
     setIsRecordingBeatPlaying(false);
   };
+
+  const saveRecordedVideoToDevice = useCallback(async () => {
+    if (!sessionSummary?.recordedVideoUri) {
+      Alert.alert('Sin video', 'Aún no hay video grabado para guardar.');
+      return;
+    }
+
+    if (Platform.OS === 'web') {
+      const anchor = document.createElement('a');
+      anchor.href = sessionSummary.recordedVideoUri;
+      anchor.download = `freestyle-session-${Date.now()}.mp4`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      return;
+    }
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const mediaLibrary = require('expo-media-library');
+      if (!mediaLibrary?.requestPermissionsAsync || !mediaLibrary?.createAssetAsync) {
+        Alert.alert('Guardar no disponible', 'Instala expo-media-library para guardar videos en el dispositivo.');
+        return;
+      }
+
+      const permission = await mediaLibrary.requestPermissionsAsync();
+      if (!permission?.granted) {
+        Alert.alert('Permiso denegado', 'Necesitas permitir acceso a fotos y videos para guardar.');
+        return;
+      }
+
+      const asset = await mediaLibrary.createAssetAsync(sessionSummary.recordedVideoUri);
+      await mediaLibrary.createAlbumAsync('FreestyleZone', asset, false);
+      Alert.alert('Guardado', 'Video guardado en el dispositivo.');
+    } catch {
+      Alert.alert('Error al guardar', 'No se pudo guardar el video en el dispositivo.');
+    }
+  }, [sessionSummary]);
 
   const displayTimer = isUnlimitedSession || remainingSeconds === null ? formatTime(elapsedSeconds) : formatTime(remainingSeconds);
   const timerColor = getSessionTimerColor(remainingSeconds, initialSessionSeconds, isUnlimitedSession);
@@ -1003,7 +1101,7 @@ export default function RapearScreen() {
           </Pressable>
         ) : null}
       </ScrollView>
-      <Modal visible={sessionVisible} animationType="slide" onRequestClose={stopSession}>
+      <Modal visible={sessionVisible} animationType="slide" onRequestClose={() => void stopSession()}>
         <View style={styles.sessionFullscreen}>
           <View style={[styles.cameraPlaceholder, styles.sessionModalCard, selectedSessionType === 'train' ? styles.trainingBackground : styles.recordingBackground, { marginTop: insets.top + 8, marginBottom: insets.bottom + 8 }]}>
             {(selectedSessionType === 'train' || (!hasSessionStarted && countdown === null)) ? renderVolumeControl(selectedSessionType === 'train' ? 'right' : 'left') : null}
@@ -1018,7 +1116,7 @@ export default function RapearScreen() {
                       <Text style={styles.trainingModeTagText}>Entrenar</Text>
                     </View>
                   </View>
-                  <Pressable style={styles.finishButton} onPress={finishSession}>
+                  <Pressable style={styles.finishButton} onPress={() => void finishSession()}>
                     <Text style={styles.finishButtonText}>Finalizar</Text>
                   </Pressable>
                 </View>
@@ -1093,7 +1191,7 @@ export default function RapearScreen() {
             ) : (
               <>
                 {hasCameraPermission && CameraPreviewComponent ? (
-                  <CameraPreviewComponent style={styles.cameraPreviewLayer} facing={cameraFacing} />
+                  <CameraPreviewComponent ref={cameraRef} style={styles.cameraPreviewLayer} facing={cameraFacing} />
                 ) : (
                   <View style={styles.cameraPermissionEmptyState}>
                     <MaterialIcons name="videocam-off" size={28} color="#FFFFFFCC" />
@@ -1110,7 +1208,7 @@ export default function RapearScreen() {
                     </View>
                   </View>
                   <View style={styles.sessionHeaderActions}>
-                    <Pressable style={styles.finishButton} onPress={finishSession}>
+                    <Pressable style={styles.finishButton} onPress={() => void finishSession()}>
                       <Text style={styles.finishButtonText}>Finalizar</Text>
                     </Pressable>
                   </View>
@@ -1138,7 +1236,7 @@ export default function RapearScreen() {
                           <MaterialIcons name={isRecordingBeatPlaying ? 'pause' : 'play-arrow'} size={24} color="#FFFFFF" />
                         </Pressable>
 
-                        <Pressable style={styles.recordButton} onPress={onStartRecordingPress}>
+                        <Pressable style={styles.recordButton} onPress={() => void onStartRecordingPress()}>
                           <View style={styles.recordButtonInner} />
                         </Pressable>
 
@@ -1202,24 +1300,34 @@ export default function RapearScreen() {
           </View>
 
           <View style={styles.previewCard}>
-            <View style={[styles.previewVideo, { backgroundColor: summaryTheme.previewBg, borderColor: summaryTheme.cardBorder }]}> 
+            <View style={[styles.previewVideo, { backgroundColor: summaryTheme.previewBg, borderColor: summaryTheme.cardBorder }]}>
+              {sessionSummary?.recordedVideoUri ? (
+                <Video
+                  source={{ uri: sessionSummary.recordedVideoUri }}
+                  style={styles.previewVideoPlayer}
+                  resizeMode={ResizeMode.COVER}
+                  shouldPlay={false}
+                  useNativeControls
+                />
+              ) : null}
+              {sessionSummary?.recordedThumbnailUri ? <Image source={{ uri: sessionSummary.recordedThumbnailUri }} style={styles.previewThumbnail} /> : null}
               <Text style={[styles.previewTimer, { color: summaryTheme.primaryText }]}>{formatTime(sessionSummary?.elapsedSeconds ?? 0)}</Text>
             </View>
-            <Text style={[styles.previewHint, { color: summaryTheme.tertiaryText }]}>Preview con overlay de tiempo (sin botones de control).</Text>
+            <Text style={[styles.previewHint, { color: summaryTheme.tertiaryText }]}>Preview de la grabación + miniatura de referencia.</Text>
           </View>
 
           <View style={[styles.summaryMetaCard, { backgroundColor: summaryTheme.cardBg, borderColor: summaryTheme.cardBorder }]}> 
             <Text style={[styles.summaryMetaText, { color: summaryTheme.secondaryText }]}>Modo: {summaryModeInfo?.label ?? '-'}</Text>
             <Text style={[styles.summaryMetaDescription, { color: summaryTheme.tertiaryText }]}>Descripción: {summaryModeInfo?.description ?? '-'}</Text>
             <Text style={[styles.summaryMetaText, { color: summaryTheme.secondaryText }]}>Sesión: {sessionSummary?.sessionType === 'record' ? 'Grabar' : 'Entrenar'}</Text>
-            <Text style={[styles.summaryMetaText, { color: summaryTheme.secondaryText }]}>Base: {sessionSummary?.instrumental ? selectedTrackLabel : '-'}</Text>
+            <Text style={[styles.summaryMetaText, { color: summaryTheme.secondaryText }]}>Base: {sessionSummary?.instrumental ? sessionSummary.instrumentalLabel : '-'}</Text>
             <Text style={[styles.summaryMetaText, { color: summaryTheme.secondaryText }]}>Tiempo: {formatTime(sessionSummary?.elapsedSeconds ?? 0)}</Text>
           </View>
 
           <View style={styles.summaryActions}>
             <Pressable
               style={[styles.summaryActionButton, { backgroundColor: summaryTheme.buttonBg }]}
-              onPress={() => Alert.alert('Guardar en galería', 'Función preparada para conectar con guardado local de video.')}>
+              onPress={() => void saveRecordedVideoToDevice()}>
               <MaterialIcons name="download" size={18} color="#FFFFFF" />
               <Text style={styles.summaryActionText}>Guardar en galería</Text>
             </Pressable>

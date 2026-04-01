@@ -38,11 +38,7 @@ const RAP_STYLES: RapStyle[] = ['Sin estilo', 'Doble punch', 'Metriquero', 'Bata
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const VIEW_TOP_OFFSET = 12;
 
-const AVATAR_OPTIONS = [
-  'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=400&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop',
-];
+const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=400&h=400&fit=crop';
 
 export default function ProfileScreen() {
   const { effectiveColorScheme, themePreference, setThemePreference } = useAppTheme();
@@ -150,10 +146,53 @@ export default function ProfileScreen() {
     });
   };
 
-  const rotateAvatar = () => {
-    const currentIndex = AVATAR_OPTIONS.findIndex((item) => item === draftProfile.avatarUri);
-    const nextIndex = (currentIndex + 1) % AVATAR_OPTIONS.length;
-    setDraftProfile((prev) => ({ ...prev, avatarUri: AVATAR_OPTIONS[nextIndex] }));
+  const pickAvatarFromLibrary = async () => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const imagePicker = require('expo-image-picker');
+      const permission = await imagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission?.granted) {
+        Alert.alert('Permiso denegado', 'Debes permitir acceso a fotos para usar una imagen de tu biblioteca.');
+        return;
+      }
+
+      const result = await imagePicker.launchImageLibraryAsync({
+        mediaTypes: imagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result?.canceled && result?.assets?.[0]?.uri) {
+        setDraftProfile((prev) => ({ ...prev, avatarUri: result.assets[0].uri }));
+      }
+    } catch {
+      Alert.alert('No disponible', 'Instala expo-image-picker para elegir una foto de la galería.');
+    }
+  };
+
+  const takeAvatarPhoto = async () => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const imagePicker = require('expo-image-picker');
+      const permission = await imagePicker.requestCameraPermissionsAsync();
+      if (!permission?.granted) {
+        Alert.alert('Permiso denegado', 'Debes permitir acceso a la cámara para tomar una foto.');
+        return;
+      }
+
+      const result = await imagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result?.canceled && result?.assets?.[0]?.uri) {
+        setDraftProfile((prev) => ({ ...prev, avatarUri: result.assets[0].uri }));
+      }
+    } catch {
+      Alert.alert('No disponible', 'Instala expo-image-picker para tomar una foto desde la app.');
+    }
   };
 
   if (!isLoggedIn) {
@@ -249,9 +288,16 @@ export default function ProfileScreen() {
             <ScrollView contentContainerStyle={styles.editContent} keyboardShouldPersistTaps="handled">
               <View style={styles.editAvatarWrap}>
                 <Image source={{ uri: draftProfile.avatarUri }} style={[styles.editAvatar, { borderColor: colors.border }]} contentFit="cover" />
-                <Pressable onPress={rotateAvatar} style={styles.editAvatarButton}>
-                  <MaterialIcons name="edit" size={16} color="#FFFFFF" />
-                </Pressable>
+                <View style={styles.avatarActionsRow}>
+                  <Pressable onPress={() => void pickAvatarFromLibrary()} style={styles.editAvatarActionButton}>
+                    <MaterialIcons name="photo-library" size={16} color="#FFFFFF" />
+                    <Text style={styles.editAvatarActionText}>Galería</Text>
+                  </Pressable>
+                  <Pressable onPress={() => void takeAvatarPhoto()} style={styles.editAvatarActionButton}>
+                    <MaterialIcons name="photo-camera" size={16} color="#FFFFFF" />
+                    <Text style={styles.editAvatarActionText}>Cámara</Text>
+                  </Pressable>
+                </View>
               </View>
 
               <Field
@@ -486,17 +532,18 @@ const styles = StyleSheet.create({
     borderRadius: 58,
     borderWidth: 1,
   },
-  editAvatarButton: {
-    position: 'absolute',
-    right: '37%',
-    bottom: 10,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+  avatarActionsRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  editAvatarActionButton: {
+    borderRadius: 999,
     backgroundColor: '#6B46FF',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    gap: 6,
   },
+  editAvatarActionText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
   settingsBackdrop: { flex: 1, justifyContent: 'flex-end', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 0 },
   settingsCard: { borderWidth: 1, borderRadius: 14, padding: 16, gap: 12, alignSelf: 'stretch' },
   modalTitle: { fontSize: 18, fontWeight: '700' },
