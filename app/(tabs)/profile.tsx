@@ -249,9 +249,16 @@ export default function ProfileScreen() {
             <ScrollView contentContainerStyle={styles.editContent} keyboardShouldPersistTaps="handled">
               <View style={styles.editAvatarWrap}>
                 <Image source={{ uri: draftProfile.avatarUri }} style={[styles.editAvatar, { borderColor: colors.border }]} contentFit="cover" />
-                <Pressable onPress={rotateAvatar} style={styles.editAvatarButton}>
-                  <MaterialIcons name="edit" size={16} color="#FFFFFF" />
-                </Pressable>
+                <View style={styles.avatarActionsRow}>
+                  <Pressable onPress={() => void pickAvatarFromLibrary()} style={styles.editAvatarActionButton}>
+                    <MaterialIcons name="photo-library" size={16} color="#FFFFFF" />
+                    <Text style={styles.editAvatarActionText}>Galería</Text>
+                  </Pressable>
+                  <Pressable onPress={() => void takeAvatarPhoto()} style={styles.editAvatarActionButton}>
+                    <MaterialIcons name="photo-camera" size={16} color="#FFFFFF" />
+                    <Text style={styles.editAvatarActionText}>Cámara</Text>
+                  </Pressable>
+                </View>
               </View>
 
               <Field
@@ -486,17 +493,18 @@ const styles = StyleSheet.create({
     borderRadius: 58,
     borderWidth: 1,
   },
-  editAvatarButton: {
-    position: 'absolute',
-    right: '37%',
-    bottom: 10,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+  avatarActionsRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  editAvatarActionButton: {
+    borderRadius: 999,
     backgroundColor: '#6B46FF',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    gap: 6,
   },
+  editAvatarActionText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
   settingsBackdrop: { flex: 1, justifyContent: 'flex-end', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 0 },
   settingsCard: { borderWidth: 1, borderRadius: 14, padding: 16, gap: 12, alignSelf: 'stretch' },
   modalTitle: { fontSize: 18, fontWeight: '700' },
