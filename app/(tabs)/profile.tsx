@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   Animated,
   Dimensions,
   Keyboard,
@@ -18,11 +19,12 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { getUserProfile, mapUserProfileErrorMessage, updateUserProfileDetails } from '@/data/user_profiles';
 import { useAppTheme } from '@/context/app-theme-context';
 import { useAuth } from '@/context/auth-context';
 import { useAppThemeColors } from '@/hooks/use-app-theme-colors';
 
-type RapStyle = '' | 'Doble punch' | 'Metriquero' | 'Batallero';
+type RapStyle = 'Sin estilo' | 'Doble punch' | 'Metriquero' | 'Batallero';
 
 type ProfileData = {
   username: string;
@@ -32,15 +34,15 @@ type ProfileData = {
 };
 type ProfileContentTab = 'videos' | 'lines';
 
-const RAP_STYLES: RapStyle[] = ['', 'Doble punch', 'Metriquero', 'Batallero'];
+const RAP_STYLES: RapStyle[] = ['Sin estilo', 'Doble punch', 'Metriquero', 'Batallero'];
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const VIEW_TOP_OFFSET = 12;
+const DEFAULT_AVATAR_URI = 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=400&h=400&fit=crop';
 
-const AVATAR_OPTIONS = [
-  'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=400&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop',
-];
+function resolveImagePickerModule() {
+  const moduleName = 'expo-image-picker';
+  return import(moduleName).catch(() => null);
+}
 
 export default function ProfileScreen() {
   const { effectiveColorScheme, themePreference, setThemePreference } = useAppTheme();
@@ -48,12 +50,17 @@ export default function ProfileScreen() {
   const colors = useAppThemeColors();
   const insets = useSafeAreaInsets();
   const { user, isLoggedIn, openAuthModal, signOutFromApp } = useAuth();
+  const avatarOptions = [
+    DEFAULT_AVATAR_URI,
+    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop',
+  ];
 
   const [profile, setProfile] = useState<ProfileData>({
     username: user?.name ?? '',
     bio: '',
-    rapStyle: '',
-    avatarUri: AVATAR_OPTIONS[0],
+    rapStyle: 'Sin estilo',
+    avatarUri: DEFAULT_AVATAR_URI,
   });
   const [draftProfile, setDraftProfile] = useState<ProfileData>(profile);
   const [settingsVisible, setSettingsVisible] = useState(false);
@@ -72,6 +79,32 @@ export default function ProfileScreen() {
     setProfile((prev) => ({ ...prev, username: user.name }));
     setDraftProfile((prev) => ({ ...prev, username: user.name }));
   }, [user?.name]);
+
+  useEffect(() => {
+    if (!user?.uid) {
+      return;
+    }
+
+    void getUserProfile(user.uid)
+      .then((remoteProfile) => {
+        if (!remoteProfile) {
+          return;
+        }
+
+        const hydratedProfile: ProfileData = {
+          username: String(remoteProfile.Name ?? user.name ?? '').trim(),
+          bio: String(remoteProfile.Biography ?? '').trim(),
+          rapStyle: (remoteProfile.Rap_style as RapStyle) || 'Sin estilo',
+          avatarUri: String(remoteProfile.Profile_image ?? DEFAULT_AVATAR_URI).trim() || DEFAULT_AVATAR_URI,
+        };
+
+        setProfile(hydratedProfile);
+        setDraftProfile(hydratedProfile);
+      })
+      .catch(() => {
+        Alert.alert('Error', 'No se pudo cargar tu perfil desde la base de datos.');
+      });
+  }, [user?.uid, user?.name]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -95,7 +128,26 @@ export default function ProfileScreen() {
     Keyboard.dismiss();
 
     if (save) {
-      setProfile(draftProfile);
+      const sanitizedProfile: ProfileData = {
+        username: draftProfile.username.trim() || user?.name || 'Freestyler',
+        bio: draftProfile.bio.trim(),
+        rapStyle: draftProfile.rapStyle || 'Sin estilo',
+        avatarUri: draftProfile.avatarUri || DEFAULT_AVATAR_URI,
+      };
+
+      setProfile(sanitizedProfile);
+      setDraftProfile(sanitizedProfile);
+
+      if (user?.uid) {
+        void updateUserProfileDetails(user.uid, {
+          name: sanitizedProfile.username,
+          bio: sanitizedProfile.bio,
+          rapStyle: sanitizedProfile.rapStyle,
+          avatarUri: sanitizedProfile.avatarUri,
+        }).catch((error) => {
+          Alert.alert('Error', mapUserProfileErrorMessage(error));
+        });
+      }
     }
 
     Animated.timing(slideAnim, { toValue: 0, duration: 250, useNativeDriver: true }).start(() => {
@@ -104,9 +156,71 @@ export default function ProfileScreen() {
   };
 
   const rotateAvatar = () => {
-    const currentIndex = AVATAR_OPTIONS.findIndex((item) => item === draftProfile.avatarUri);
-    const nextIndex = (currentIndex + 1) % AVATAR_OPTIONS.length;
-    setDraftProfile((prev) => ({ ...prev, avatarUri: AVATAR_OPTIONS[nextIndex] }));
+    const currentIndex = avatarOptions.findIndex((item) => item === draftProfile.avatarUri);
+    const nextIndex = (currentIndex + 1) % avatarOptions.length;
+    setDraftProfile((prev) => ({ ...prev, avatarUri: avatarOptions[nextIndex] }));
+  };
+
+  const pickAvatarFromGallery = async () => {
+    const imagePicker = await resolveImagePickerModule();
+    if (!imagePicker) {
+      Alert.alert('Módulo no disponible', 'No encontramos expo-image-picker en esta build.');
+      return;
+    }
+
+    try {
+      const permission = await imagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Permiso denegado', 'Necesitas habilitar la galería para elegir una foto de perfil.');
+        return;
+      }
+
+      const result = await imagePicker.launchImageLibraryAsync({
+        mediaTypes: imagePicker.MediaType.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (result.canceled || !result.assets[0]?.uri) {
+        return;
+      }
+
+      setDraftProfile((prev) => ({ ...prev, avatarUri: result.assets[0].uri }));
+    } catch {
+      Alert.alert('Error', 'No se pudo abrir la galería.');
+    }
+  };
+
+  const takeAvatarPhoto = async () => {
+    const imagePicker = await resolveImagePickerModule();
+    if (!imagePicker) {
+      Alert.alert('Módulo no disponible', 'No encontramos expo-image-picker en esta build.');
+      return;
+    }
+
+    try {
+      const permission = await imagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Permiso denegado', 'Necesitas habilitar la cámara para sacar una foto de perfil.');
+        return;
+      }
+
+      const result = await imagePicker.launchCameraAsync({
+        mediaTypes: imagePicker.MediaType.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (result.canceled || !result.assets[0]?.uri) {
+        return;
+      }
+
+      setDraftProfile((prev) => ({ ...prev, avatarUri: result.assets[0].uri }));
+    } catch {
+      Alert.alert('Error', 'No se pudo abrir la cámara.');
+    }
   };
 
   if (!isLoggedIn) {
@@ -205,6 +319,14 @@ export default function ProfileScreen() {
                 <Pressable onPress={rotateAvatar} style={styles.editAvatarButton}>
                   <MaterialIcons name="edit" size={16} color="#FFFFFF" />
                 </Pressable>
+                <View style={styles.avatarActionsRow}>
+                  <Pressable onPress={pickAvatarFromGallery} style={[styles.avatarActionBtn, { borderColor: colors.border }]}>
+                    <Text style={[styles.avatarActionText, { color: colors.textPrimary }]}>Galería</Text>
+                  </Pressable>
+                  <Pressable onPress={takeAvatarPhoto} style={[styles.avatarActionBtn, { borderColor: colors.border }]}>
+                    <Text style={[styles.avatarActionText, { color: colors.textPrimary }]}>Cámara</Text>
+                  </Pressable>
+                </View>
               </View>
 
               <Field
@@ -238,7 +360,7 @@ export default function ProfileScreen() {
                         },
                       ]}>
                       <Text style={{ color: selected ? '#6B46FF' : colors.textPrimary, fontWeight: selected ? '700' : '500' }}>
-                        {style || 'Sin estilo'}
+                        {style}
                       </Text>
                     </Pressable>
                   );
@@ -450,6 +572,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  avatarActionsRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  avatarActionBtn: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  avatarActionText: { fontSize: 13, fontWeight: '600' },
   settingsBackdrop: { flex: 1, justifyContent: 'flex-end', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 0 },
   settingsCard: { borderWidth: 1, borderRadius: 14, padding: 16, gap: 12, alignSelf: 'stretch' },
   modalTitle: { fontSize: 18, fontWeight: '700' },
