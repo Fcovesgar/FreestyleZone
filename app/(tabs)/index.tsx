@@ -143,6 +143,7 @@ export default function RapearScreen() {
   latestTrainingRestartKeyRef.current = trainingRestartKey;
   const summaryModeInfo = rapModes.find((mode) => mode.key === sessionSummary?.mode);
   const instrumentalVolumePercent = Math.round(instrumentalVolume * 100);
+  const sessionBeatVolume = selectedSessionType === 'record' && hasSessionStarted ? Math.max(instrumentalVolume, 0.65) : instrumentalVolume;
 
   const summaryVideoPlayer = useVideoPlayer(
     sessionSummary?.recordedVideoUri ? { uri: sessionSummary.recordedVideoUri } : null,
@@ -353,7 +354,7 @@ export default function RapearScreen() {
 
       const audio = new Audio(currentTrack.url);
       audio.loop = true;
-      audio.volume = instrumentalVolume;
+      audio.volume = sessionBeatVolume;
       webTrainingAudioRef.current = audio;
       webTrainingTrackRef.current = selectedTrack;
       webRestartKeyAppliedRef.current = trainingRestartKey;
@@ -362,7 +363,7 @@ export default function RapearScreen() {
     webTrainingAudioRef.current.play().catch(() => {
       setIsTrainingBeatPlaying(false);
     });
-  }, [hasSessionStarted, instrumentalVolume, isRecordingBeatPlaying, isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, stopWebTrainingSound, tracks, trainingRestartKey]);
+  }, [hasSessionStarted, isRecordingBeatPlaying, isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionBeatVolume, sessionVisible, stopWebTrainingSound, tracks, trainingRestartKey]);
 
   useEffect(() => {
     if (Platform.OS === 'web') return;
@@ -419,7 +420,7 @@ export default function RapearScreen() {
           return;
         }
         sound.loop = true;
-        sound.volume = instrumentalVolume;
+        sound.volume = sessionBeatVolume;
         sound.play();
         if (requestId !== trainingRequestRef.current) {
           disposeNativeSound(sound);
@@ -438,7 +439,7 @@ export default function RapearScreen() {
     };
 
     playTrainingNative();
-  }, [createNativeAudioPlayer, disposeNativeSound, hasSessionStarted, instrumentalVolume, isRecordingBeatPlaying, resolveNativeAudioModule, isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionVisible, stopNativeSound, stopTrainingPlayback, tracks, trainingRestartKey]);
+  }, [createNativeAudioPlayer, disposeNativeSound, hasSessionStarted, isRecordingBeatPlaying, resolveNativeAudioModule, isTrainingBeatPlaying, selectedSessionType, selectedTrack, sessionBeatVolume, sessionVisible, stopNativeSound, stopTrainingPlayback, tracks, trainingRestartKey]);
 
   useEffect(() => {
     return () => {
@@ -462,13 +463,13 @@ export default function RapearScreen() {
   useEffect(() => {
     if (Platform.OS === 'web') {
       if (webPreviewAudioRef.current) webPreviewAudioRef.current.volume = instrumentalVolume;
-      if (webTrainingAudioRef.current) webTrainingAudioRef.current.volume = instrumentalVolume;
+      if (webTrainingAudioRef.current) webTrainingAudioRef.current.volume = sessionBeatVolume;
       return;
     }
 
     if (nativePreviewSoundRef.current) nativePreviewSoundRef.current.volume = instrumentalVolume;
-    if (nativeTrainingSoundRef.current) nativeTrainingSoundRef.current.volume = instrumentalVolume;
-  }, [instrumentalVolume]);
+    if (nativeTrainingSoundRef.current) nativeTrainingSoundRef.current.volume = sessionBeatVolume;
+  }, [instrumentalVolume, sessionBeatVolume]);
 
   const onSelectSessionType = (sessionType: SessionType) => {
     setSelectedSessionType(sessionType);
