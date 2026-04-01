@@ -750,7 +750,11 @@ export default function RapearScreen() {
   const startVideoRecordingCapture = useCallback(() => {
     if (selectedSessionType !== 'record' || Platform.OS === 'web') return;
     const activeCamera = cameraRef.current;
-    if (!activeCamera?.recordAsync || isRecordingCaptureActive) return;
+    if (isRecordingCaptureActive) return;
+    if (!activeCamera?.recordAsync) {
+      Alert.alert('Grabación no disponible', 'No se pudo iniciar la grabación de video en este dispositivo.');
+      return;
+    }
 
     const recordingTask = (async () => {
       try {
@@ -1222,7 +1226,7 @@ export default function RapearScreen() {
             ) : (
               <>
                 {hasCameraPermission && CameraPreviewComponent ? (
-                  <CameraPreviewComponent ref={cameraRef} style={styles.cameraPreviewLayer} facing={cameraFacing} />
+                  <CameraPreviewComponent ref={cameraRef} style={styles.cameraPreviewLayer} facing={cameraFacing} mode="video" />
                 ) : (
                   <View style={styles.cameraPermissionEmptyState}>
                     <MaterialIcons name="videocam-off" size={28} color="#FFFFFFCC" />
