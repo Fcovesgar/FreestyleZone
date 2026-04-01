@@ -12,7 +12,10 @@ export type SessionSummary = {
   mode: RapMode | null;
   sessionType: SessionType;
   instrumental: InstrumentalId | null;
+  instrumentalLabel: string;
   elapsedSeconds: number;
+  recordedVideoUri?: string;
+  recordedThumbnailUri?: string;
 };
 
 export type RapModeOption = {
