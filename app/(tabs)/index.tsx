@@ -885,7 +885,7 @@ export default function RapearScreen() {
 
     await stopPreviewPlayback();
     await resetSessionBeatPosition();
-    setIsRecordingBeatPlaying(true);
+    setIsRecordingBeatPlaying(false);
 
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
 
