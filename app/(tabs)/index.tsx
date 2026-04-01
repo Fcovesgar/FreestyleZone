@@ -139,6 +139,7 @@ export default function RapearScreen() {
   const availableSessionTimes = selectedSessionType === 'train' ? TRAINING_TIME : SESSION_TIMES;
   const selectedTrackLabel = tracks.find((track) => track.key === selectedTrack)?.label ?? '-';
   latestTrainingRestartKeyRef.current = trainingRestartKey;
+  const selectedModeInfo = rapModes.find((mode) => mode.key === selectedMode);
   const summaryModeInfo = rapModes.find((mode) => mode.key === sessionSummary?.mode);
   const instrumentalVolume = 0.8;
   const sessionBeatVolume = selectedSessionType === 'record' && hasSessionStarted ? Math.max(instrumentalVolume, 0.65) : instrumentalVolume;
@@ -1279,9 +1280,9 @@ export default function RapearScreen() {
                   <View>
                     <Text style={styles.trainingAppName}>FreestyleZone</Text>
                     <Text style={[styles.timer, { color: timerColor }]}>{displayTimer}</Text>
-                    <View style={styles.trainingModeTag}>
-                      <MaterialIcons name="mic" size={11} color="#FFD9D9" />
-                      <Text style={styles.recordingModeTagText}>{hasSessionStarted ? 'Grabando' : 'Listo para grabar'}</Text>
+                    <View style={[styles.trainingModeTag, styles.recordingOverlayTag]}>
+                      <MaterialIcons name="mic" size={11} color="#FFFFFF" />
+                      <Text style={styles.recordingModeTagText}>{selectedModeInfo?.label ?? 'Modo no seleccionado'}</Text>
                     </View>
                   </View>
                   <View style={styles.sessionHeaderActions}>
