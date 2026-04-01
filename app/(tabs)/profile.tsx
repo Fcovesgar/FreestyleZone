@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   Animated,
   Dimensions,
   Keyboard,
@@ -18,11 +19,12 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { getUserProfile, mapUserProfileErrorMessage, updateUserProfileDetails } from '@/data/user_profiles';
 import { useAppTheme } from '@/context/app-theme-context';
 import { useAuth } from '@/context/auth-context';
 import { useAppThemeColors } from '@/hooks/use-app-theme-colors';
 
-type RapStyle = '' | 'Doble punch' | 'Metriquero' | 'Batallero';
+type RapStyle = 'Sin estilo' | 'Doble punch' | 'Metriquero' | 'Batallero';
 
 type ProfileData = {
   username: string;
@@ -32,15 +34,10 @@ type ProfileData = {
 };
 type ProfileContentTab = 'videos' | 'lines';
 
-const RAP_STYLES: RapStyle[] = ['', 'Doble punch', 'Metriquero', 'Batallero'];
+const RAP_STYLES: RapStyle[] = ['Sin estilo', 'Doble punch', 'Metriquero', 'Batallero'];
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const VIEW_TOP_OFFSET = 12;
-
-const AVATAR_OPTIONS = [
-  'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=400&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop',
-];
+const DEFAULT_AVATAR_URI = 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=400&h=400&fit=crop';
 
 export default function ProfileScreen() {
   const { effectiveColorScheme, themePreference, setThemePreference } = useAppTheme();
@@ -48,12 +45,17 @@ export default function ProfileScreen() {
   const colors = useAppThemeColors();
   const insets = useSafeAreaInsets();
   const { user, isLoggedIn, openAuthModal, signOutFromApp } = useAuth();
+  const avatarOptions = [
+    DEFAULT_AVATAR_URI,
+    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop',
+  ];
 
   const [profile, setProfile] = useState<ProfileData>({
     username: user?.name ?? '',
     bio: '',
-    rapStyle: '',
-    avatarUri: AVATAR_OPTIONS[0],
+    rapStyle: 'Sin estilo',
+    avatarUri: DEFAULT_AVATAR_URI,
   });
   const [draftProfile, setDraftProfile] = useState<ProfileData>(profile);
   const [settingsVisible, setSettingsVisible] = useState(false);
@@ -72,6 +74,32 @@ export default function ProfileScreen() {
     setProfile((prev) => ({ ...prev, username: user.name }));
     setDraftProfile((prev) => ({ ...prev, username: user.name }));
   }, [user?.name]);
+
+  useEffect(() => {
+    if (!user?.uid) {
+      return;
+    }
+
+    void getUserProfile(user.uid)
+      .then((remoteProfile) => {
+        if (!remoteProfile) {
+          return;
+        }
+
+        const hydratedProfile: ProfileData = {
+          username: String(remoteProfile.Name ?? user.name ?? '').trim(),
+          bio: String(remoteProfile.Biography ?? '').trim(),
+          rapStyle: (remoteProfile.Rap_style as RapStyle) || 'Sin estilo',
+          avatarUri: String(remoteProfile.Profile_image ?? DEFAULT_AVATAR_URI).trim() || DEFAULT_AVATAR_URI,
+        };
+
+        setProfile(hydratedProfile);
+        setDraftProfile(hydratedProfile);
+      })
+      .catch(() => {
+        Alert.alert('Error', 'No se pudo cargar tu perfil desde la base de datos.');
+      });
+  }, [user?.uid, user?.name]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -95,7 +123,26 @@ export default function ProfileScreen() {
     Keyboard.dismiss();
 
     if (save) {
-      setProfile(draftProfile);
+      const sanitizedProfile: ProfileData = {
+        username: draftProfile.username.trim() || user?.name || 'Freestyler',
+        bio: draftProfile.bio.trim(),
+        rapStyle: draftProfile.rapStyle || 'Sin estilo',
+        avatarUri: draftProfile.avatarUri || DEFAULT_AVATAR_URI,
+      };
+
+      setProfile(sanitizedProfile);
+      setDraftProfile(sanitizedProfile);
+
+      if (user?.uid) {
+        void updateUserProfileDetails(user.uid, {
+          name: sanitizedProfile.username,
+          bio: sanitizedProfile.bio,
+          rapStyle: sanitizedProfile.rapStyle,
+          avatarUri: sanitizedProfile.avatarUri,
+        }).catch((error) => {
+          Alert.alert('Error', mapUserProfileErrorMessage(error));
+        });
+      }
     }
 
     Animated.timing(slideAnim, { toValue: 0, duration: 250, useNativeDriver: true }).start(() => {
@@ -104,9 +151,9 @@ export default function ProfileScreen() {
   };
 
   const rotateAvatar = () => {
-    const currentIndex = AVATAR_OPTIONS.findIndex((item) => item === draftProfile.avatarUri);
-    const nextIndex = (currentIndex + 1) % AVATAR_OPTIONS.length;
-    setDraftProfile((prev) => ({ ...prev, avatarUri: AVATAR_OPTIONS[nextIndex] }));
+    const currentIndex = avatarOptions.findIndex((item) => item === draftProfile.avatarUri);
+    const nextIndex = (currentIndex + 1) % avatarOptions.length;
+    setDraftProfile((prev) => ({ ...prev, avatarUri: avatarOptions[nextIndex] }));
   };
 
   if (!isLoggedIn) {
@@ -238,7 +285,7 @@ export default function ProfileScreen() {
                         },
                       ]}>
                       <Text style={{ color: selected ? '#6B46FF' : colors.textPrimary, fontWeight: selected ? '700' : '500' }}>
-                        {style || 'Sin estilo'}
+                        {style}
                       </Text>
                     </Pressable>
                   );
