@@ -1277,9 +1277,9 @@ export default function RapearScreen() {
                   </View>
                 )}
                 <View style={[styles.trainingHeader, { paddingTop: insets.top + 8 }]}>
-                  <View>
-                    <Text style={styles.trainingAppName}>FreestyleZone</Text>
-                    <Text style={[styles.timer, { color: timerColor }]}>{displayTimer}</Text>
+                  <View style={styles.recordingOverlayInfoBlock}>
+                    <Text style={styles.recordingOverlayAppName}>FreestyleZone</Text>
+                    <Text style={[styles.timer, styles.recordingOverlayTimer, { color: timerColor }]}>{displayTimer}</Text>
                     <View style={[styles.trainingModeTag, styles.recordingOverlayTag]}>
                       <MaterialIcons name="mic" size={11} color="#FFFFFF" />
                       <Text style={styles.recordingModeTagText}>{selectedModeInfo?.label ?? 'Modo no seleccionado'}</Text>
