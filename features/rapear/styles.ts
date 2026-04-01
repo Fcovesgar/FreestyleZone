@@ -120,6 +120,8 @@ const styles = StyleSheet.create({
   previewVideo: { height: 320, borderRadius: 16, borderWidth: 1, justifyContent: 'flex-start', alignItems: 'flex-start', padding: 14, overflow: 'hidden' },
   previewVideoPlayer: { ...StyleSheet.absoluteFillObject },
   previewThumbnail: { position: 'absolute', right: 14, bottom: 14, width: 78, height: 78, borderRadius: 10, borderWidth: 1, borderColor: '#FFFFFF88' },
+  previewOverlayChip: { position: 'absolute', left: 14, top: 14, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: '#00000099', flexDirection: 'row', alignItems: 'center', gap: 5 },
+  previewOverlayChipText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
   previewTimer: { fontSize: 18, fontWeight: '800' },
   previewHint: { fontSize: 12 },
   summaryActions: { flexDirection: 'row', gap: 10, marginTop: 'auto' },
