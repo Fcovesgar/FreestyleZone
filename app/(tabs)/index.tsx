@@ -140,6 +140,7 @@ export default function RapearScreen() {
   const selectedTrackLabel = tracks.find((track) => track.key === selectedTrack)?.label ?? '-';
   latestTrainingRestartKeyRef.current = trainingRestartKey;
   const selectedModeInfo = rapModes.find((mode) => mode.key === selectedMode);
+  const selectedModeIcon = (selectedModeInfo?.icon && selectedModeInfo.icon in MaterialIcons.glyphMap ? selectedModeInfo.icon : 'help-outline') as keyof typeof MaterialIcons.glyphMap;
   const summaryModeInfo = rapModes.find((mode) => mode.key === sessionSummary?.mode);
   const instrumentalVolume = 0.8;
   const sessionBeatVolume = selectedSessionType === 'record' && hasSessionStarted ? Math.max(instrumentalVolume, 0.65) : instrumentalVolume;
@@ -1283,7 +1284,7 @@ export default function RapearScreen() {
                       <Text style={[styles.timer, styles.recordingOverlayTimer, { color: timerColor }]}>{displayTimer}</Text>
                     </View>
                     <View style={[styles.trainingModeTag, styles.recordingOverlayTag]}>
-                      <MaterialIcons name="mic" size={11} color="#FFFFFF" />
+                      <MaterialIcons name={selectedModeIcon} size={12} color="#FFFFFF" />
                       <Text style={styles.recordingModeTagText}>{selectedModeInfo?.label ?? 'Modo no seleccionado'}</Text>
                     </View>
                   </View>
