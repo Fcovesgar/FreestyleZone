@@ -50,12 +50,6 @@ export default function ProfileScreen() {
   const colors = useAppThemeColors();
   const insets = useSafeAreaInsets();
   const { user, isLoggedIn, openAuthModal, signOutFromApp } = useAuth();
-  const avatarOptions = [
-    DEFAULT_AVATAR_URI,
-    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop',
-    'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop',
-  ];
-
   const [profile, setProfile] = useState<ProfileData>({
     username: user?.name ?? '',
     bio: '',
@@ -65,6 +59,7 @@ export default function ProfileScreen() {
   const [draftProfile, setDraftProfile] = useState<ProfileData>(profile);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [avatarPickerVisible, setAvatarPickerVisible] = useState(false);
   const [accountVisible, setAccountVisible] = useState(false);
   const [confirmLogoutVisible, setConfirmLogoutVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<ProfileContentTab>('videos');
@@ -155,12 +150,6 @@ export default function ProfileScreen() {
     });
   };
 
-  const rotateAvatar = () => {
-    const currentIndex = avatarOptions.findIndex((item) => item === draftProfile.avatarUri);
-    const nextIndex = (currentIndex + 1) % avatarOptions.length;
-    setDraftProfile((prev) => ({ ...prev, avatarUri: avatarOptions[nextIndex] }));
-  };
-
   const pickAvatarFromGallery = async () => {
     const imagePicker = await resolveImagePickerModule();
     if (!imagePicker) {
@@ -175,8 +164,9 @@ export default function ProfileScreen() {
         return;
       }
 
+      const imageMediaType = imagePicker.MediaType?.Images ?? imagePicker.MediaTypeOptions?.Images;
       const result = await imagePicker.launchImageLibraryAsync({
-        mediaTypes: imagePicker.MediaType.Images,
+        ...(imageMediaType ? { mediaTypes: imageMediaType } : {}),
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -187,6 +177,7 @@ export default function ProfileScreen() {
       }
 
       setDraftProfile((prev) => ({ ...prev, avatarUri: result.assets[0].uri }));
+      setAvatarPickerVisible(false);
     } catch {
       Alert.alert('Error', 'No se pudo abrir la galería.');
     }
@@ -206,8 +197,9 @@ export default function ProfileScreen() {
         return;
       }
 
+      const imageMediaType = imagePicker.MediaType?.Images ?? imagePicker.MediaTypeOptions?.Images;
       const result = await imagePicker.launchCameraAsync({
-        mediaTypes: imagePicker.MediaType.Images,
+        ...(imageMediaType ? { mediaTypes: imageMediaType } : {}),
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -218,6 +210,7 @@ export default function ProfileScreen() {
       }
 
       setDraftProfile((prev) => ({ ...prev, avatarUri: result.assets[0].uri }));
+      setAvatarPickerVisible(false);
     } catch {
       Alert.alert('Error', 'No se pudo abrir la cámara.');
     }
@@ -316,17 +309,9 @@ export default function ProfileScreen() {
             <ScrollView contentContainerStyle={styles.editContent} keyboardShouldPersistTaps="handled">
               <View style={styles.editAvatarWrap}>
                 <Image source={{ uri: draftProfile.avatarUri }} style={[styles.editAvatar, { borderColor: colors.border }]} contentFit="cover" />
-                <Pressable onPress={rotateAvatar} style={styles.editAvatarButton}>
+                <Pressable onPress={() => setAvatarPickerVisible(true)} style={styles.editAvatarButton}>
                   <MaterialIcons name="edit" size={16} color="#FFFFFF" />
                 </Pressable>
-                <View style={styles.avatarActionsRow}>
-                  <Pressable onPress={pickAvatarFromGallery} style={[styles.avatarActionBtn, { borderColor: colors.border }]}>
-                    <Text style={[styles.avatarActionText, { color: colors.textPrimary }]}>Galería</Text>
-                  </Pressable>
-                  <Pressable onPress={takeAvatarPhoto} style={[styles.avatarActionBtn, { borderColor: colors.border }]}>
-                    <Text style={[styles.avatarActionText, { color: colors.textPrimary }]}>Cámara</Text>
-                  </Pressable>
-                </View>
               </View>
 
               <Field
@@ -429,6 +414,30 @@ export default function ProfileScreen() {
                 <Text style={styles.logoutBtnText}>Sí, cerrar</Text>
               </Pressable>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal animationType="fade" transparent visible={avatarPickerVisible} onRequestClose={() => setAvatarPickerVisible(false)}>
+        <View style={[styles.confirmBackdrop, { backgroundColor: colors.overlay }]}>
+          <View style={[styles.avatarPickerCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Foto de perfil</Text>
+            <Text style={[styles.confirmDescription, { color: colors.textSecondary }]}>
+              Elige cómo quieres actualizar tu imagen de perfil.
+            </Text>
+
+            <View style={styles.avatarActionsRow}>
+              <Pressable onPress={() => void pickAvatarFromGallery()} style={[styles.avatarActionBtn, { borderColor: colors.border }]}>
+                <Text style={[styles.avatarActionText, { color: colors.textPrimary }]}>Galería</Text>
+              </Pressable>
+              <Pressable onPress={() => void takeAvatarPhoto()} style={[styles.avatarActionBtn, { borderColor: colors.border }]}>
+                <Text style={[styles.avatarActionText, { color: colors.textPrimary }]}>Cámara</Text>
+              </Pressable>
+            </View>
+
+            <Pressable onPress={() => setAvatarPickerVisible(false)} style={[styles.closeSettingsBtn, { borderColor: colors.border }]}>
+              <Text style={[styles.actionBtnText, { color: colors.textPrimary }]}>Cancelar</Text>
+            </Pressable>
           </View>
         </View>
       </Modal>
@@ -570,7 +579,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarActionsRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  avatarActionsRow: { flexDirection: 'row', gap: 10, marginTop: 12, width: '100%' },
   editAvatarActionButton: {
     borderRadius: 999,
     backgroundColor: '#6B46FF',
@@ -586,6 +595,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 8,
+    flex: 1,
+    alignItems: 'center',
   },
   avatarActionText: { fontSize: 13, fontWeight: '600' },
   settingsBackdrop: { flex: 1, justifyContent: 'flex-end', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 0 },
@@ -603,6 +614,7 @@ const styles = StyleSheet.create({
   logoutBtnText: { fontWeight: '700', color: '#DB2C2C' },
   confirmBackdrop: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 },
   confirmCard: { width: '100%', borderWidth: 1, borderRadius: 16, paddingHorizontal: 18, paddingVertical: 20, gap: 14 },
+  avatarPickerCard: { width: '100%', borderWidth: 1, borderRadius: 16, paddingHorizontal: 18, paddingVertical: 20, gap: 14 },
   confirmDescription: { fontSize: 14, lineHeight: 22, marginTop: -2, marginBottom: 2 },
   confirmActions: { flexDirection: 'row', gap: 10, marginTop: 4 },
   confirmSecondaryBtn: { borderWidth: 1, borderRadius: 10, paddingVertical: 11, alignItems: 'center', flex: 1 },
