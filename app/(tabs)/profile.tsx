@@ -561,6 +561,15 @@ const styles = StyleSheet.create({
     borderRadius: 58,
     borderWidth: 1,
   },
+  editAvatarButton: {
+    marginTop: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#6B46FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   avatarActionsRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
   editAvatarActionButton: {
     borderRadius: 999,
@@ -572,7 +581,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 6,
   },
-  avatarActionsRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
   avatarActionBtn: {
     borderWidth: 1,
     borderRadius: 10,
