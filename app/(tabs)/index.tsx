@@ -1326,17 +1326,7 @@ export default function RapearScreen() {
                     <Text style={styles.cameraPermissionEmptyStateText}>Activa permiso de cámara para previsualizarte antes de grabar.</Text>
                   </View>
                 )}
-                <View style={[styles.trainingHeader, { paddingTop: insets.top + 8 }]}>
-                  <View style={styles.recordingOverlayInfoBlock}>
-                    <View style={styles.recordingOverlayTitleRow}>
-                      <Text style={styles.recordingOverlayAppName}>FreestyleZone</Text>
-                      <Text style={[styles.timer, styles.recordingOverlayTimer, { color: timerColor }]}>{displayTimer}</Text>
-                    </View>
-                    <View style={[styles.trainingModeTag, styles.recordingOverlayTag]}>
-                      <MaterialIcons name={selectedModeIcon} size={12} color="#FFFFFF" />
-                      <Text style={styles.recordingModeTagText}>{selectedModeInfo?.label ?? 'Modo no seleccionado'}</Text>
-                    </View>
-                  </View>
+                <View style={[styles.trainingHeader, styles.recordingTopHeader, { paddingTop: insets.top + 8 }]}> 
                   <View style={styles.sessionHeaderActions}>
                     <Pressable style={styles.finishButton} onPress={() => void finishSession()}>
                       <Text style={styles.finishButtonText}>Finalizar</Text>
@@ -1344,12 +1334,19 @@ export default function RapearScreen() {
                   </View>
                 </View>
 
-                {hasSessionStarted && activeOverlayWord ? (
-                  <View style={styles.overlayWordWrapper}>
-                    <Text style={styles.overlayWordLabel}>Palabra aleatoria</Text>
-                    <Text style={styles.overlayWordValue}>{activeOverlayWord}</Text>
+                <View style={styles.recordingCenterOverlay}>
+                  <Text style={[styles.timer, styles.recordingCenterTimer, { color: timerColor }]}>{displayTimer}</Text>
+                  <View style={[styles.trainingModeTag, styles.recordingOverlayTag]}>
+                    <MaterialIcons name={selectedModeIcon} size={12} color="#FFFFFF" />
+                    <Text style={styles.recordingModeTagText}>{selectedModeInfo?.label ?? 'Modo no seleccionado'}</Text>
                   </View>
-                ) : null}
+
+                  {hasSessionStarted && activeOverlayWord ? (
+                    <View style={styles.overlayWordWrapper}>
+                      <Text style={styles.overlayWordValue} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.5}>{activeOverlayWord}</Text>
+                    </View>
+                  ) : null}
+                </View>
 
                 <View style={[styles.sessionBottomActions, { paddingBottom: insets.bottom + 26 }]}>
                   {countdown !== null ? <Text style={[styles.countdownNumber, { color: getCountdownColor(countdown) }]}>{countdown}</Text> : null}
