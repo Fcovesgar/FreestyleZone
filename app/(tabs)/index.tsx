@@ -7,6 +7,7 @@ import { VideoView, useVideoPlayer } from 'expo-video';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getInstrumentals } from '../../data/get_instrumentals';
 import { getModes } from '../../data/get_modes';
+import { getWords } from '../../data/get_words';
 
 import { useAppThemeColors } from '@/hooks/use-app-theme-colors';
 import { ModeStepView } from '../../features/rapear/components/mode-step-view';
@@ -35,6 +36,7 @@ export default function RapearScreen() {
 
   const [instrumentals, setInstrumentals] = useState<Instrumental[]>([]);
   const [modes, setModes] = useState<ModeEntity[]>([]);
+  const [words, setWords] = useState<string[]>([]);
   const [loadingInstrumentals, setLoadingInstrumentals] = useState(false);
   const [loadingModes, setLoadingModes] = useState(false);
   const [selectedMode, setSelectedMode] = useState<RapMode | null>(null);
@@ -63,6 +65,7 @@ export default function RapearScreen() {
   const [, setRecordedVideoUri] = useState<string | null>(null);
   const [, setRecordedThumbnailUri] = useState<string | null>(null);
   const [isRecordingCaptureActive, setIsRecordingCaptureActive] = useState(false);
+  const [activeOverlayWord, setActiveOverlayWord] = useState<string | null>(null);
 
   const rapModes: RapModeOption[] = useMemo(
     () =>
@@ -104,6 +107,11 @@ export default function RapearScreen() {
     setLoadingModes(false);
   }, []);
 
+  const loadWords = useCallback(async () => {
+    const data = await getWords();
+    setWords(data);
+  }, []);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     setPreviewTrack(null);
@@ -111,12 +119,14 @@ export default function RapearScreen() {
     setBaseSelectorVisible(false);
     await loadModes();
     await loadInstrumentals();
+    await loadWords();
     await new Promise((resolve) => setTimeout(resolve, 300));
     setRefreshing(false);
-  }, [loadInstrumentals, loadModes]);
+  }, [loadInstrumentals, loadModes, loadWords]);
 
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const wordIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const webPreviewAudioRef = useRef<any>(null);
   const webTrainingAudioRef = useRef<any>(null);
   const webTrainingTrackRef = useRef<InstrumentalId | null>(null);
@@ -141,6 +151,7 @@ export default function RapearScreen() {
   latestTrainingRestartKeyRef.current = trainingRestartKey;
   const selectedModeInfo = rapModes.find((mode) => mode.key === selectedMode);
   const selectedModeIcon = (selectedModeInfo?.icon && selectedModeInfo.icon in MaterialIcons.glyphMap ? selectedModeInfo.icon : 'help-outline') as keyof typeof MaterialIcons.glyphMap;
+  const selectedWordIntervalSeconds = selectedMode === 'easy' ? 10 : selectedMode === 'hard' ? 5 : null;
   const summaryModeInfo = rapModes.find((mode) => mode.key === sessionSummary?.mode);
   const instrumentalVolume = 0.8;
   const sessionBeatVolume = selectedSessionType === 'record' && hasSessionStarted ? Math.max(instrumentalVolume, 0.65) : instrumentalVolume;
@@ -164,6 +175,7 @@ export default function RapearScreen() {
     return () => {
       if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
       if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current);
+      if (wordIntervalRef.current) clearInterval(wordIntervalRef.current);
     };
   }, []);
 
@@ -174,6 +186,10 @@ export default function RapearScreen() {
   useEffect(() => {
     loadInstrumentals();
   }, [loadInstrumentals]);
+
+  useEffect(() => {
+    loadWords();
+  }, [loadWords]);
 
   useEffect(() => {
     if (!rapModes.length) {
@@ -287,6 +303,7 @@ export default function RapearScreen() {
     await stopTrainingPlayback();
     setIsTrainingBeatPlaying(false);
     setIsRecordingBeatPlaying(false);
+    setActiveOverlayWord(null);
   }, [stopPreviewPlayback, stopTrainingPlayback]);
 
   useFocusEffect(
@@ -294,6 +311,7 @@ export default function RapearScreen() {
       return () => {
         if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
         if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current);
+        if (wordIntervalRef.current) clearInterval(wordIntervalRef.current);
         setCountdown(null);
         setHasSessionStarted(false);
         setSessionVisible(false);
@@ -738,6 +756,21 @@ export default function RapearScreen() {
     return accepted;
   };
 
+  const pickRandomWord = useCallback((currentWord: string | null) => {
+    if (!words.length) return null;
+
+    if (words.length === 1) return words[0];
+
+    let nextWord = words[Math.floor(Math.random() * words.length)] ?? null;
+
+    if (nextWord === currentWord) {
+      const availableWords = words.filter((word) => word !== currentWord);
+      nextWord = availableWords[Math.floor(Math.random() * availableWords.length)] ?? nextWord;
+    }
+
+    return nextWord;
+  }, [words]);
+
   const openSession = async () => {
     if (!isReadyToStart) return;
 
@@ -756,6 +789,7 @@ export default function RapearScreen() {
     recordedVideoUriRef.current = null;
     recordedThumbnailUriRef.current = null;
     recordingTaskRef.current = null;
+    setActiveOverlayWord(null);
 
     if (selectedSessionType === 'train') {
       startSessionTimer();
@@ -764,11 +798,22 @@ export default function RapearScreen() {
 
   const startSessionTimer = () => {
     if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current);
+    if (wordIntervalRef.current) clearInterval(wordIntervalRef.current);
+
     setHasSessionStarted(true);
     setIsRecordingBeatPlaying(true);
+
     if (selectedSessionType === 'record') {
       setTrainingRestartKey((previous) => previous + 1);
       void startVideoRecordingCapture();
+
+      if (selectedWordIntervalSeconds !== null && words.length > 0) {
+        setActiveOverlayWord((currentWord) => pickRandomWord(currentWord));
+
+        wordIntervalRef.current = setInterval(() => {
+          setActiveOverlayWord((currentWord) => pickRandomWord(currentWord));
+        }, selectedWordIntervalSeconds * 1000);
+      }
     }
 
     sessionIntervalRef.current = setInterval(() => {
@@ -918,6 +963,7 @@ export default function RapearScreen() {
   const finishSession = async () => {
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current);
+    if (wordIntervalRef.current) clearInterval(wordIntervalRef.current);
 
     setSessionVisible(false);
     await stopVideoRecordingCapture();
@@ -928,6 +974,7 @@ export default function RapearScreen() {
     setHasSessionStarted(false);
     setBaseSelectorVisible(false);
     setIsRecordingBeatPlaying(false);
+    setActiveOverlayWord(null);
 
     const capturedVideoUri = recordedVideoUriRef.current;
     const capturedThumbnailUri = recordedThumbnailUriRef.current;
@@ -956,6 +1003,7 @@ export default function RapearScreen() {
   const stopSession = async () => {
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current);
+    if (wordIntervalRef.current) clearInterval(wordIntervalRef.current);
 
     setSessionVisible(false);
     await stopVideoRecordingCapture();
@@ -967,6 +1015,7 @@ export default function RapearScreen() {
     setHasSessionStarted(false);
     setBaseSelectorVisible(false);
     setIsRecordingBeatPlaying(false);
+    setActiveOverlayWord(null);
   };
 
   const saveRecordedVideoToDevice = useCallback(async () => {
@@ -1277,22 +1326,26 @@ export default function RapearScreen() {
                     <Text style={styles.cameraPermissionEmptyStateText}>Activa permiso de cámara para previsualizarte antes de grabar.</Text>
                   </View>
                 )}
-                <View style={[styles.trainingHeader, { paddingTop: insets.top + 8 }]}>
-                  <View style={styles.recordingOverlayInfoBlock}>
-                    <View style={styles.recordingOverlayTitleRow}>
-                      <Text style={styles.recordingOverlayAppName}>FreestyleZone</Text>
-                      <Text style={[styles.timer, styles.recordingOverlayTimer, { color: timerColor }]}>{displayTimer}</Text>
-                    </View>
-                    <View style={[styles.trainingModeTag, styles.recordingOverlayTag]}>
-                      <MaterialIcons name={selectedModeIcon} size={12} color="#FFFFFF" />
-                      <Text style={styles.recordingModeTagText}>{selectedModeInfo?.label ?? 'Modo no seleccionado'}</Text>
-                    </View>
-                  </View>
+                <View style={[styles.trainingHeader, styles.recordingTopHeader, { paddingTop: insets.top + 8 }]}> 
                   <View style={styles.sessionHeaderActions}>
                     <Pressable style={styles.finishButton} onPress={() => void finishSession()}>
                       <Text style={styles.finishButtonText}>Finalizar</Text>
                     </Pressable>
                   </View>
+                </View>
+
+                <View style={styles.recordingCenterOverlay}>
+                  <Text style={[styles.timer, styles.recordingCenterTimer, { color: timerColor }]}>{displayTimer}</Text>
+                  <View style={[styles.trainingModeTag, styles.recordingOverlayTag]}>
+                    <MaterialIcons name={selectedModeIcon} size={12} color="#FFFFFF" />
+                    <Text style={styles.recordingModeTagText}>{selectedModeInfo?.label ?? 'Modo no seleccionado'}</Text>
+                  </View>
+
+                  {hasSessionStarted && activeOverlayWord ? (
+                    <View style={styles.overlayWordWrapper}>
+                      <Text style={styles.overlayWordValue} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.5}>{activeOverlayWord}</Text>
+                    </View>
+                  ) : null}
                 </View>
 
                 <View style={[styles.sessionBottomActions, { paddingBottom: insets.bottom + 26 }]}>
