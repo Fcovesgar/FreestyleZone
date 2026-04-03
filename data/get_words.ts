@@ -4,14 +4,10 @@ import { db } from '../firebase/firebaseConfig';
 
 export type Word = {
   id: string;
-  Word?: string;
-  Name?: string;
-  value?: string;
-  text?: string;
+  word: string;
 };
 
-const pickWordValue = (entry: Omit<Word, 'id'>) =>
-  [entry.Word, entry.Name, entry.value, entry.text].find((value): value is string => typeof value === 'string' && value.trim().length > 0)?.trim() ?? null;
+const pickWordValue = (entry: Omit<Word, 'id'>) => (typeof entry.word === 'string' && entry.word.trim().length > 0 ? entry.word.trim() : null);
 
 export const getWords = async (): Promise<string[]> => {
   try {
