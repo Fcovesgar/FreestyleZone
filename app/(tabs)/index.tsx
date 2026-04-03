@@ -66,6 +66,7 @@ export default function RapearScreen() {
   const [, setRecordedThumbnailUri] = useState<string | null>(null);
   const [isRecordingCaptureActive, setIsRecordingCaptureActive] = useState(false);
   const [activeOverlayWord, setActiveOverlayWord] = useState<string | null>(null);
+  const [wordProgressNowMs, setWordProgressNowMs] = useState<number | null>(null);
 
   const rapModes: RapModeOption[] = useMemo(
     () =>
@@ -127,6 +128,7 @@ export default function RapearScreen() {
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const wordIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const wordProgressStartMsRef = useRef<number | null>(null);
   const webPreviewAudioRef = useRef<any>(null);
   const webTrainingAudioRef = useRef<any>(null);
   const webTrainingTrackRef = useRef<InstrumentalId | null>(null);
@@ -190,6 +192,19 @@ export default function RapearScreen() {
   useEffect(() => {
     loadWords();
   }, [loadWords]);
+
+  useEffect(() => {
+    if (!hasSessionStarted || selectedSessionType !== 'record' || selectedWordIntervalSeconds === null || words.length === 0) {
+      setWordProgressNowMs(null);
+      return;
+    }
+
+    const progressTicker = setInterval(() => {
+      setWordProgressNowMs(Date.now());
+    }, 100);
+
+    return () => clearInterval(progressTicker);
+  }, [hasSessionStarted, selectedSessionType, selectedWordIntervalSeconds, words.length]);
 
   useEffect(() => {
     if (!rapModes.length) {
@@ -304,6 +319,8 @@ export default function RapearScreen() {
     setIsTrainingBeatPlaying(false);
     setIsRecordingBeatPlaying(false);
     setActiveOverlayWord(null);
+    setWordProgressNowMs(null);
+    wordProgressStartMsRef.current = null;
   }, [stopPreviewPlayback, stopTrainingPlayback]);
 
   useFocusEffect(
@@ -809,6 +826,8 @@ export default function RapearScreen() {
 
       if (selectedWordIntervalSeconds !== null && words.length > 0) {
         setActiveOverlayWord((currentWord) => pickRandomWord(currentWord));
+        wordProgressStartMsRef.current = Date.now();
+        setWordProgressNowMs(Date.now());
 
         wordIntervalRef.current = setInterval(() => {
           setActiveOverlayWord((currentWord) => pickRandomWord(currentWord));
@@ -1016,6 +1035,8 @@ export default function RapearScreen() {
     setBaseSelectorVisible(false);
     setIsRecordingBeatPlaying(false);
     setActiveOverlayWord(null);
+    setWordProgressNowMs(null);
+    wordProgressStartMsRef.current = null;
   };
 
   const saveRecordedVideoToDevice = useCallback(async () => {
@@ -1058,10 +1079,19 @@ export default function RapearScreen() {
 
   const displayTimer = isUnlimitedSession || remainingSeconds === null ? formatTime(elapsedSeconds) : formatTime(remainingSeconds);
   const timerColor = getSessionTimerColor(remainingSeconds, initialSessionSeconds, isUnlimitedSession);
-  const nextWordProgress = selectedWordIntervalSeconds && hasSessionStarted && words.length > 0 ? (elapsedSeconds % selectedWordIntervalSeconds) / selectedWordIntervalSeconds : 0;
-  const secondsUntilNextWord = selectedWordIntervalSeconds && hasSessionStarted && words.length > 0
-    ? (elapsedSeconds % selectedWordIntervalSeconds === 0 ? selectedWordIntervalSeconds : selectedWordIntervalSeconds - (elapsedSeconds % selectedWordIntervalSeconds))
-    : null;
+  const wordProgressIntervalMs = selectedWordIntervalSeconds !== null ? selectedWordIntervalSeconds * 1000 : null;
+  const wordElapsedMs =
+    wordProgressIntervalMs !== null &&
+    hasSessionStarted &&
+    wordProgressStartMsRef.current !== null &&
+    wordProgressNowMs !== null
+      ? Math.max(0, wordProgressNowMs - wordProgressStartMsRef.current)
+      : null;
+  const nextWordProgress = wordElapsedMs !== null && wordProgressIntervalMs !== null ? (wordElapsedMs % wordProgressIntervalMs) / wordProgressIntervalMs : 0;
+  const secondsUntilNextWord =
+    wordElapsedMs !== null && wordProgressIntervalMs !== null
+      ? Math.ceil((wordProgressIntervalMs - (wordElapsedMs % wordProgressIntervalMs || wordProgressIntervalMs)) / 1000)
+      : null;
 
   const confirmCloseSummary = () => {
     Alert.alert('¿Salir del resumen?', 'Si sales ahora, se cerrará el resumen y perderás la sesión.', [
@@ -1336,7 +1366,11 @@ export default function RapearScreen() {
 
                     <View style={styles.recordingCenterMainRow}>
                       {!(hasSessionStarted && activeOverlayWord) ? <MaterialIcons name={selectedModeIcon} size={12} color="#FFFFFF" /> : null}
-                      <Text style={styles.recordingCenterMainText} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.7}>
+                      <Text
+                        style={[styles.recordingCenterMainText, hasSessionStarted && activeOverlayWord ? styles.recordingCenterWordText : null]}
+                        numberOfLines={2}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.7}>
                         {hasSessionStarted && activeOverlayWord ? activeOverlayWord : selectedModeInfo?.label ?? 'Modo no seleccionado'}
                       </Text>
                     </View>
@@ -1346,16 +1380,11 @@ export default function RapearScreen() {
                         <View style={styles.wordProgressTrack}>
                           <View style={[styles.wordProgressFill, { width: `${Math.min(100, Math.max(0, nextWordProgress * 100))}%` }]} />
                         </View>
-                        <Text style={styles.wordProgressText}>Siguiente palabra en {secondsUntilNextWord}s</Text>
                       </View>
                     ) : null}
 
                     <Text style={[styles.timer, styles.recordingCenterTimer]}>{displayTimer}</Text>
                   </View>
-
-                  <Pressable style={styles.recordingCloseButton} onPress={() => void finishSession()}>
-                    <MaterialIcons name="close" size={20} color="#FFFFFF" />
-                  </Pressable>
                 </View>
 
                 <Pressable style={[styles.finishButton, styles.recordingFinishFloating, { bottom: insets.bottom + 18 }]} onPress={() => void finishSession()}>
