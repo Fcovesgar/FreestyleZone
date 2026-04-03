@@ -1058,6 +1058,10 @@ export default function RapearScreen() {
 
   const displayTimer = isUnlimitedSession || remainingSeconds === null ? formatTime(elapsedSeconds) : formatTime(remainingSeconds);
   const timerColor = getSessionTimerColor(remainingSeconds, initialSessionSeconds, isUnlimitedSession);
+  const nextWordProgress = selectedWordIntervalSeconds && hasSessionStarted && words.length > 0 ? (elapsedSeconds % selectedWordIntervalSeconds) / selectedWordIntervalSeconds : 0;
+  const secondsUntilNextWord = selectedWordIntervalSeconds && hasSessionStarted && words.length > 0
+    ? (elapsedSeconds % selectedWordIntervalSeconds === 0 ? selectedWordIntervalSeconds : selectedWordIntervalSeconds - (elapsedSeconds % selectedWordIntervalSeconds))
+    : null;
 
   const confirmCloseSummary = () => {
     Alert.alert('¿Salir del resumen?', 'Si sales ahora, se cerrará el resumen y perderás la sesión.', [
@@ -1331,11 +1335,20 @@ export default function RapearScreen() {
                     <Text style={styles.recordingOverlayAppName}>FreestyleZone</Text>
 
                     <View style={styles.recordingCenterMainRow}>
-                      <MaterialIcons name={selectedModeIcon} size={12} color="#FFFFFF" />
+                      {!(hasSessionStarted && activeOverlayWord) ? <MaterialIcons name={selectedModeIcon} size={12} color="#FFFFFF" /> : null}
                       <Text style={styles.recordingCenterMainText} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.7}>
                         {hasSessionStarted && activeOverlayWord ? activeOverlayWord : selectedModeInfo?.label ?? 'Modo no seleccionado'}
                       </Text>
                     </View>
+
+                    {secondsUntilNextWord !== null ? (
+                      <View style={styles.wordProgressWrap}>
+                        <View style={styles.wordProgressTrack}>
+                          <View style={[styles.wordProgressFill, { width: `${Math.min(100, Math.max(0, nextWordProgress * 100))}%` }]} />
+                        </View>
+                        <Text style={styles.wordProgressText}>Siguiente palabra en {secondsUntilNextWord}s</Text>
+                      </View>
+                    ) : null}
 
                     <Text style={[styles.timer, styles.recordingCenterTimer]}>{displayTimer}</Text>
                   </View>
