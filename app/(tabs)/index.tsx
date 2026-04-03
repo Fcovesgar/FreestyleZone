@@ -1362,7 +1362,14 @@ export default function RapearScreen() {
                 )}
                 <View style={[styles.recordingHeaderBar, { paddingTop: insets.top + 8 }]}> 
                   <View style={styles.recordingTopOverlayFrame}>
-                    <Text style={styles.recordingOverlayAppName}>FreestyleZone</Text>
+                    <View style={styles.recordingTitleRow}>
+                      {!hasSessionStarted ? (
+                        <Pressable style={styles.recordingBackButton} onPress={() => void stopSession()}>
+                          <MaterialIcons name="arrow-back" size={16} color="#FFFFFF" />
+                        </Pressable>
+                      ) : null}
+                      <Text style={styles.recordingOverlayAppName}>FreestyleZone</Text>
+                    </View>
 
                     <View style={styles.recordingCenterMainRow}>
                       {!(hasSessionStarted && activeOverlayWord) ? <MaterialIcons name={selectedModeIcon} size={12} color="#FFFFFF" /> : null}
@@ -1387,9 +1394,11 @@ export default function RapearScreen() {
                   </View>
                 </View>
 
-                <Pressable style={[styles.finishButton, styles.recordingFinishFloating, { bottom: insets.bottom + 18 }]} onPress={() => void finishSession()}>
-                  <Text style={styles.finishButtonText}>Finalizar</Text>
-                </Pressable>
+                {hasSessionStarted ? (
+                  <Pressable style={[styles.finishButton, styles.recordingFinishFloating, { bottom: insets.bottom + 18 }]} onPress={() => void finishSession()}>
+                    <Text style={styles.finishButtonText}>Finalizar</Text>
+                  </Pressable>
+                ) : null}
 
                 <View style={[styles.sessionBottomActions, { paddingBottom: insets.bottom + 26 }]}>
                   {countdown !== null ? <Text style={[styles.countdownNumber, { color: getCountdownColor(countdown) }]}>{countdown}</Text> : null}
