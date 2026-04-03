@@ -1361,13 +1361,14 @@ export default function RapearScreen() {
                   </View>
                 )}
                 <View style={[styles.recordingHeaderBar, { paddingTop: insets.top + 8 }]}> 
+                  {!hasSessionStarted ? (
+                    <Pressable style={styles.recordingBackOutsideButton} onPress={() => void stopSession()}>
+                      <MaterialIcons name="arrow-back" size={18} color="#FFFFFF" />
+                    </Pressable>
+                  ) : null}
+
                   <View style={styles.recordingTopOverlayFrame}>
                     <View style={styles.recordingTitleRow}>
-                      {!hasSessionStarted ? (
-                        <Pressable style={styles.recordingBackButton} onPress={() => void stopSession()}>
-                          <MaterialIcons name="arrow-back" size={16} color="#FFFFFF" />
-                        </Pressable>
-                      ) : null}
                       <Text style={styles.recordingOverlayAppName}>FreestyleZone</Text>
                     </View>
 
@@ -1395,8 +1396,8 @@ export default function RapearScreen() {
                 </View>
 
                 {hasSessionStarted ? (
-                  <Pressable style={[styles.finishButton, styles.recordingFinishFloating, { bottom: insets.bottom + 18 }]} onPress={() => void finishSession()}>
-                    <Text style={styles.finishButtonText}>Finalizar</Text>
+                  <Pressable style={[styles.recordingFinishCircle, styles.recordingFinishFloating, { bottom: insets.bottom + 18 }]} onPress={() => void finishSession()}>
+                    <MaterialIcons name="stop" size={24} color="#FFFFFF" />
                   </Pressable>
                 ) : null}
 
