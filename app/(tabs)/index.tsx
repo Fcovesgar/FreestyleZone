@@ -1358,6 +1358,10 @@ export default function RapearScreen() {
                   </Pressable>
                 </View>
 
+                <Pressable style={[styles.finishButton, styles.recordingFinishFloating, { bottom: insets.bottom + 18 }]} onPress={() => void finishSession()}>
+                  <Text style={styles.finishButtonText}>Finalizar</Text>
+                </Pressable>
+
                 <View style={[styles.sessionBottomActions, { paddingBottom: insets.bottom + 26 }]}>
                   {countdown !== null ? <Text style={[styles.countdownNumber, { color: getCountdownColor(countdown) }]}>{countdown}</Text> : null}
 
