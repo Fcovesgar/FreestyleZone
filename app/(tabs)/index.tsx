@@ -1326,7 +1326,19 @@ export default function RapearScreen() {
                     <Text style={styles.cameraPermissionEmptyStateText}>Activa permiso de cámara para previsualizarte antes de grabar.</Text>
                   </View>
                 )}
-                <View style={[styles.trainingHeader, styles.recordingTopHeader, { paddingTop: insets.top + 8 }]}> 
+                <View style={[styles.trainingHeader, styles.recordingTopHeader, { paddingTop: insets.top + 8 }]}>
+                  <View style={styles.recordingHeaderLeft}>
+                    <Text style={styles.recordingOverlayAppName}>FreestyleZone</Text>
+                    <View style={[styles.trainingModeTag, styles.recordingOverlayTag, styles.recordingModeTagCompact]}>
+                      <MaterialIcons name={selectedModeIcon} size={11} color="#FFFFFF" />
+                      <Text style={styles.recordingModeTagText}>{selectedModeInfo?.label ?? 'Modo no seleccionado'}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.recordingHeaderCenter}>
+                    <Text style={[styles.timer, styles.recordingCenterTimer, { color: timerColor }]}>{displayTimer}</Text>
+                  </View>
+
                   <View style={styles.sessionHeaderActions}>
                     <Pressable style={styles.finishButton} onPress={() => void finishSession()}>
                       <Text style={styles.finishButtonText}>Finalizar</Text>
@@ -1334,19 +1346,11 @@ export default function RapearScreen() {
                   </View>
                 </View>
 
-                <View style={styles.recordingCenterOverlay}>
-                  <Text style={[styles.timer, styles.recordingCenterTimer, { color: timerColor }]}>{displayTimer}</Text>
-                  <View style={[styles.trainingModeTag, styles.recordingOverlayTag]}>
-                    <MaterialIcons name={selectedModeIcon} size={12} color="#FFFFFF" />
-                    <Text style={styles.recordingModeTagText}>{selectedModeInfo?.label ?? 'Modo no seleccionado'}</Text>
+                {hasSessionStarted && activeOverlayWord ? (
+                  <View style={styles.overlayWordWrapper}>
+                    <Text style={styles.overlayWordValue} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.65}>{activeOverlayWord}</Text>
                   </View>
-
-                  {hasSessionStarted && activeOverlayWord ? (
-                    <View style={styles.overlayWordWrapper}>
-                      <Text style={styles.overlayWordValue} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.5}>{activeOverlayWord}</Text>
-                    </View>
-                  ) : null}
-                </View>
+                ) : null}
 
                 <View style={[styles.sessionBottomActions, { paddingBottom: insets.bottom + 26 }]}>
                   {countdown !== null ? <Text style={[styles.countdownNumber, { color: getCountdownColor(countdown) }]}>{countdown}</Text> : null}
