@@ -1326,24 +1326,23 @@ export default function RapearScreen() {
                     <Text style={styles.cameraPermissionEmptyStateText}>Activa permiso de cámara para previsualizarte antes de grabar.</Text>
                   </View>
                 )}
-                <View style={[styles.recordingTopOverlay, { paddingTop: insets.top + 8 }]}> 
-                  <View style={styles.recordingTopMetaRow}>
-                    <Text style={styles.recordingTopMetaText}>FreestyleZone</Text>
-                    <Text style={styles.recordingTopMetaText}>—</Text>
-                    <View style={styles.recordingModeInline}>
-                      <MaterialIcons name={selectedModeIcon} size={11} color="#FFFFFF" />
-                      <Text style={styles.recordingTopMetaText}>{selectedModeInfo?.label ?? 'Modo no seleccionado'}</Text>
+                <View style={[styles.recordingHeaderBar, { paddingTop: insets.top + 8 }]}> 
+                  <View style={styles.recordingTopOverlayFrame}>
+                    <Text style={styles.recordingOverlayAppName}>FreestyleZone</Text>
+
+                    <View style={styles.recordingCenterMainRow}>
+                      <MaterialIcons name={selectedModeIcon} size={12} color="#FFFFFF" />
+                      <Text style={styles.recordingCenterMainText} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.7}>
+                        {hasSessionStarted && activeOverlayWord ? activeOverlayWord : selectedModeInfo?.label ?? 'Modo no seleccionado'}
+                      </Text>
                     </View>
+
+                    <Text style={[styles.timer, styles.recordingCenterTimer]}>{displayTimer}</Text>
                   </View>
 
-                  <Text style={styles.recordingTopMetaText}>Tiempo</Text>
-                  <Text style={[styles.timer, styles.recordingCenterTimer, { color: timerColor }]}>{displayTimer}</Text>
-
-                  {hasSessionStarted && activeOverlayWord ? (
-                    <View style={styles.overlayWordWrapper}>
-                      <Text style={styles.overlayWordValue} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.65}>{activeOverlayWord}</Text>
-                    </View>
-                  ) : null}
+                  <Pressable style={styles.recordingCloseButton} onPress={() => void finishSession()}>
+                    <MaterialIcons name="close" size={20} color="#FFFFFF" />
+                  </Pressable>
                 </View>
 
                 <Pressable style={[styles.finishButton, styles.recordingFinishFloating, { bottom: insets.bottom + 18 }]} onPress={() => void finishSession()}>
