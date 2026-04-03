@@ -1395,11 +1395,6 @@ export default function RapearScreen() {
                   </View>
                 </View>
 
-                {hasSessionStarted ? (
-                  <Pressable style={[styles.recordingFinishCircle, styles.recordingFinishFloating, { bottom: insets.bottom + 18 }]} onPress={() => void finishSession()}>
-                    <MaterialIcons name="stop" size={24} color="#FFFFFF" />
-                  </Pressable>
-                ) : null}
 
                 <View style={[styles.sessionBottomActions, { paddingBottom: insets.bottom + 26 }]}>
                   {countdown !== null ? <Text style={[styles.countdownNumber, { color: getCountdownColor(countdown) }]}>{countdown}</Text> : null}
@@ -1446,9 +1441,15 @@ export default function RapearScreen() {
                   ) : null}
 
                   {hasSessionStarted ? (
-                    <Pressable style={styles.liveSessionSwitchCameraButton} onPress={onToggleCameraFacing}>
-                      <MaterialIcons name="flip-camera-ios" size={27} color="#FFFFFF" />
-                    </Pressable>
+                    <View style={styles.liveSessionControlsRow}>
+                      <Pressable style={styles.liveSessionStopButton} onPress={() => void finishSession()}>
+                        <MaterialIcons name="stop" size={27} color="#FFFFFF" />
+                      </Pressable>
+
+                      <Pressable style={styles.liveSessionSwitchCameraButton} onPress={onToggleCameraFacing}>
+                        <MaterialIcons name="flip-camera-ios" size={27} color="#FFFFFF" />
+                      </Pressable>
+                    </View>
                   ) : null}
                 </View>
               </>
