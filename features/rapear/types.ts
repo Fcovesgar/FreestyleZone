@@ -18,8 +18,10 @@ export type SessionSummary = {
   elapsedSeconds: number;
   recordedWithMicrophone: boolean;
   recordedVideoUri?: string;
+  renderedVideoUri?: string;
   recordedThumbnailUri?: string;
   overlayWordsTimeline?: { atSecond: number; word: string }[];
+  hasEmbeddedOverlay?: boolean;
 };
 
 export type RapModeOption = {
