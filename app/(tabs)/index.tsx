@@ -3,6 +3,7 @@ import { Alert, Image, Linking, Modal, PermissionsAndroid, Platform, Pressable, 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useFocusEffect } from '@react-navigation/native';
 import { VideoView, useVideoPlayer } from 'expo-video';
+import Constants from 'expo-constants';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getInstrumentals } from '../../data/get_instrumentals';
 import { getModes } from '../../data/get_modes';
@@ -16,6 +17,40 @@ import { PRE_RECORD_COUNTDOWN_SECONDS, SESSION_TIMES, TRAINING_TIME, VIEW_TOP_OF
 import styles from '../../features/rapear/styles';
 import type { CameraFacing, Instrumental, InstrumentalId, ModeEntity, NativeAudioPlayer, RapMode, RapModeOption, SessionSummary, SessionTime, SessionType, SetupStep, TrackItem } from '../../features/rapear/types';
 import { formatTime, getCountdownColor, getSessionDuration, getSessionTimerColor } from '../../features/rapear/utils';
+
+type TimelineWord = { atSecond: number; word: string };
+
+const escapeDrawtextValue = (value: string) =>
+  value
+    .replace(/\\/g, '\\\\')
+    .replace(/:/g, '\\:')
+    .replace(/'/g, "\\'")
+    .replace(/%/g, '\\%');
+
+const quoteFfmpegArg = (value: string) => `'${value.replace(/'/g, "'\\''")}'`;
+
+const buildEmbeddedOverlayFilter = (modeLabel: string, timeline: TimelineWord[]) => {
+  const safeModeLabel = escapeDrawtextValue(modeLabel);
+  const baseLayers = [
+    "drawbox=x=w*0.09:y=18:w=w*0.82:h=130:color=black@0.35:t=fill",
+    "drawbox=x=w*0.09:y=18:w=w*0.82:h=130:color=white@0.18:t=2",
+    "drawtext=fontcolor=white:fontsize=h*0.028:text='FreestyleZone':x=(w-text_w)/2:y=32",
+    `drawtext=fontcolor=white:fontsize=h*0.044:text='${safeModeLabel}':x=(w-text_w)/2:y=62`,
+    "drawtext=fontcolor=white:fontsize=h*0.034:text='%{pts\\:hms}':x=(w-text_w)/2:y=100",
+  ];
+
+  const timelineLayers = timeline.map((item, index) => {
+    const start = Math.max(0, item.atSecond);
+    const nextTime = timeline[index + 1]?.atSecond;
+    const safeWord = escapeDrawtextValue(item.word);
+    if (nextTime === undefined) {
+      return `drawtext=fontcolor=white:fontsize=h*0.055:text='${safeWord}':x=(w-text_w)/2:y=62`;
+    }
+    return `drawtext=fontcolor=white:fontsize=h*0.055:text='${safeWord}':x=(w-text_w)/2:y=62:enable='between(t,${start},${Math.max(start + 0.2, nextTime - 0.01)})'`;
+  });
+
+  return [...baseLayers, ...timelineLayers].join(',');
+};
 
 export default function RapearScreen() {
   const insets = useSafeAreaInsets();
@@ -67,6 +102,7 @@ export default function RapearScreen() {
   const [activeOverlayWord, setActiveOverlayWord] = useState<string | null>(null);
   const [summaryOverlayWord, setSummaryOverlayWord] = useState<string | null>(null);
   const [wordProgressNowMs, setWordProgressNowMs] = useState<number | null>(null);
+  const [isEmbeddingOverlay, setIsEmbeddingOverlay] = useState(false);
 
   const rapModes: RapModeOption[] = useMemo(
     () =>
@@ -161,7 +197,7 @@ export default function RapearScreen() {
   const sessionBeatVolume = selectedSessionType === 'record' && hasSessionStarted ? Math.max(instrumentalVolume, 0.65) : instrumentalVolume;
 
   const summaryVideoPlayer = useVideoPlayer(
-    sessionSummary?.recordedVideoUri ? { uri: sessionSummary.recordedVideoUri } : null,
+    sessionSummary?.renderedVideoUri ? { uri: sessionSummary.renderedVideoUri } : sessionSummary?.recordedVideoUri ? { uri: sessionSummary.recordedVideoUri } : null,
     (player) => {
       player.pause();
       player.loop = false;
@@ -889,6 +925,55 @@ export default function RapearScreen() {
     }
   }, []);
 
+  const renderVideoWithEmbeddedOverlay = useCallback(
+    async (videoUri: string, modeLabel: string, timeline: TimelineWord[]) => {
+      if (Platform.OS === 'web') return videoUri;
+      if (Constants.executionEnvironment === 'storeClient') {
+        Alert.alert(
+          'No disponible en Expo Go',
+          'El render embebido usa un módulo nativo (ffmpeg-kit-react-native). Ejecuta la app con Development Build para habilitarlo.'
+        );
+        return videoUri;
+      }
+
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const ffmpegKit = require('ffmpeg-kit-react-native');
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const fileSystem = require('expo-file-system');
+
+        const ffmpegSessionRunner = ffmpegKit?.FFmpegKit?.execute;
+        const returnCodeFactory = ffmpegKit?.ReturnCode;
+        const cacheDirectory = fileSystem?.cacheDirectory;
+        if (!ffmpegSessionRunner || !returnCodeFactory || !cacheDirectory) {
+          Alert.alert(
+            'Overlay incrustado no disponible',
+            'Instala ffmpeg-kit-react-native y expo-file-system para renderizar el overlay dentro del video final.'
+          );
+          return videoUri;
+        }
+
+        const targetUri = `${cacheDirectory}freestyle-session-overlay-${Date.now()}.mp4`;
+        const filterGraph = buildEmbeddedOverlayFilter(modeLabel, timeline);
+        const command = `-y -i ${quoteFfmpegArg(videoUri)} -vf ${quoteFfmpegArg(filterGraph)} -c:v libx264 -preset veryfast -crf 22 -c:a copy ${quoteFfmpegArg(targetUri)}`;
+        const session = await ffmpegSessionRunner(command);
+        const returnCode = await session?.getReturnCode?.();
+        if (!returnCodeFactory.isSuccess(returnCode)) {
+          return videoUri;
+        }
+
+        return targetUri;
+      } catch {
+        Alert.alert(
+          'Render no disponible',
+          'No se pudo incrustar el overlay en el video. Verifica la instalación de ffmpeg-kit-react-native.'
+        );
+        return videoUri;
+      }
+    },
+    []
+  );
+
   const startVideoRecordingCapture = useCallback(() => {
     if (selectedSessionType !== 'record' || Platform.OS === 'web') return;
     const activeCamera = cameraRef.current;
@@ -1019,6 +1104,20 @@ export default function RapearScreen() {
 
     const capturedVideoUri = recordedVideoUriRef.current;
     const capturedThumbnailUri = recordedThumbnailUriRef.current;
+    let renderedVideoUri = capturedVideoUri ?? undefined;
+    let hasEmbeddedOverlay = false;
+
+    if (selectedSessionType === 'record' && capturedVideoUri) {
+      setIsEmbeddingOverlay(true);
+      renderedVideoUri = await renderVideoWithEmbeddedOverlay(
+        capturedVideoUri,
+        selectedModeInfo?.label ?? 'Modo freestyle',
+        recordedWordsTimelineRef.current
+      );
+      hasEmbeddedOverlay = renderedVideoUri !== capturedVideoUri;
+      setIsEmbeddingOverlay(false);
+    }
+
     const nextSummary: SessionSummary = {
       mode: selectedMode,
       modeLabel: selectedModeInfo?.label ?? 'Modo no seleccionado',
@@ -1029,8 +1128,10 @@ export default function RapearScreen() {
       elapsedSeconds,
       recordedWithMicrophone: hasMicrophonePermission,
       recordedVideoUri: capturedVideoUri ?? undefined,
+      renderedVideoUri,
       recordedThumbnailUri: capturedThumbnailUri ?? undefined,
       overlayWordsTimeline: recordedWordsTimelineRef.current,
+      hasEmbeddedOverlay,
     };
 
     if (selectedSessionType === 'record') {
@@ -1066,14 +1167,15 @@ export default function RapearScreen() {
   };
 
   const saveRecordedVideoToDevice = useCallback(async () => {
-    if (!sessionSummary?.recordedVideoUri) {
+    const videoToSave = sessionSummary?.renderedVideoUri ?? sessionSummary?.recordedVideoUri;
+    if (!videoToSave) {
       Alert.alert('Sin video', 'Aún no hay video grabado para guardar.');
       return;
     }
 
     if (Platform.OS === 'web') {
       const anchor = document.createElement('a');
-      anchor.href = sessionSummary.recordedVideoUri;
+      anchor.href = videoToSave;
       anchor.download = `freestyle-session-${Date.now()}.mp4`;
       document.body.appendChild(anchor);
       anchor.click();
@@ -1095,7 +1197,7 @@ export default function RapearScreen() {
         return;
       }
 
-      const asset = await mediaLibrary.createAssetAsync(sessionSummary.recordedVideoUri);
+      const asset = await mediaLibrary.createAssetAsync(videoToSave);
       await mediaLibrary.createAlbumAsync('FreestyleZone', asset, false);
       Alert.alert('Guardado', 'Video guardado en el dispositivo.');
     } catch {
@@ -1538,7 +1640,7 @@ export default function RapearScreen() {
 
           <View style={styles.previewCard}>
             <View style={[styles.previewVideo, { backgroundColor: summaryTheme.previewBg, borderColor: summaryTheme.cardBorder }]}>
-              {sessionSummary?.recordedVideoUri ? (
+              {(sessionSummary?.renderedVideoUri ?? sessionSummary?.recordedVideoUri) ? (
                 <VideoView
                   player={summaryVideoPlayer}
                   style={styles.previewVideoPlayer}
@@ -1547,24 +1649,32 @@ export default function RapearScreen() {
                 />
               ) : null}
               {sessionSummary?.recordedThumbnailUri ? <Image source={{ uri: sessionSummary.recordedThumbnailUri }} style={styles.previewThumbnail} /> : null}
-              <View style={styles.summaryVideoLayoutOverlay}>
-                <View style={styles.summaryVideoLayoutTopFrame}>
-                  <Text style={styles.recordingOverlayAppName}>FreestyleZone</Text>
-                  <View style={styles.recordingCenterMainRow}>
-                    {!summaryOverlayWord ? <MaterialIcons name={sessionSummary?.modeIcon ?? 'help-outline'} size={12} color="#FFFFFF" /> : null}
-                    <Text
-                      style={[styles.recordingCenterMainText, summaryOverlayWord ? styles.recordingCenterWordText : null]}
-                      numberOfLines={2}
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.7}>
-                      {summaryOverlayWord ?? sessionSummary?.modeLabel ?? 'Modo no seleccionado'}
-                    </Text>
+              {!sessionSummary?.hasEmbeddedOverlay ? (
+                <View style={styles.summaryVideoLayoutOverlay}>
+                  <View style={styles.summaryVideoLayoutTopFrame}>
+                    <Text style={styles.recordingOverlayAppName}>FreestyleZone</Text>
+                    <View style={styles.recordingCenterMainRow}>
+                      {!summaryOverlayWord ? <MaterialIcons name={sessionSummary?.modeIcon ?? 'help-outline'} size={12} color="#FFFFFF" /> : null}
+                      <Text
+                        style={[styles.recordingCenterMainText, summaryOverlayWord ? styles.recordingCenterWordText : null]}
+                        numberOfLines={2}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.7}>
+                        {summaryOverlayWord ?? sessionSummary?.modeLabel ?? 'Modo no seleccionado'}
+                      </Text>
+                    </View>
+                    <Text style={[styles.timer, styles.recordingCenterTimer]}>{formatTime(sessionSummary?.elapsedSeconds ?? 0)}</Text>
                   </View>
-                  <Text style={[styles.timer, styles.recordingCenterTimer]}>{formatTime(sessionSummary?.elapsedSeconds ?? 0)}</Text>
                 </View>
-              </View>
+              ) : null}
             </View>
-            <Text style={[styles.previewHint, { color: summaryTheme.tertiaryText }]}>Preview con layout fusionado y palabras del rapeo.</Text>
+            <Text style={[styles.previewHint, { color: summaryTheme.tertiaryText }]}>
+              {isEmbeddingOverlay
+                ? 'Renderizando overlay dentro del video final...'
+                : sessionSummary?.hasEmbeddedOverlay
+                  ? 'Overlay incrustado dentro del video exportado.'
+                  : 'Preview visual temporal. Instala ffmpeg-kit-react-native para incrustar el overlay en el archivo final.'}
+            </Text>
           </View>
 
           <View style={[styles.summaryMetaCard, { backgroundColor: summaryTheme.cardBg, borderColor: summaryTheme.cardBorder }]}> 
@@ -1574,6 +1684,7 @@ export default function RapearScreen() {
             <Text style={[styles.summaryMetaText, { color: summaryTheme.secondaryText }]}>Base: {sessionSummary?.instrumental ? sessionSummary.instrumentalLabel : '-'}</Text>
             <Text style={[styles.summaryMetaText, { color: summaryTheme.secondaryText }]}>Tiempo: {formatTime(sessionSummary?.elapsedSeconds ?? 0)}</Text>
             <Text style={[styles.summaryMetaText, { color: summaryTheme.secondaryText }]}>Audio de voz: {sessionSummary?.recordedWithMicrophone ? 'Incluido en el video' : 'No detectado'}</Text>
+            <Text style={[styles.summaryMetaText, { color: summaryTheme.secondaryText }]}>Overlay final: {sessionSummary?.hasEmbeddedOverlay ? 'Incrustado en video' : 'Fallback visual en app'}</Text>
           </View>
 
           <View style={styles.summaryActions}>
