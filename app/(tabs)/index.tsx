@@ -65,6 +65,7 @@ export default function RapearScreen() {
   const [, setRecordedThumbnailUri] = useState<string | null>(null);
   const [isRecordingCaptureActive, setIsRecordingCaptureActive] = useState(false);
   const [activeOverlayWord, setActiveOverlayWord] = useState<string | null>(null);
+  const [summaryOverlayWord, setSummaryOverlayWord] = useState<string | null>(null);
   const [wordProgressNowMs, setWordProgressNowMs] = useState<number | null>(null);
 
   const rapModes: RapModeOption[] = useMemo(
@@ -145,6 +146,8 @@ export default function RapearScreen() {
   const recordingTaskRef = useRef<Promise<void> | null>(null);
   const recordedVideoUriRef = useRef<string | null>(null);
   const recordedThumbnailUriRef = useRef<string | null>(null);
+  const recordedWordsTimelineRef = useRef<{ atSecond: number; word: string }[]>([]);
+  const elapsedSecondsRef = useRef(0);
 
   const initialSessionSeconds = getSessionDuration(selectedSessionTime);
   const availableSessionTimes = selectedSessionType === 'train' ? TRAINING_TIME : SESSION_TIMES;
@@ -164,6 +167,13 @@ export default function RapearScreen() {
       player.loop = false;
     }
   );
+
+  const pushOverlayWordToTimeline = useCallback((word: string | null, atSecond: number) => {
+    if (!word) return;
+    const latestWord = recordedWordsTimelineRef.current.at(-1);
+    if (latestWord?.word === word) return;
+    recordedWordsTimelineRef.current.push({ atSecond: Math.max(0, atSecond), word });
+  }, []);
 
   const canAdvance =
     (setupStep === 'mode' && selectedMode !== null) ||
@@ -204,6 +214,10 @@ export default function RapearScreen() {
 
     return () => clearInterval(progressTicker);
   }, [hasSessionStarted, selectedSessionType, selectedWordIntervalSeconds, words.length]);
+
+  useEffect(() => {
+    elapsedSecondsRef.current = elapsedSeconds;
+  }, [elapsedSeconds]);
 
   useEffect(() => {
     if (!rapModes.length) {
@@ -802,6 +816,7 @@ export default function RapearScreen() {
     setIsRecordingBeatPlaying(false);
     setRecordedVideoUri(null);
     setRecordedThumbnailUri(null);
+    recordedWordsTimelineRef.current = [];
     recordedVideoUriRef.current = null;
     recordedThumbnailUriRef.current = null;
     recordingTaskRef.current = null;
@@ -824,12 +839,20 @@ export default function RapearScreen() {
       void startVideoRecordingCapture();
 
       if (selectedWordIntervalSeconds !== null && words.length > 0) {
-        setActiveOverlayWord((currentWord) => pickRandomWord(currentWord));
+        setActiveOverlayWord((currentWord) => {
+          const nextWord = pickRandomWord(currentWord);
+          pushOverlayWordToTimeline(nextWord, 0);
+          return nextWord;
+        });
         wordProgressStartMsRef.current = Date.now();
         setWordProgressNowMs(Date.now());
 
         wordIntervalRef.current = setInterval(() => {
-          setActiveOverlayWord((currentWord) => pickRandomWord(currentWord));
+          setActiveOverlayWord((currentWord) => {
+            const nextWord = pickRandomWord(currentWord);
+            pushOverlayWordToTimeline(nextWord, elapsedSecondsRef.current + 1);
+            return nextWord;
+          });
         }, selectedWordIntervalSeconds * 1000);
       }
     }
@@ -1007,6 +1030,7 @@ export default function RapearScreen() {
       recordedWithMicrophone: hasMicrophonePermission,
       recordedVideoUri: capturedVideoUri ?? undefined,
       recordedThumbnailUri: capturedThumbnailUri ?? undefined,
+      overlayWordsTimeline: recordedWordsTimelineRef.current,
     };
 
     if (selectedSessionType === 'record') {
@@ -1078,6 +1102,21 @@ export default function RapearScreen() {
       Alert.alert('Error al guardar', 'No se pudo guardar el video en el dispositivo.');
     }
   }, [sessionSummary]);
+
+  useEffect(() => {
+    if (!summaryVisible || !sessionSummary?.overlayWordsTimeline?.length) {
+      setSummaryOverlayWord(null);
+      return;
+    }
+
+    const ticker = setInterval(() => {
+      const currentSecond = Math.floor(summaryVideoPlayer.currentTime ?? 0);
+      const activeWord = [...sessionSummary.overlayWordsTimeline].reverse().find((item) => item.atSecond <= currentSecond)?.word;
+      setSummaryOverlayWord(activeWord ?? null);
+    }, 120);
+
+    return () => clearInterval(ticker);
+  }, [sessionSummary?.overlayWordsTimeline, summaryVideoPlayer, summaryVisible]);
 
   const displayTimer = isUnlimitedSession || remainingSeconds === null ? formatTime(elapsedSeconds) : formatTime(remainingSeconds);
   const timerColor = getSessionTimerColor(remainingSeconds, initialSessionSeconds, isUnlimitedSession);
@@ -1508,24 +1547,24 @@ export default function RapearScreen() {
                 />
               ) : null}
               {sessionSummary?.recordedThumbnailUri ? <Image source={{ uri: sessionSummary.recordedThumbnailUri }} style={styles.previewThumbnail} /> : null}
-              <View style={styles.previewOverlayChip}>
-                <MaterialIcons name="graphic-eq" size={12} color="#FFFFFF" />
-                <Text style={styles.previewOverlayChipText}>{sessionSummary?.instrumentalLabel ?? 'Base'}</Text>
-              </View>
               <View style={styles.summaryVideoLayoutOverlay}>
                 <View style={styles.summaryVideoLayoutTopFrame}>
                   <Text style={styles.recordingOverlayAppName}>FreestyleZone</Text>
                   <View style={styles.recordingCenterMainRow}>
-                    <MaterialIcons name={sessionSummary?.modeIcon ?? 'help-outline'} size={12} color="#FFFFFF" />
-                    <Text style={styles.recordingCenterMainText} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.7}>
-                      {sessionSummary?.modeLabel ?? 'Modo no seleccionado'}
+                    {!summaryOverlayWord ? <MaterialIcons name={sessionSummary?.modeIcon ?? 'help-outline'} size={12} color="#FFFFFF" /> : null}
+                    <Text
+                      style={[styles.recordingCenterMainText, summaryOverlayWord ? styles.recordingCenterWordText : null]}
+                      numberOfLines={2}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.7}>
+                      {summaryOverlayWord ?? sessionSummary?.modeLabel ?? 'Modo no seleccionado'}
                     </Text>
                   </View>
                   <Text style={[styles.timer, styles.recordingCenterTimer]}>{formatTime(sessionSummary?.elapsedSeconds ?? 0)}</Text>
                 </View>
               </View>
             </View>
-            <Text style={[styles.previewHint, { color: summaryTheme.tertiaryText }]}>Preview con layout de grabación y video final capturado.</Text>
+            <Text style={[styles.previewHint, { color: summaryTheme.tertiaryText }]}>Preview con layout fusionado y palabras del rapeo.</Text>
           </View>
 
           <View style={[styles.summaryMetaCard, { backgroundColor: summaryTheme.cardBg, borderColor: summaryTheme.cardBorder }]}> 
