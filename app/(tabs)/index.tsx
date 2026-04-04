@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Image, Linking, Modal, PermissionsAndroid, Platform, Pressable, RefreshControl, ScrollView, Text, Vibration, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useFocusEffect } from '@react-navigation/native';
-// eslint-disable-next-line import/no-unresolved
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getInstrumentals } from '../../data/get_instrumentals';
@@ -999,10 +998,13 @@ export default function RapearScreen() {
     const capturedThumbnailUri = recordedThumbnailUriRef.current;
     const nextSummary: SessionSummary = {
       mode: selectedMode,
+      modeLabel: selectedModeInfo?.label ?? 'Modo no seleccionado',
+      modeIcon: selectedModeIcon,
       sessionType: selectedSessionType,
       instrumental: selectedTrack,
       instrumentalLabel: selectedTrackLabel,
       elapsedSeconds,
+      recordedWithMicrophone: hasMicrophonePermission,
       recordedVideoUri: capturedVideoUri ?? undefined,
       recordedThumbnailUri: capturedThumbnailUri ?? undefined,
     };
@@ -1353,7 +1355,7 @@ export default function RapearScreen() {
             ) : (
               <>
                 {hasCameraPermission && CameraPreviewComponent ? (
-                  <CameraPreviewComponent ref={cameraRef} style={styles.cameraPreviewLayer} facing={cameraFacing} mode="video" mute={false} />
+                  <CameraPreviewComponent ref={cameraRef} style={styles.cameraPreviewLayer} facing={cameraFacing} mode="video" mute={!hasMicrophonePermission} />
                 ) : (
                   <View style={styles.cameraPermissionEmptyState}>
                     <MaterialIcons name="videocam-off" size={28} color="#FFFFFFCC" />
@@ -1510,8 +1512,20 @@ export default function RapearScreen() {
                 <MaterialIcons name="graphic-eq" size={12} color="#FFFFFF" />
                 <Text style={styles.previewOverlayChipText}>{sessionSummary?.instrumentalLabel ?? 'Base'}</Text>
               </View>
+              <View style={styles.summaryVideoLayoutOverlay}>
+                <View style={styles.summaryVideoLayoutTopFrame}>
+                  <Text style={styles.recordingOverlayAppName}>FreestyleZone</Text>
+                  <View style={styles.recordingCenterMainRow}>
+                    <MaterialIcons name={sessionSummary?.modeIcon ?? 'help-outline'} size={12} color="#FFFFFF" />
+                    <Text style={styles.recordingCenterMainText} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.7}>
+                      {sessionSummary?.modeLabel ?? 'Modo no seleccionado'}
+                    </Text>
+                  </View>
+                  <Text style={[styles.timer, styles.recordingCenterTimer]}>{formatTime(sessionSummary?.elapsedSeconds ?? 0)}</Text>
+                </View>
+              </View>
             </View>
-            <Text style={[styles.previewHint, { color: summaryTheme.tertiaryText }]}>Preview de la grabación + miniatura de referencia.</Text>
+            <Text style={[styles.previewHint, { color: summaryTheme.tertiaryText }]}>Preview con layout de grabación y video final capturado.</Text>
           </View>
 
           <View style={[styles.summaryMetaCard, { backgroundColor: summaryTheme.cardBg, borderColor: summaryTheme.cardBorder }]}> 
@@ -1520,6 +1534,7 @@ export default function RapearScreen() {
             <Text style={[styles.summaryMetaText, { color: summaryTheme.secondaryText }]}>Sesión: {sessionSummary?.sessionType === 'record' ? 'Grabar' : 'Entrenar'}</Text>
             <Text style={[styles.summaryMetaText, { color: summaryTheme.secondaryText }]}>Base: {sessionSummary?.instrumental ? sessionSummary.instrumentalLabel : '-'}</Text>
             <Text style={[styles.summaryMetaText, { color: summaryTheme.secondaryText }]}>Tiempo: {formatTime(sessionSummary?.elapsedSeconds ?? 0)}</Text>
+            <Text style={[styles.summaryMetaText, { color: summaryTheme.secondaryText }]}>Audio de voz: {sessionSummary?.recordedWithMicrophone ? 'Incluido en el video' : 'No detectado'}</Text>
           </View>
 
           <View style={styles.summaryActions}>
