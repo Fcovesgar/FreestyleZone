@@ -7,6 +7,7 @@ declare module 'expo-video' {
   export type VideoPlayer = {
     pause: () => void;
     loop: boolean;
+    currentTime?: number;
   };
 
   export function useVideoPlayer(source: VideoSource, setup?: (player: VideoPlayer) => void): VideoPlayer;

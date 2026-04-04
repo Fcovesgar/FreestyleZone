@@ -1126,7 +1126,7 @@ export default function RapearScreen() {
       instrumental: selectedTrack,
       instrumentalLabel: selectedTrackLabel,
       elapsedSeconds,
-      recordedWithMicrophone: hasMicrophonePermission,
+      recordedWithMicrophone: !!hasMicrophonePermission,
       recordedVideoUri: capturedVideoUri ?? undefined,
       renderedVideoUri,
       recordedThumbnailUri: capturedThumbnailUri ?? undefined,
@@ -1206,14 +1206,15 @@ export default function RapearScreen() {
   }, [sessionSummary]);
 
   useEffect(() => {
-    if (!summaryVisible || !sessionSummary?.overlayWordsTimeline?.length) {
+    const timeline = sessionSummary?.overlayWordsTimeline ?? [];
+    if (!summaryVisible || timeline.length === 0) {
       setSummaryOverlayWord(null);
       return;
     }
 
     const ticker = setInterval(() => {
       const currentSecond = Math.floor(summaryVideoPlayer.currentTime ?? 0);
-      const activeWord = [...sessionSummary.overlayWordsTimeline].reverse().find((item) => item.atSecond <= currentSecond)?.word;
+      const activeWord = [...timeline].reverse().find((item) => item.atSecond <= currentSecond)?.word;
       setSummaryOverlayWord(activeWord ?? null);
     }, 120);
 
