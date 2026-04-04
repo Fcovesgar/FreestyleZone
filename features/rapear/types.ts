@@ -10,10 +10,13 @@ export type SetupStep = 'mode' | 'track' | 'time';
 
 export type SessionSummary = {
   mode: RapMode | null;
+  modeLabel: string;
+  modeIcon: keyof typeof MaterialIcons.glyphMap;
   sessionType: SessionType;
   instrumental: InstrumentalId | null;
   instrumentalLabel: string;
   elapsedSeconds: number;
+  recordedWithMicrophone: boolean;
   recordedVideoUri?: string;
   recordedThumbnailUri?: string;
 };
