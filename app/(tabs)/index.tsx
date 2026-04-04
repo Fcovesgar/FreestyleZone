@@ -3,6 +3,7 @@ import { Alert, Image, Linking, Modal, PermissionsAndroid, Platform, Pressable, 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useFocusEffect } from '@react-navigation/native';
 import { VideoView, useVideoPlayer } from 'expo-video';
+import Constants from 'expo-constants';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getInstrumentals } from '../../data/get_instrumentals';
 import { getModes } from '../../data/get_modes';
@@ -927,6 +928,13 @@ export default function RapearScreen() {
   const renderVideoWithEmbeddedOverlay = useCallback(
     async (videoUri: string, modeLabel: string, timeline: TimelineWord[]) => {
       if (Platform.OS === 'web') return videoUri;
+      if (Constants.executionEnvironment === 'storeClient') {
+        Alert.alert(
+          'No disponible en Expo Go',
+          'El render embebido usa un módulo nativo (ffmpeg-kit-react-native). Ejecuta la app con Development Build para habilitarlo.'
+        );
+        return videoUri;
+      }
 
       try {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
