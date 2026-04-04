@@ -1443,11 +1443,11 @@ export default function RapearScreen() {
                   {hasSessionStarted ? (
                     <View style={styles.liveSessionControlsRow}>
                       <Pressable style={styles.liveSessionStopButton} onPress={() => void finishSession()}>
-                        <MaterialIcons name="stop" size={27} color="#FFFFFF" />
+                        <MaterialIcons name="stop" size={24} color="#FFFFFF" />
                       </Pressable>
 
                       <Pressable style={styles.liveSessionSwitchCameraButton} onPress={onToggleCameraFacing}>
-                        <MaterialIcons name="flip-camera-ios" size={27} color="#FFFFFF" />
+                        <MaterialIcons name="flip-camera-ios" size={22} color="#FFFFFF" />
                       </Pressable>
                     </View>
                   ) : null}
